@@ -1,10 +1,10 @@
 <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
     <div class="app-brand demo">
         <a href="index.html" class="app-brand-link">
-            {{-- <span class="app-brand-logo demo">
-                <img src="{{ asset('assets/logo.webp') }}" width="100px">
-            </span> --}}
-            <span class=""><b>{{ config('app.name') }}</b></span>
+            <span class="app-brand-logo demo">
+                <img src="{{ asset('LOGO_SENGKUYUNG/LOGO_SENGKUYUNG.png') }}" width="200px">
+            </span>
+            {{-- <span class=""><b>{{ config('app.name') }}</b></span> --}}
         </a>
 
         <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto d-block d-xl-none">
@@ -29,6 +29,27 @@
                     {{-- <i class="menu-icon tf-icons bx bx-home-circle"></i> --}}
                     <i class="menu-icon tf-icons bx bx-lock-open-alt"></i>
                     <div data-i18n="Analytics">Users</div>
+                </a>
+            </li>
+
+            <li class="menu-item {{ request()->routeIs('download.index') ? 'active' : '' }}">
+                <a href="{{ route('download.index') }}" class="menu-link">
+                    <i class="menu-icon tf-icons bx bx-download"></i>  {{-- Ikon Download --}}
+                    <div data-i18n="Analytics">Download</div>
+                </a>
+            </li>
+            
+            <li class="menu-item {{ request()->routeIs('verifikasi.index') ? 'active' : '' }}">
+                <a href="{{ route('verifikasi.index') }}" class="menu-link">
+                    <i class="menu-icon tf-icons bx bx-check-shield"></i>  {{-- Ikon Verifikasi --}}
+                    <div data-i18n="Analytics">Verifikasi</div>
+                </a>
+            </li>
+            
+            <li class="menu-item {{ request()->routeIs('pelaporan.index') ? 'active' : '' }}">
+                <a href="{{ route('pelaporan.index') }}" class="menu-link">
+                    <i class="menu-icon tf-icons bx bx-file"></i>  {{-- Ikon Pelaporan --}}
+                    <div data-i18n="Analytics">Pelaporan</div>
                 </a>
             </li>
 

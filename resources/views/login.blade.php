@@ -6,10 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LOGIN {{ config('app.name') }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="{{ asset('LOGO_SENGKUYUNG/ICON_LOGO_SENGKUYUNG.png') }}">
     <style>
         body {
             /* background-color: #339BF1; */
-            background-image: url('/bali2.jpg');
+            background-image: url('/perambanan.avif');
             background-size: cover;
             background-position: center;
             display: flex;
@@ -61,7 +62,10 @@
                 {{ session('success') }}
             </div>
         @endif
-        <h2 class="text-center mb-4">LOGIN {{ config('app.name') }}</h2>
+        <h2 class="text-center mb-4">LOGIN</h2>
+        <img src="{{ asset('LOGO_SENGKUYUNG/LOGO_SENGKUYUNG.png') }}" alt="Logo {{ config('app.name') }}" class="img-fluid mx-auto d-block">
+        <br/>
+        <br/>
         <form id="loginForm" action="{{ route('login.action') }}" method="POST">
             @csrf
             <div class="mb-3">

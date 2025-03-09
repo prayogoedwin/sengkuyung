@@ -27,8 +27,10 @@ class SengPendataanKendaraanController extends Controller
     
     public function index(Request $request)
     {
+        $user = Auth::user();
         $perPage = $request->input('per_page', 10); // Default 10 item per halaman
-        $data = SengPendataanKendaraan::paginate($perPage);
+        // $data = SengPendataanKendaraan::paginate($perPage);
+        $data = SengPendataanKendaraan::where('created_by', $user->id)->paginate($perPage);
     
         // Encode ID pada setiap item
         $data->getCollection()->transform(function ($item) {

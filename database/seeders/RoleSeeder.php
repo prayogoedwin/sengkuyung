@@ -13,26 +13,48 @@ class RoleSeeder extends Seeder
      */
     public function run(): void
     {
-        // Membuat permission jika belum ada
-        $permission = Permission::firstOrCreate(['name' => 'role-access']);
-        
-        // Membuat role jika belum ada dan memberi permission ke role
-        $roles = [
-            'super-admin',
-            'admin',
-            'kabkota',
-            'kecamatan',
-            'kelurahan',
-            'rw',
-            'rt'
+        // Daftar permission yang tersedia di kedua guard
+        $permissions = [
+            'role-access'
         ];
 
-        foreach ($roles as $roleName) {
-            // Membuat role baru jika belum ada
-            $role = Role::firstOrCreate(['name' => $roleName]);
+        foreach ($permissions as $permissionName) {
+            foreach (['web', 'api'] as $guard) {
+                Permission::firstOrCreate([
+                    'name' => $permissionName,
+                    'guard_name' => $guard
+                ]);
+            }
+        }
 
-            // Menambahkan permission ke role
-            $role->givePermissionTo($permission);
+        // Daftar role dan guardnya
+        $roles = [
+            'super-admin' => ['web'],
+            'admin'       => ['web'],
+            'uptd'        => ['web'],
+            'kabkota'     => ['web'],
+            'kecamatan'   => ['web'],
+            'kelurahan'   => ['web'],
+            'petugas'     => ['web', 'api'], // Petugas bisa di Web & API
+        ];
+
+        foreach ($roles as $roleName => $guards) {
+            foreach ($guards as $guard) {
+                // Buat role dengan guard yang sesuai
+                $role = Role::firstOrCreate([
+                    'name' => $roleName,
+                    'guard_name' => $guard
+                ]);
+
+                // Ambil permission yang sesuai dengan guard
+                $permission = Permission::where('name', 'role-access')
+                    ->where('guard_name', $guard)
+                    ->first();
+
+                if ($permission) {
+                    $role->givePermissionTo($permission);
+                }
+            }
         }
     }
 }

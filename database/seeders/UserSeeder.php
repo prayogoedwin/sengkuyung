@@ -13,17 +13,25 @@ class UserSeeder extends Seeder
     public function run()
     {
         // Membuat Role Super Admin jika belum ada
-        $role = Role::firstOrCreate(['name' => 'super-admin']);
+        $superAdminRole = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
+        $petugasWebRole = Role::firstOrCreate(['name' => 'petugas', 'guard_name' => 'web']);
+        $petugasApiRole = Role::firstOrCreate(['name' => 'petugas', 'guard_name' => 'api']);
 
         // Membuat User Super Admin
-        $user = User::create([
+        $superAdmin = User::create([
             'name' => 'Super Admin',
             'email' => 'superadmin@example.com',
-            'password' => bcrypt('password123'),  // Ganti dengan password yang lebih aman
+            'password' => bcrypt('password123'), // Ganti dengan password yang lebih aman
         ]);
+        $superAdmin->assignRole($superAdminRole);
 
-        // Memberikan Role Super Admin pada user
-        $user->assignRole('super-admin');
+        // Membuat User Petugas
+        $petugas = User::create([
+            'name' => 'Petugas',
+            'email' => 'petugas@example.com',
+            'password' => bcrypt('password123'), // Ganti dengan password yang lebih aman
+        ]);
+        $petugas->assignRole($petugasWebRole, $petugasApiRole);
     }
 }
 

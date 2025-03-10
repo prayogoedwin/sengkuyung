@@ -67,11 +67,11 @@ Langkah-langkah untuk menginstal dan menjalankan proyek:
 9. Pull:
    ```bash
    git pull origin master
-   
+
 
 10. Copy .env.example ke .env:
    ```bash
-   cp .env.example .env 
+   cp .env.example .env && exit
 
 11. Update isi .env dengan:
    

@@ -1,4 +1,4 @@
-# MINI LARAVEL STARTER
+# SENGKUYUNG FROM MINI LARAVEL STARTER
 
 App ini adalah laravel starter dengan fitur paling minimal, ditujukan untuk kebutuhan pribadi yang butuh cepat dari install laravel (11), templating blade, hingga crud user dasar
 

@@ -70,7 +70,7 @@ Langkah-langkah untuk menginstal dan menjalankan proyek:
 
 10. Copy `.env.example` ke `.env` dan keluar dari terminal:
     ```bash
-    cp .env.example .env && exit
+    cp .env.example .env 
     ```
 
 11. Update isi `.env` dengan:
@@ -84,7 +84,7 @@ Langkah-langkah untuk menginstal dan menjalankan proyek:
 
 12. Jalankan `composer install`:
    ```bash
-   composer install && exit
+   composer install 
    ```
 
 13. Generate key:

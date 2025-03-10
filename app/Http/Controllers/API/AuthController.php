@@ -78,7 +78,7 @@ class AuthController extends Controller
         $kelurahan = $user->wilayah; // Relasi ke SengWilayah
         $kodeWilayah = $kelurahan->id ?? null; // Kode wilayah kelurahan
 
-        if ($kodeWilayah) {
+        // if ($kodeWilayah) {
             // Query satu kali dengan LIKE
             $wilayahData = SengWilayah::where('id', 'LIKE', substr($kodeWilayah, 0, 2) . '%')
                 ->orWhere('id', 'LIKE', substr($kodeWilayah, 0, 4) . '%')
@@ -92,7 +92,7 @@ class AuthController extends Controller
             $responseData['nama_kecamatan'] = $wilayahData[substr($kodeWilayah, 0, 6)]->nama ?? null;
             $responseData['nama_kota'] = $wilayahData[substr($kodeWilayah, 0, 4)]->nama ?? null;
             $responseData['nama_provinsi'] = $wilayahData[substr($kodeWilayah, 0, 2)]->nama ?? null;
-        }
+        // }
 
         return response()->json([
             'status' => true,

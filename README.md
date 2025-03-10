@@ -82,7 +82,7 @@ Langkah-langkah untuk menginstal dan menjalankan proyek:
    - DB_USERNAME=root
    - DB_PASSWORD=
 
-12. Jalankan composer install:
+12. Jalankan `composer install`:
    ```bash
    composer install
 

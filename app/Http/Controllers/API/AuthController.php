@@ -79,14 +79,19 @@ class AuthController extends Controller
         $kodeWilayah = $kelurahan->id ?? null; // Kode wilayah kelurahan
 
         if ($kodeWilayah) {
-            $kecamatan = SengWilayah::where('id', substr($kodeWilayah, 0, 6))->first();
-            $kota = SengWilayah::where('id', substr($kodeWilayah, 0, 4))->first();
-            $provinsi = SengWilayah::where('id', substr($kodeWilayah, 0, 2))->first();
+            // Query satu kali dengan LIKE
+            $wilayahData = SengWilayah::where('id', 'LIKE', substr($kodeWilayah, 0, 2) . '%')
+                ->orWhere('id', 'LIKE', substr($kodeWilayah, 0, 4) . '%')
+                ->orWhere('id', 'LIKE', substr($kodeWilayah, 0, 6) . '%')
+                ->orWhere('id', $kodeWilayah)
+                ->get()
+                ->keyBy('id'); // Mengelompokkan hasil berdasarkan ID
 
-            $responseData['nama_kelurahan'] = $kelurahan->nama ?? null;
-            $responseData['nama_kecamatan'] = $kecamatan->nama ?? null;
-            $responseData['nama_kota'] = $kota->nama ?? null;
-            $responseData['nama_provinsi'] = $provinsi->nama ?? null;
+            // Masukkan ke responseData
+            $responseData['nama_kelurahan'] = $wilayahData[$kodeWilayah]->nama ?? null;
+            $responseData['nama_kecamatan'] = $wilayahData[substr($kodeWilayah, 0, 6)]->nama ?? null;
+            $responseData['nama_kota'] = $wilayahData[substr($kodeWilayah, 0, 4)]->nama ?? null;
+            $responseData['nama_provinsi'] = $wilayahData[substr($kodeWilayah, 0, 2)]->nama ?? null;
         }
 
         return response()->json([

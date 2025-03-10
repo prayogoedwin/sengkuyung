@@ -68,13 +68,12 @@ Langkah-langkah untuk menginstal dan menjalankan proyek:
    ```bash
    git pull origin master
 
-
-10. Copy .env.example ke .env:
-   ```bash
-   cp .env.example .env
+10. Copy `.env.example` ke `.env` dan keluar dari terminal:
+    ```bash
+    cp .env.example .env && exit
     ```
 
-11. Update isi .env dengan:
+11. Update isi `.env` dengan:
    
    - DB_CONNECTION=mysql
    - DB_HOST=127.0.0.1

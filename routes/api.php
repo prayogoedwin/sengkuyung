@@ -12,6 +12,7 @@ use App\Http\Middleware\LogActivity;
 
 Route::post('/login', [AuthController::class, 'login']);
 
+
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
 // })->middleware('auth:sanctum');
@@ -35,6 +36,7 @@ Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware(['auth-api'])->group(function () {
     Route::middleware([LogActivity::class])->group(function () {
+        // Route::apiResource('profil', [AuthController::class, 'show']);
         Route::apiResource('pendataan', SengPendataanKendaraanController::class);
         Route::apiResource('status', SengStatusController::class);
         Route::apiResource('status-verifikasi', SengStatusVerifikasiController::class);

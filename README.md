@@ -29,12 +29,13 @@ Langkah-langkah untuk menginstal dan menjalankan proyek:
    cp .env.example .env
 
 3. Update isi .env dengan:
-   DB_CONNECTION=mysql
-   DB_HOST=127.0.0.1
-   DB_PORT=3306
-   DB_DATABASE=db_sengkuyung
-   DB_USERNAME=root
-   DB_PASSWORD=
+   
+   - DB_CONNECTION=mysql
+   - DB_HOST=127.0.0.1
+   - DB_PORT=3306
+   - DB_DATABASE=db_sengkuyung
+   - DB_USERNAME=root
+   - DB_PASSWORD=
 
 4. Jalankan composer install:
    ```bash
@@ -47,3 +48,11 @@ Langkah-langkah untuk menginstal dan menjalankan proyek:
 6. Migrate
    ```bash
    php artisan migrate
+
+7. Seed
+   ```bash
+   php artisan db:seed --class=RoleSeeder
+   php artisan db:seed --class=UserSeeder
+   php artisan db:seed --class=StatusSeeder
+   php artisan db:seed --class=StatusVerifikasiSeeder
+   php artisan db:seed --class=SengStatusFileSeeder

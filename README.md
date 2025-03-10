@@ -23,3 +23,27 @@ Langkah-langkah untuk menginstal dan menjalankan proyek:
 1. Clone repositori ini:
    ```bash
    git clone https://github.com/prayogoedwin/mini-laravel-starter.git
+
+2. Copy .env.example ke .env:
+   ```bash
+   cp .env.example .env
+
+3. Update isi .env dengan:
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=db_sengkuyung
+   DB_USERNAME=root
+   DB_PASSWORD=
+
+4. Jalankan composer install:
+   ```bash
+   composer install
+
+5. Generate key laravel:
+   ```bash
+   php artisan key:generate
+
+6. Migrate
+   ```bash
+   php artisan migrate

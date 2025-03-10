@@ -5,6 +5,8 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\SengPendataanKendaraan;
+use App\Models\SengStatus;
+use App\Models\SengStatusVerifikasi;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
 use App\Helpers\Helper;
@@ -70,7 +72,12 @@ class SengPendataanKendaraanController extends Controller
         // $requestData = $request->all();
         // $requestData['created_by'] = $user->id;
 
+        $status = SengStatus::find($request->status);
+        $status_verifikasi = SengStatusVerifikasi::find($request->status_verifikasi);
+
         $requestData = array_merge($request->all(), [
+            'status_name' => $status->nama,
+            'status_verifikasi_name' => $status_verifikasi->nama,
             'created_by' => $user->id,
             'updated_by' => $user->id
         ]);
@@ -147,9 +154,14 @@ class SengPendataanKendaraanController extends Controller
         // Ambil user yang sedang login
         $user = Auth::user();
 
+        $status = SengStatus::find($request->status);
+        $status_verifikasi = SengStatusVerifikasi::find($request->status_verifikasi);
+
 
         // Merge request data dengan updated_by
         $requestData = array_merge($request->all(), [
+            'status_name' => $status->nama,
+            'status_verifikasi_name' => $status_verifikasi->nama,
             'updated_by' => $user->id
         ]);
 

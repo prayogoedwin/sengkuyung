@@ -25,10 +25,12 @@ Langkah-langkah untuk menginstal dan menjalankan proyek:
     ```bash
     mkdir -p public_html/sengkuyung/.ssh
     ssh-keygen -t rsa -b 4096 -f public_html/sengkuyung/.ssh/id_rsa -N ""
+    ```
 
 2. Jalankan dan copy id_rsa.pub:
    ```bash
    cat public_html/sengkuyung/.ssh/id_rsa.pub
+   ```
 
 
 3. Buka GitHub Repository
@@ -42,27 +44,32 @@ Langkah-langkah untuk menginstal dan menjalankan proyek:
    ```bash
    chmod 600 public_html/sengkuyung/.ssh/id_rsa
    chmod 644 public_html/sengkuyung/.ssh/id_rsa.pub
+   ```
 
 
 5. Buat atau edit file ~/.ssh/config untuk memastikan server menggunakan SSH key yang benar:
    ```bash
    nano ~/.ssh/config
+   ```
 
 6. Tambahkan baris berikut:
    ```bash
    Host github.com
    IdentityFile  public_html/sengkuyung/.ssh/id_rsa
    StrictHostKeyChecking no
+   ```
 
 7. Uji Koneksi 
    ```bash
    cd public_html/sengkuyung
    ssh -T git@github.com
+   ```
 
 
 8. Clone repositori ini:
    ```bash
    git clone git@github.com:prayogoedwin/sengkuyung.git
+   ```
 
 9. Pull:
    ```bash
@@ -94,6 +101,7 @@ Langkah-langkah untuk menginstal dan menjalankan proyek:
 14. Migrate
    ```bash
    php artisan migrate
+   ```
 
 15. Seed
    ```bash
@@ -102,14 +110,17 @@ Langkah-langkah untuk menginstal dan menjalankan proyek:
    php artisan db:seed --class=StatusSeeder
    php artisan db:seed --class=StatusVerifikasiSeeder
    php artisan db:seed --class=SengStatusFileSeeder
+   ```
 
 16. Arahkan path domain ke /public
-17. Copy .env.example ke .env:
+17. Copy  `.env.example` ke `.env`:
    ```bash
    cp .htaccess.example .htaccess
+   ```
 
 18. Optimize:
    ```bash
    php artisan optimize:clear
+   ```
 
 19. Buka domain!

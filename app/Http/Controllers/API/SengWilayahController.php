@@ -13,6 +13,14 @@ class SengWilayahController extends Controller
 {
     public function index(Request $request)
     {
+
+        if ($request->has('kode') && !empty($request->kode)) {
+            
+            $info = SengWilayah::find($request->kode)->nama;
+            $keterangan = $info;
+
+        }
+
         $query = SengWilayah::query();
 
         // Cek apakah parameter kode ada dan tidak kosong
@@ -30,13 +38,12 @@ class SengWilayahController extends Controller
                 'kode' => $item->kode,
                 'nama' => $item->nama,
                 'id_up' => $item->id_up,
-                // Tambahkan field lain yang diperlukan
             ];
         });
 
         return response()->json([
             'status' => true,
-            'message' => 'List data ditemukan',
+            'message' => 'List data ditemukan: '.$keterangan,
             'data' => $data
         ]);
     }

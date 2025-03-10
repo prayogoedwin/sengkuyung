@@ -50,4 +50,9 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function wilayah()
+    {
+        return $this->belongsTo(SengWilayah::class, 'kelurahan', 'id');
+    }
 }

@@ -31,17 +31,18 @@ class SengPendataanKendaraanController extends Controller
         $perPage = $request->input('per_page', 10); // Default 10 item per halaman
         // $data = SengPendataanKendaraan::paginate($perPage);
         $data = SengPendataanKendaraan::where('created_by', $user->id)->paginate($perPage);
-    
-        // Encode ID pada setiap item
-        $data->getCollection()->transform(function ($item) {
-            $item->id = Helper::encodeId($item->id);
-            return $item;
+
+         // Ubah ke array sebelum mengubah ID
+        $items = collect($data->items())->map(function ($item) {
+            $itemArray = $item->toArray(); // Konversi ke array
+            $itemArray['id'] = Helper::encodeId($itemArray['id']); // Encode ID
+            return $itemArray;
         });
-    
+
         return response()->json([
             'status' => true,
             'message' => 'List data ditemukan',
-            'data' => $data->items(), // Data hasil pagination
+            'data' => $items, // Data hasil pagination yang sudah dimodifikasi
             'pagination' => [
                 'current_page' => $data->currentPage(),
                 'last_page' => $data->lastPage(),
@@ -51,8 +52,7 @@ class SengPendataanKendaraanController extends Controller
                 'prev_page_url' => $data->previousPageUrl(),
             ]
         ]);
-    }
-    
+    }  
 
     // Store a new record
     public function store(Request $request)

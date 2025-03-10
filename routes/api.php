@@ -6,6 +6,7 @@ use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\SengPendataanKendaraanController;
 use App\Http\Controllers\API\SengStatusController;
 use App\Http\Controllers\API\SengStatusVerifikasiController;
+use App\Http\Controllers\API\SengWilayahController;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Middleware\LogActivity;
 
@@ -37,6 +38,7 @@ Route::middleware(['auth-api'])->group(function () {
         Route::apiResource('pendataan', SengPendataanKendaraanController::class);
         Route::apiResource('status', SengStatusController::class);
         Route::apiResource('status-verifikasi', SengStatusVerifikasiController::class);
+        Route::apiResource('wilayah', SengWilayahController::class);
     });
 });
 

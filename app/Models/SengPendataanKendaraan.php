@@ -38,4 +38,10 @@ class SengPendataanKendaraan extends Model
     {
         return $this->belongsTo(SengStatusVerifikasi::class, 'status_verifikasi', 'id');
     }
+
+    public function wilayah()
+    {
+        return $this->belongsTo(SengWilayah::class, 'kec', 'id');
+    }
+    
 }

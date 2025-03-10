@@ -24,6 +24,15 @@ class LogActivity
         // if ($request->ajax() || $request->wantsJson()) {
         //     return $response;
         // }
+        $routeMiddleware = $request->route()->gatherMiddleware();
+
+        // Tentukan asal permintaan
+        $origin = 'unknown';
+        if (in_array('web', $routeMiddleware)) {
+            $origin = 'web';
+        } elseif (in_array('api', $routeMiddleware)) {
+            $origin = 'api';
+        }
 
         $log = new ActivityLog();
         $log->user_id = Auth::id();
@@ -43,6 +52,7 @@ class LogActivity
 
         $log->ip_address = $request->ip(); // Simpan IP address
         $log->created_at = now(); // Simpan waktu
+        $log->origin = $origin; // Simpan asal permintaan
         $log->save();
 
         return $response;

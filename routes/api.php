@@ -4,7 +4,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\SengPendataanKendaraanController;
+use App\Http\Controllers\API\SengStatusController;
+use App\Http\Controllers\API\SengStatusVerifikasiController;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Middleware\LogActivity;
 
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -23,7 +26,17 @@ Route::post('/login', [AuthController::class, 'login']);
 // });
 
 
-Route::middleware(['auth:sanctum', 'auth-api'])->group(function () {
-    Route::apiResource('pendataan', SengPendataanKendaraanController::class);
+// Route::middleware([ 'auth-api'])->group(function () {
+//     Route::apiResource('pendataan', SengPendataanKendaraanController::class);
+//     Route::apiResource('status', SengStatusController::class);
+//     Route::apiResource('status-verifikasi', SengStatusVerifikasiController::class);
+// });
+
+Route::middleware(['auth-api'])->group(function () {
+    Route::middleware([LogActivity::class])->group(function () {
+        Route::apiResource('pendataan', SengPendataanKendaraanController::class);
+        Route::apiResource('status', SengStatusController::class);
+        Route::apiResource('status-verifikasi', SengStatusVerifikasiController::class);
+    });
 });
 

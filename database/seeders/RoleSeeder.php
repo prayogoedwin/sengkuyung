@@ -35,7 +35,8 @@ class RoleSeeder extends Seeder
             'kabkota'     => ['web'],
             'kecamatan'   => ['web'],
             'kelurahan'   => ['web'],
-            'petugas'     => ['web', 'api'], // Petugas bisa di Web & API
+            'petugas'     => ['web', 'api'], // Petugas bisa di Web & API,
+            'sistem'      => ['api'],
         ];
 
         foreach ($roles as $roleName => $guards) {

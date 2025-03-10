@@ -23,7 +23,9 @@ class UserController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $users = User::select('*');
+            // $users = User::select('*')->where('email != ');
+            $users = User::select('*')->where('email', '!=', 'superadmin@example.com')->get();
+
             return DataTables::of($users)
                 ->addIndexColumn()
                 ->addColumn('user_name', function ($user) {

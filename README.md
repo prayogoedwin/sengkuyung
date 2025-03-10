@@ -71,7 +71,8 @@ Langkah-langkah untuk menginstal dan menjalankan proyek:
 
 10. Copy .env.example ke .env:
    ```bash
-   cp .env.example .env && exit
+   cp .env.example .env
+    ```
 
 11. Update isi .env dengan:
    

@@ -1,6 +1,6 @@
 # SENGKUYUNG FROM MINI LARAVEL STARTER
 
-App ini adalah laravel starter dengan fitur paling minimal, ditujukan untuk kebutuhan pribadi yang butuh cepat dari install laravel (11), templating blade, hingga crud user dasar
+Sengkuyung aplikasi berbasis web  dan api servis untuk mobile sengkuyung app by BAPENDA
 
 ## Fitur
 

@@ -115,7 +115,7 @@ Langkah-langkah untuk menginstal dan menjalankan proyek:
    ```
 
 16. Arahkan path domain ke /public
-17. Copy  `.env.example` ke `.env`:
+17. Pindah ke root project copy  `.env.example` ke `.env`:
    ```bash
    cp .htaccess.example .htaccess
    ```

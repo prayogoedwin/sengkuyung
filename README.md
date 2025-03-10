@@ -84,9 +84,8 @@ Langkah-langkah untuk menginstal dan menjalankan proyek:
 
 12. Jalankan `composer install`:
    ```bash
-   composer install
-   && exit
-    ```
+   composer install && exit
+   ```
 
 13. Generate key:
    ```bash

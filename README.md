@@ -74,6 +74,7 @@ Langkah-langkah untuk menginstal dan menjalankan proyek:
 9. Pull:
    ```bash
    git pull origin master
+   ```
 
 10. Copy `.env.example` ke `.env` dan keluar dari terminal:
     ```bash
@@ -97,6 +98,7 @@ Langkah-langkah untuk menginstal dan menjalankan proyek:
 13. Generate key:
    ```bash
    php artisan key:generate
+   ```
 
 14. Migrate
    ```bash

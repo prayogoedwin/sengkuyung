@@ -137,10 +137,16 @@ class SengPendataanKendaraanController extends Controller
             "{$file_ke}_ket" => $request->keterangan
         ]);
 
+        // Buat salinan data untuk response
+        $responseData = $data->toArray();
+        $responseData['id'] = Helper::encodeId($data->id);
+
+        $data->id = Helper::encodeId($data->id);
+
         return response()->json([
             'status' => true,
             'message' => 'File berhasil diunggah',
-            'data' => $data
+            'data' => $responseData
         ], 200);
     }
 

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
 use App\Helpers\Helper;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 use Illuminate\Support\Facades\Auth;
 
@@ -99,56 +100,67 @@ class SengPendataanKendaraanController extends Controller
     {
         // Decode ID dari request
         $decodedId = Helper::decodeId($id);
-
+    
         $validator = Validator::make($request->all(), [
             'file_ke' => 'required|string|in:file0,file1,file2,file3,file4,file5,file6,file7,file8,file9',
             'file' => 'required|file|max:2048', // Maksimum 2MB
             'keterangan' => 'required'
         ]);
-
+    
         if ($validator->fails()) {
-            return response()->json(['status' => false, 'message' => $validator->errors()], 400);
+            return response()->json(['status' => false, 'message' => $validator->errors()], Response::HTTP_BAD_REQUEST);
         }
-
+    
         $data = SengPendataanKendaraan::find($decodedId);
         if (!$data) {
-            return response()->json(['status' => false, 'message' => 'Data tidak ditemukan'], 404);
+            return response()->json(['status' => false, 'message' => 'Data tidak ditemukan'], Response::HTTP_NOT_FOUND);
         }
-
+    
         $user = Auth::user();
         $file_ke = $request->file_ke;
         $tahun = Carbon::now()->year;
         $timestamp = Carbon::now()->format('YmdHis'); // Format waktu
-
+    
         $file = $request->file('file');
-
-         // Dapatkan ekstensi asli file
         $extension = $file->getClientOriginalExtension();
-
-        // $nama_file = time() . '_' . $file->getClientOriginalName();
-        $nama_file = hash('sha256', $timestamp . $decodedId . $file->getClientOriginalName()) . '.' . $extension;
-
-        $path = $file->storeAs("uploads/$tahun", $nama_file, 'public');
-
+        $nama_file = hash('sha256', $timestamp . $decodedId . $request->keterangan) . '.' . $extension;
+        $path = "uploads/$tahun/$nama_file";
+    
+        // Ambil URL file lama dari database
+        $oldFileUrl = $data->{"{$file_ke}_url"};
+    
+        if ($oldFileUrl) {
+            // Ekstrak nama file dari URL (biasanya "storage/uploads/2024/nama_file.ext")
+            $oldFilePath = str_replace('storage/', '', $oldFileUrl);
+    
+            // Cek dan hapus file lama jika ada
+            if (Storage::disk('public')->exists($oldFilePath)) {
+                Storage::disk('public')->delete($oldFilePath);
+            }
+        }
+    
+        // Simpan file baru
+        $file->storeAs("uploads/$tahun", $nama_file, 'public');
+    
+        // Update database
         $data->update([
             'updated_by' => $user->id,
             $file_ke => $nama_file,
             "{$file_ke}_url" => "storage/$path",
             "{$file_ke}_ket" => $request->keterangan
         ]);
-
+    
         // Buat salinan data untuk response
         $responseData = $data->toArray();
         $responseData['id'] = Helper::encodeId($data->id);
-
-        $data->id = Helper::encodeId($data->id);
-
+    
         return response()->json([
             'status' => true,
             'message' => 'File berhasil diunggah',
             'data' => $responseData
-        ], 200);
+        ]);
     }
+
 
     // Show a single record
     public function show($id)

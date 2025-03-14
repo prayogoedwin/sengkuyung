@@ -18,8 +18,18 @@ class SengPendataanKendaraan extends Model
         'merk', 'tipe', 'tahun', 'tnkb', 'warna', 'jenis_kbm', 'jatuh_tempo',
         'pkb_pokok', 'pkb_denda', 'pkb', 'tanggal_akhir_Pkb',
         'jr_pokok', 'jr_denda', 'jr', 'pnbp_stnk', 'pnbp_tnkb', 'pnbp',
-        'is_setuju', 'ttd', 'status', 'status_name', 'status_verifikasi',
-        'status_verifikasi_name', 'created_by', 'updated_by', 'deleted_by'
+        'is_setuju', 'ttd', 'lat', 'lng', 'status', 'status_name', 'status_verifikasi',
+        'status_verifikasi_name', 'created_by', 'updated_by', 'deleted_by',
+        'file0', 'file0_url', 'file0_ket',
+        'file1', 'file1_url', 'file1_ket',
+        'file2', 'file2_url', 'file2_ket',
+        'file3', 'file3_url', 'file3_ket',
+        'file4', 'file4_url', 'file4_ket',
+        'file5', 'file5_url', 'file5_ket',
+        'file6', 'file6_url', 'file6_ket',
+        'file7', 'file7_url', 'file7_ket',
+        'file8', 'file8_url', 'file8_ket',
+        'file9', 'file9_url', 'file9_ket',
     ];
 
     protected $dates = ['deleted_at'];

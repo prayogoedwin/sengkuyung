@@ -10,6 +10,7 @@ use App\Models\SengStatusVerifikasi;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
 use App\Helpers\Helper;
+use Carbon\Carbon;
 
 use Illuminate\Support\Facades\Auth;
 
@@ -92,6 +93,55 @@ class SengPendataanKendaraanController extends Controller
         $data->id = Helper::encodeId($data->id);
 
         return response()->json(['status' => true, 'message' => 'Data berhasil ditambahkan', 'data' => $responseData], Response::HTTP_CREATED);
+    }
+
+    public function upload(Request $request, $id)
+    {
+        // Decode ID dari request
+        $decodedId = Helper::decodeId($id);
+
+        $validator = Validator::make($request->all(), [
+            'file_ke' => 'required|string|in:file0,file1,file2,file3,file4,file5,file6,file7,file8,file9',
+            'file' => 'required|file|max:2048', // Maksimum 2MB
+            'keterangan' => 'required'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()], 400);
+        }
+
+        $data = SengPendataanKendaraan::find($decodedId);
+        if (!$data) {
+            return response()->json(['status' => false, 'message' => 'Data tidak ditemukan'], 404);
+        }
+
+        $user = Auth::user();
+        $file_ke = $request->file_ke;
+        $tahun = Carbon::now()->year;
+        $timestamp = Carbon::now()->format('YmdHis'); // Format waktu
+
+        $file = $request->file('file');
+
+         // Dapatkan ekstensi asli file
+        $extension = $file->getClientOriginalExtension();
+
+        // $nama_file = time() . '_' . $file->getClientOriginalName();
+        $nama_file = hash('sha256', $timestamp . $decodedId . $file->getClientOriginalName()) . '.' . $extension;
+
+        $path = $file->storeAs("uploads/$tahun", $nama_file, 'public');
+
+        $data->update([
+            'updated_by' => $user->id,
+            $file_ke => $nama_file,
+            "{$file_ke}_url" => "storage/$path",
+            "{$file_ke}_ket" => $request->keterangan
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'File berhasil diunggah',
+            'data' => $data
+        ], 200);
     }
 
     // Show a single record

@@ -102,6 +102,30 @@
                                     </div>
                                 </div>
 
+                                <div class="col-sm-12">
+                                    <div class="form-group">
+                                        <label for="userRole" class="form-label">Samsat</label>
+                                        <select class="form-control" id="userUptd" name="uptd_id" required>
+                                            <option value="">Select Samsat</option>
+                                            @foreach ($samsats as $smst)
+                                                <option value="{{ $smst->id }}">{{ $smst->nama }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="col-sm-12">
+                                    <div class="form-group">
+                                        <label for="userRole" class="form-label">Kabkota</label>
+                                        <select class="form-control" id="userKabkota" name="kabkota_id" required>
+                                            <option value="">Select Kabkota</option>
+                                            @foreach ($kabkotas as $kbkt)
+                                                <option value="{{ $kbkt->id }}">{{ $kbkt->nama }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+
 
 
                                 <div class="col-sm-12 mt-3">

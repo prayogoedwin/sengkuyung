@@ -7,6 +7,8 @@ use App\Models\User;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Spatie\Permission\Models\Role;
+use App\Models\SengWilayah;
+use App\Models\WilayahSamsat;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Validator;
 
@@ -55,8 +57,16 @@ class UserController extends Controller
         }
 
         // Ambil data roles untuk dikirim ke view
-        $roles = Role::select('id', 'name')->get();
-        return view('backend.users.index',  compact('roles'));
+        $roles = Role::select('id', 'name')
+        ->whereIn('id', [2, 3, 4,7])
+        ->get();
+
+        $samsats = WilayahSamsat::select('*')->get();
+
+        $kabkotas = SengWilayah::select('*')
+        ->where('id_up', 33)
+        ->get();
+        return view('backend.users.index',  compact('roles', 'kabkotas', 'samsats'));
     }
 
     // Method untuk menyimpan data user baru

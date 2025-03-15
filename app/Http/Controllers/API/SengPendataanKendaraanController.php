@@ -153,6 +153,18 @@ class SengPendataanKendaraanController extends Controller
         // Buat salinan data untuk response
         $responseData = $data->toArray();
         $responseData['id'] = Helper::encodeId($data->id);
+        // $responseData["{$file_ke}_url"] = config('app.url') . '/' . $data["{$file_ke}_url"];
+
+        $baseUrl = config('app.url'); // Ambil BASE_URL dari .env
+
+        for ($i = 0; $i <= 9; $i++) {
+            $fileKey = "file{$i}_url";
+            
+            if (!empty($data[$fileKey])) {
+                $responseData[$fileKey] = $baseUrl . '/' . $data[$fileKey];
+            }
+        }
+
     
         return response()->json([
             'status' => true,
@@ -182,6 +194,16 @@ class SengPendataanKendaraanController extends Controller
         // Encode kembali ID sebelum dikirim
         $responseData = $data->toArray();
         $responseData['id'] = Helper::encodeId($data->id);
+
+        $baseUrl = config('app.url'); // Ambil BASE_URL dari .env
+
+        for ($i = 0; $i <= 9; $i++) {
+            $fileKey = "file{$i}_url";
+            
+            if (!empty($data[$fileKey])) {
+                $responseData[$fileKey] = $baseUrl . '/' . $data[$fileKey];
+            }
+        }
 
         return response()->json([
             'status' => true,

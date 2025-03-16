@@ -75,7 +75,7 @@ class SengPendataanKendaraanController extends Controller
         // $requestData['created_by'] = $user->id;
 
         $decodedStatus = Helper::decodeId($request->status);
-        $status = SengStatus::find($decodedStatu);
+        $status = SengStatus::find($decodedStatus);
         $status_verifikasi = SengStatusVerifikasi::find($request->status_verifikasi);
 
         $requestData = array_merge($request->all(), [

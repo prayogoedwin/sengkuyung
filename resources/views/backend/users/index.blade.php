@@ -102,10 +102,10 @@
                                     </div>
                                 </div>
 
-                                <div class="col-sm-12">
+                                <div class="col-sm-12 hidden" id="uptdContainer"  style="display: none;">
                                     <div class="form-group">
                                         <label for="userRole" class="form-label">Samsat</label>
-                                        <select class="form-control" id="userUptd" name="uptd_id" required>
+                                        <select class="form-control" id="userUptd" name="uptd_id">
                                             <option value="">Select Samsat</option>
                                             @foreach ($samsats as $smst)
                                                 <option value="{{ $smst->id }}">{{ $smst->nama }}</option>
@@ -114,15 +114,56 @@
                                     </div>
                                 </div>
 
-                                <div class="col-sm-12">
+                                <div class="col-sm-12 hidden" id="kabkotaContainer"  style="display: none;">
                                     <div class="form-group">
                                         <label for="userRole" class="form-label">Kabkota</label>
-                                        <select class="form-control" id="userKabkota" name="kabkota_id" required>
+                                        <select class="form-control" id="userKabkota" name="kabkota_id" >
                                             <option value="">Select Kabkota</option>
                                             @foreach ($kabkotas as $kbkt)
                                                 <option value="{{ $kbkt->id }}">{{ $kbkt->nama }}</option>
                                             @endforeach
                                         </select>
+                                    </div>
+                                </div>
+
+                                <div class="col-sm-12 hidden" id="districtContainer"  style="display: none;">
+                                    <div class="form-group">
+                                        <label for="userDistrict" class="form-label">Kecamatan</label>
+                                        <select class="form-control" id="userDistrict" name="district_id" >
+                                            <option value="">Select Kecamatan</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="col-sm-12  hidden" id="kelurahanContainer"  style="display: none;">
+                                    <div class="form-group">
+                                        <label class="floating-label" for="kelurahan">Kelurahan</label>
+                                        <input type="text" class="form-control" id="kelurahan" name="kelurahan"
+                                            placeholder="">
+                                    </div>
+                                </div>
+
+                                <div class="col-sm-12 hidden" id="rwContainer"  style="display: none;">
+                                    <div class="form-group">
+                                        <label class="floating-label" for="rw">RW</label>
+                                        <input type="text" class="form-control" id="rw" name="rw"
+                                            placeholder="">
+                                    </div>
+                                </div>
+
+                                <div class="col-sm-12 hidden" id="rtContainer"  style="display: none;">
+                                    <div class="form-group">
+                                        <label class="floating-label" for="rt">RT</label>
+                                        <input type="text" class="form-control" id="rt" name="rt"
+                                            placeholder="">
+                                    </div>
+                                </div>
+
+                                <div class="col-sm-12 hidden" id="alamatContainer"  style="display: none;">
+                                    <div class="form-group">
+                                        <label class="floating-label" for="rt">Alamat Lengkap</label>
+                                        <input type="text" class="form-control" id="alamat_lengkap" name="alamat_lengkap"
+                                            placeholder="">
                                     </div>
                                 </div>
 
@@ -175,7 +216,7 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <button type="submit" class="btn btn-primary" onclick="updateFaq()">Save Changes</button>
+                            <button type="submit" class="btn btn-primary" onclick="updateUser()">Save Changes</button>
                         </form>
                     </div>
                 </div>
@@ -215,6 +256,51 @@
                         searchable: false
                     },
                 ]
+            });
+        });
+    </script>
+
+    <script>
+        $(document).ready(function() {
+        // Function to hide all elements
+
+            function hideAllElements() {
+                $('#uptdContainer').hide();
+                $('#kabkotaContainer').hide();
+                $('#districtContainer').hide();
+                $('#kelurahanContainer').hide();
+                $('#rwContainer').hide();
+                $('#rtContainer').hide();
+                $('#alamatContainer').hide();
+            }
+    
+            // Call hideAllElements on page load
+            hideAllElements();
+
+            // Handle role change
+            $('#userRole').on('change', function() {
+                hideAllElements(); // Hide all elements first
+                var selectedRole = $(this).val();
+
+                if (selectedRole == 3) {
+                    $('#uptdContainer').show().find('select, input').attr('required', 'required');
+                } else if (selectedRole == 4) {
+                    $('#kabkotaContainer').show().find('select, input').attr('required', 'required');
+                } else if (selectedRole == 5) {
+                    $('#kabkotaContainer').show().find('select, input').attr('required', 'required');
+                    $('#districtContainer').show().find('select, input').attr('required', 'required');
+                } else if (selectedRole == 6) {
+                    $('#kabkotaContainer').show().find('select, input').attr('required', 'required');
+                    $('#districtContainer').show().find('select, input').attr('required', 'required');
+                    $('#kelurahanContainer').show().find('input').attr('required', 'required');
+                } else if (selectedRole == 7) {
+                    $('#kabkotaContainer').show().find('select, input').attr('required', 'required');
+                    $('#districtContainer').show().find('select, input').attr('required', 'required');
+                    $('#kelurahanContainer').show().find('input').attr('required', 'required');
+                    $('#rwContainer').show().find('input').attr('required', 'required');
+                    $('#rtContainer').show().find('input').attr('required', 'required');
+                    $('#alamatContainer').show().find('input').attr('required', 'required');
+                }
             });
         });
     </script>
@@ -304,7 +390,7 @@
     </script>
 
     <script>
-        function updateFaq() {
+        function updateUser() {
             // Get data from the modal form
             var id = $('#editAdminId').val();
             var name = $('#editName').val();
@@ -371,5 +457,39 @@
                 });
             }
         }
+    </script>
+
+    <script>
+        $(document).ready(function() {
+            $('#userKabkota').on('change', function() {
+                var kabkotaId = $(this).val();
+        
+                if (kabkotaId) {
+                    $.ajax({
+                        url: '{{ route("getDistricts") }}',
+                        type: 'GET',
+                        data: { kabkota_id: kabkotaId },
+                        success: function(response) {
+                            if (response.success) {
+                                var districts = response.districts;
+                                var options = '<option value="">Select Kecamatan</option>';
+                                $.each(districts, function(index, district) {
+                                    options += '<option value="' + district.id + '">' + district.nama + '</option>';
+                                });
+                                $('#userDistrict').html(options);
+                            } else {
+                                $('#userDistrict').html('<option value="">No districts found</option>');
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error fetching districts:', error);
+                            $('#userDistrict').html('<option value="">Error fetching districts</option>');
+                        }
+                    });
+                } else {
+                    $('#userDistrict').html('<option value="">Select District</option>');
+                }
+            });
+        });
     </script>
 @endpush

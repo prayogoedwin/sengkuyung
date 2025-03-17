@@ -11,6 +11,7 @@ use App\Models\SengWilayah;
 use App\Models\WilayahSamsat;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 
 
 // class UserController extends Controller implements HasMiddleware
@@ -91,6 +92,14 @@ class UserController extends Controller
             'email' => $request->email,
             'whatsapp' => $request->whatsapp,
             'password' => bcrypt($request->name), // Set password default atau sesuai logika Anda
+            'uptd_id' =>  $request->uptd_id,
+            'provinsi' =>  $request->kabkota_id,
+            'kota' =>  $request->kabkota_id,
+            'kecamatan' =>  $request->district_id,
+            'kelurahan' =>  $request->kelurahan,
+            'rw' =>  $request->rw,
+            'rt' =>  $request->rt,
+            'alamat_lengkap' =>  $request->alamat_lengkap
         ]);
 
         // Menambahkan role ke user
@@ -174,9 +183,11 @@ class UserController extends Controller
 
             if ($user) {
                 // Set is_deleted = 1 untuk soft delete user
-                $user->is_deleted = 1;
+                // $user->is_deleted = 1;
+                $user->deleted_by = 1;
+                $user->deleted_at = Carbon::now();
                 $user->save();  // Simpan perubahan
-                $user->delete();
+                // $user->delete();
             }
 
             return response()->json(['success' => true, 'message' => 'Hapus data berhasil']);

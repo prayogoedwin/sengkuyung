@@ -30,12 +30,20 @@
                                                             <td>{{ $data->alamat }}</td>
                                                         </tr>
                                                         <tr>
+                                                            <th>Provinsi</th>
+                                                            <td>{{ $data->prov_name }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Kabupaten/Kota</th>
+                                                            <td>{{ $data->kota_name }}</td>
+                                                        </tr>
+                                                        <tr>
                                                             <th>Kecamatan</th>
-                                                            <td>{{ $data->kecamatan }}</td>
+                                                            <td>{{ $data->kec_name }}</td>
                                                         </tr>
                                                         <tr>
                                                             <th>Kelurahan</th>
-                                                            <td>{{ $data->kelurahan }}</td>
+                                                            <td>{{ $data->desa_name }}</td>
                                                         </tr>
                                                         <tr>
                                                             <th>NPWPD/NIK</th>

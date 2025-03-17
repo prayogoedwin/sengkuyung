@@ -40,6 +40,7 @@ class SengPendataanKendaraanController extends Controller
         $items = collect($data->items())->map(function ($item) {
             $itemArray = $item->toArray(); // Konversi ke array
             $itemArray['id'] = Helper::encodeId($itemArray['id']); // Encode ID
+            $itemArray['created_at'] = Carbon::parse($itemArray['created_at'])->format('Y-m-d H:i:s');
             return $itemArray;
         });
 

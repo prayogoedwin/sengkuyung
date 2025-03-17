@@ -17,7 +17,7 @@
 
                                         <div class="row">
                                             <!-- Data Subjek Pajak -->
-                                            <div class="col-md-6">
+                                            <div class="col-md-6 mb-4">
                                                 <h5 class="fw-bold">DATA SUBJEK PAJAK</h5>
                                                 <table class="table table-bordered">
                                                     <tbody>
@@ -78,23 +78,47 @@
                                             <!-- Lokasi Geotagging & Verifikasi -->
                                             <div class="col-md-6">
                                                 <h5 class="fw-bold">LOKASI GEOTAGGING GMAPS</h5>
-                                                <p>LAMPIRAN FOTO KTP</p>
-                                                <p>LAMPIRAN FOTO KENDARAAN</p>
-                                                <p>LAMPIRAN FOTO DATA DUKUNG</p>
-                                                <p>LAMPIRAN SURAT PERNYATAAN</p>
-                        
+                                                <table class="table table-bordered">
+                                                    <tr>
+                                                        <th width="30%">Koordinat</th>
+                                                        <td>
+                                                            <a href="https://www.google.com/maps?q={{ $data->lat }},{{ $data->lng }}" target="_blank">
+                                                                {{ $data->lat }}, {{ $data->lng }}
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                    
+                                                </table>
+
+
+                                                <h5 class="fw-bold mt-4">LAMPIRAN</h5>
+                                                <table class="table table-bordered">
+                                                    <tr>
+                                                        <th width="30%">{{ $data->file0_ket }}</th>
+                                                        <td><a href="{{ asset($data->file0_url) }}" target="BLANK_"><img src="{{ asset($data->file0_url) }}" alt="{{ $data->file0_ket }}" style="width: 50%;"></a></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>{{ $data->file1_ket }}</th>
+                                                        <td><a href="{{ asset($data->file1_url) }}" target="BLANK_"><img src="{{ asset($data->file1_url) }}" alt="{{ $data->file1_ket }}" style="width: 50%;"></a></td>
+                                                    </tr>
+                                                   
+                                                </table>
+
                                                 <h5 class="fw-bold mt-4">VERIFIKASI STATUS KENDARAAN</h5>
-                                                <p>No Polisi : </p>
-                                                <p>Tgl Pendataan : </p>
-                                                <p>Status Objek Pajak : </p>
-                        
-                                                <div class="d-flex align-items-center">
-                                                    <input type="text" class="form-control me-2" readonly>
-                                                    <button class="btn btn-danger">DITOLAK</button>
-                                                </div>
-                        
-                                                <label class="mt-2">Alasan* (Bila ditolak)</label>
-                                                <textarea class="form-control" rows="2"></textarea>
+                                                <table class="table table-bordered">
+                                                    <tr>
+                                                        <th width="30%">Status</th>
+                                                        <td>{{ $data->status_name }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th width="30%">Status Verifikasi</th>
+                                                        <td>{{ $data->status_verifikasi_name }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th>Keterangan</th>
+                                                        <td>{{ $data->keterangan }}</td>
+                                                    </tr>
+                                                </table>
                                             </div>
                                         </div>
                         

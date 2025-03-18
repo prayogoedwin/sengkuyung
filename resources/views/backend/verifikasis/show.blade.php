@@ -153,7 +153,11 @@
                                                         </tr>
                                                         <tr>
                                                             <th>Keterangan</th>
-                                                            <td>{{ $data->keterangan }}</td>
+                                                            <td>
+                                                                <textarea name="keterangan">
+                                                                {{ $data->keterangan }}
+                                                                </textarea>
+                                                            </td>
                                                         </tr>
                                                         <tr>
                                                             <th colspan=2 style="text-align:right"> <button type="submit" class="btn btn-primary">Update Status</button></th>

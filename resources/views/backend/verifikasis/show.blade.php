@@ -166,7 +166,7 @@
                                         </div>
                         
                                         <!-- Tombol Aksi -->
-                                        <div class="d-flex justify-content-end mt-4">
+                                        <div class="d-flex justify-content-end mt-4" hidden>
                                             <button class="btn btn-warning me-2">Batal</button>
                                             <button class="btn btn-info text-white">Simpan</button>
                                         </div>

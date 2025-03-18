@@ -121,7 +121,7 @@
                                                             <td>{{ $data->status_name }}</td>
                                                         </tr>
                                                         <tr>
-                                                            <th width="30%">STATUS VERIF</th>
+                                                            <th width="30%">VERIFIKASI</th>
                                                             <td>
                                                                 {{-- {{ $data->status_verifikasi_name }} --}}
                                                                 <input  type="hidden" name="id" value="{{ \App\Helpers\Helper::encodeId($data->id) }}">

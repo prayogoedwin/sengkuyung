@@ -154,9 +154,7 @@
                                                         <tr>
                                                             <th>Keterangan</th>
                                                             <td>
-                                                                <textarea name="keterangan">
-                                                                {{ $data->keterangan }}
-                                                                </textarea>
+                                                                <textarea name="keterangan" style="widht:100%">{{ $data->file9_ket }}</textarea>
                                                             </td>
                                                         </tr>
                                                         <tr>

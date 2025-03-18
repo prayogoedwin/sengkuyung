@@ -104,7 +104,7 @@ class VerifikasiController extends Controller
         // Update the status_verifikasi field
         $data->status_verifikasi = $request->status_verifikasi_id;
         $data->status_verifikasi_name = $status_verifikasi->nama;
-        $data->keterangan = $request->keterangan;
+        $data->file9_ket = $request->keterangan;
 
         // Save the changes
         if ($data->save()) {

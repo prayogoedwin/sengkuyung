@@ -113,20 +113,55 @@
                                                 </table>
 
                                                 <h5 class="fw-bold mt-4">VERIFIKASI STATUS KENDARAAN</h5>
-                                                <table class="table table-bordered">
-                                                    <tr>
-                                                        <th width="30%">Status</th>
-                                                        <td>{{ $data->status_name }}</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <th width="30%">Status Verifikasi</th>
-                                                        <td>{{ $data->status_verifikasi_name }}</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <th>Keterangan</th>
-                                                        <td>{{ $data->keterangan }}</td>
-                                                    </tr>
-                                                </table>
+                                                <form action="{{ route('verifikasi.status') }}" method="POST"> <!-- Replace with your actual route -->
+                                                @csrf <!-- Include CSRF token for security -->
+                                                    <table class="table table-bordered">
+                                                        <tr>
+                                                            <th width="30%">STATUS</th>
+                                                            <td>{{ $data->status_name }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th width="30%">STATUS VERIF</th>
+                                                            <td>
+                                                                {{-- {{ $data->status_verifikasi_name }} --}}
+                                                                <input  type="hidden" name="id" value="{{ \App\Helpers\Helper::encodeId($data->id) }}">
+
+                                                                @php
+                                                                    // Determine the background color based on the status
+                                                                    $backgroundColor = '';
+                                                                    if ($data->status_verifikasi == 1) {
+                                                                        $backgroundColor = 'background-color: yellow; color: black;'; // Blue
+                                                                    } elseif ($data->status_verifikasi == 2) {
+                                                                        $backgroundColor = 'background-color: green; color: white;'; // green
+                                                                    } elseif ($data->status_verifikasi == 3) {
+                                                                        $backgroundColor = 'background-color: red; color: white;'; // Red
+                                                                    }
+                                                                @endphp
+
+                                                                <select class="form-control" id="statusVerifikasi" name="status_verifikasi_id" required  style="{{ $backgroundColor }}">
+                                                                    <option value="">PILIH STATUS</option>
+                                                                    @foreach ($status_verifikasis as $status)
+                                                                        <option value="{{ $status->id }}" 
+                                                                            {{ $data->status_verifikasi == $status->id ? 'selected' : '' }}>
+                                                                            {{ $status->nama }}
+                                                                        </option>
+                                                                    @endforeach
+                                                                </select>
+
+                                                            </td>
+
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Keterangan</th>
+                                                            <td>{{ $data->keterangan }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th colspan=2 style="text-align:right"> <button type="submit" class="btn btn-primary">Update Status</button></th>
+
+                                                        </tr>
+                                                    </table>
+                                                
+                                                </form>
                                             </div>
                                         </div>
                         

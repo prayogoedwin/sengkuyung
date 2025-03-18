@@ -70,6 +70,7 @@ class VerifikasiController extends Controller
 
         // Find data based on ID
         $data = SengPendataanKendaraan::find($decodedId);
+        $status_verifikasis = SengStatusVerifikasi::select('*')->get();
 
         // If data is not found
         if (!$data) {
@@ -80,6 +81,37 @@ class VerifikasiController extends Controller
         }
 
         // Return the view with the data
-        return view('backend.verifikasis.show',  compact('data'));
+        return view('backend.verifikasis.show',  compact('data', 'status_verifikasis'));
     }
+
+    public function verif(Request $request)
+    {
+        // Decode ID from request
+        $decodedId = Helper::decodeId($request->id);
+
+        // Find the record by the decoded ID
+        $data = SengPendataanKendaraan::find($decodedId);
+        $status_verifikasi = SengStatusVerifikasi::find($request->status_verifikasi_id);
+
+        // Check if the record exists
+        if (!$data) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Data tidak ditemukan'
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        // Update the status_verifikasi field
+        $data->status_verifikasi = $request->status_verifikasi_id;
+        $data->status_verifikasi_name = $status_verifikasi->nama;
+
+        // Save the changes
+        if ($data->save()) {
+            // Redirect to the detail page upon successful update
+            return redirect()->route('verifikasi-detail.index', ['id' => Helper::encodeId($data->id)])->with('success', 'Status updated successfully.');
+        } else {
+            return back()->with('error', 'Failed to update status.');
+        }
+    }
+
 }

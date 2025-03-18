@@ -20,7 +20,20 @@ class VerifikasiController extends Controller
     {
         if ($request->ajax()) {
 
-            $verifikasis = SengPendataanKendaraan::select('*')->where('email', '!=', 'superadmin@example.com')->get();
+            $userRole = auth()->user()->role; 
+            // Cari admin berdasarkan ID
+            $user = User::findOrFail(auth()->id());
+            $verifikasis = SengPendataanKendaraan::select('*')->get();
+            // Apply filters based on user role
+            if ($userRole == 1 || $userRole == 2) {
+                // No additional WHERE clause for roles 1 and 2
+            } elseif ($userRole == 4) {
+                // Add WHERE clause for role 4
+                $query->where('kota', $user->kota);
+            } elseif ($userRole == 7) {
+                // Add WHERE clause for role 7
+                $query->where('created_by', auth()->id());
+            }
 
             return DataTables::of($verifikasis)
                 ->addIndexColumn()

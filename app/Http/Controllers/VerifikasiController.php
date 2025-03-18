@@ -13,6 +13,7 @@ use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use App\Helpers\Helper;
+use App\Models\User;
 
 class VerifikasiController extends Controller
 {

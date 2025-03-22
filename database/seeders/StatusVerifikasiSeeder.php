@@ -15,7 +15,7 @@ class StatusVerifikasiSeeder extends Seeder
     public function run()
     {
         $statuses = [
-            'DIPROSES',
+            'MENUNGGU VERIFIKASI',
             'DIVERIFIKASI',
             'DITOLAK',
         ];

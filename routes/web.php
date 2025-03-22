@@ -8,6 +8,7 @@ use App\Http\Controllers\BackController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerifikasiController;
 use App\Http\Controllers\WilayahController;
+use App\Http\Controllers\RekapController;
 
 Route::middleware([LogActivity::class])->group(function () {
     Route::get('/your-route', [YourController::class, 'yourMethod']);
@@ -30,6 +31,8 @@ Route::middleware([LogActivity::class])->group(function () {
         // Route::get('/verifikasi', [BackController::class, 'verifikasi'])->name('verifikasi.index');
         // Route::get('/verifikasi-detail', [BackController::class, 'verifikasi_detail'])->name('verifikasi-detail.index');
         Route::get('/pelaporan', [BackController::class, 'pelaporan'])->name('pelaporan.index');
+
+        Route::get('/rekap', [RekapController::class, 'index'])->name('rekap.index');
 
 
         Route::get('/get-districts', [WilayahController::class, 'getDistricts'])->name('getDistricts');

@@ -212,6 +212,9 @@ class SengPendataanKendaraanController extends Controller
             }
         }
 
+         // Tambahkan URL surat pernyataan
+        $responseData['surat_pernyataan'] = $baseUrl . '/surat_pernyataan/' . Helper::encodeId($data->id);
+
         return response()->json([
             'status' => true,
             'message' => 'Data ditemukan',

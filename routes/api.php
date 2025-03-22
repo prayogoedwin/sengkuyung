@@ -8,6 +8,7 @@ use App\Http\Controllers\API\SengStatusController;
 use App\Http\Controllers\API\SengStatusVerifikasiController;
 use App\Http\Controllers\API\SengWilayahController;
 use App\Http\Controllers\API\SengStatusFileController;
+use App\Http\Controllers\API\RekapController;
 use Illuminate\Support\Facades\Auth;
 
 use App\Http\Middleware\LogActivity;
@@ -45,6 +46,7 @@ Route::middleware(['auth-api'])->group(function () {
         Route::apiResource('status-verifikasi', SengStatusVerifikasiController::class);
         Route::apiResource('wilayah', SengWilayahController::class);
         Route::apiResource('status-file', SengStatusFileController::class);
+        Route::get('rekap', [RekapController::class, 'index']);
     });
 });
 

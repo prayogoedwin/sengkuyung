@@ -24,16 +24,32 @@ class VerifikasiController extends Controller
             $userRole = auth()->user()->role; 
             // Cari admin berdasarkan ID
             $user = User::findOrFail(auth()->id());
-            $verifikasis = SengPendataanKendaraan::select('*')->get();
+            // $verifikasis = SengPendataanKendaraan::select('*')->get();
+            $verifikasis = SengPendataanKendaraan::query();
+
             // Apply filters based on user role
             if ($userRole == 1 || $userRole == 2) {
                 // No additional WHERE clause for roles 1 and 2
             } elseif ($userRole == 4) {
                 // Add WHERE clause for role 4
-                $query->where('kota', $user->kota);
+                $verifikasis->where('kota', $user->kota);
             } elseif ($userRole == 7) {
                 // Add WHERE clause for role 7
-                $query->where('created_by', auth()->id());
+                $verifikasis->where('created_by', auth()->id());
+            }
+
+            // Filter berdasarkan input dari form
+            if ($request->status_verifikasi_id) {
+                $verifikasis->where('status_verifikasi', $request->status_verifikasi_id);
+            }
+            if ($request->kabkota_id) {
+                $verifikasis->where('kota', $request->kabkota_id);
+            }
+            if ($request->district_id) {
+                $verifikasis->where('kec', $request->district_id);
+            }
+            if ($request->tanggal_start && $request->tanggal_end) {
+                $verifikasis->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
             }
 
             return DataTables::of($verifikasis)

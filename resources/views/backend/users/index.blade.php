@@ -94,7 +94,7 @@
                                     <div class="form-group">
                                         <label for="userRole" class="form-label">Role</label>
                                         <select class="form-control" id="userRole" name="role_id" required>
-                                            <option value="">Select Role</option>
+                                            <option value="">Pilih Role</option>
                                             @foreach ($roles as $role)
                                                 <option value="{{ $role->id }}">{{ $role->name }}</option>
                                             @endforeach
@@ -106,7 +106,7 @@
                                     <div class="form-group">
                                         <label for="userRole" class="form-label">Samsat</label>
                                         <select class="form-control" id="userUptd" name="uptd_id">
-                                            <option value="">Select Samsat</option>
+                                            <option value="">Pilih Samsat</option>
                                             @foreach ($samsats as $smst)
                                                 <option value="{{ $smst->id }}">{{ $smst->nama }}</option>
                                             @endforeach
@@ -118,7 +118,7 @@
                                     <div class="form-group">
                                         <label for="userRole" class="form-label">Kabkota</label>
                                         <select class="form-control" id="userKabkota" name="kabkota_id" >
-                                            <option value="">Select Kabkota</option>
+                                            <option value="">Pilih Kabkota</option>
                                             @foreach ($kabkotas as $kbkt)
                                                 <option value="{{ $kbkt->id }}">{{ $kbkt->nama }}</option>
                                             @endforeach
@@ -130,7 +130,7 @@
                                     <div class="form-group">
                                         <label for="userDistrict" class="form-label">Kecamatan</label>
                                         <select class="form-control" id="userDistrict" name="district_id" >
-                                            <option value="">Select Kecamatan</option>
+                                            <option value="">Pilih Kecamatan</option>
                                         </select>
                                     </div>
                                 </div>

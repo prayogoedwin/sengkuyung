@@ -41,32 +41,63 @@
                                 </div>
                             </div>
 
+                            <div class="row">
+                            
                             <div class="row" style="margin-bottom:14px">
-                            <div class="col-md-4">
-                                <label for="kabupaten1">Kabupaten</label>
-                                <select class="form-control" id="kabupaten1">
-                                    <option value="">Pilih Kabupaten</option>
-                                    <option value="kab1">Kabupaten 1</option>
-                                    <option value="kab2">Kabupaten 2</option>
-                                </select>
+
+                                <form method="GET" action="{{ route('dashboard') }}">
+                                    <div class="row">
+                                        <div class="col-md-2">
+                                            <label for="kabupaten1">Kabupaten</label>
+                                            <select class="form-control" id="userKabkota" name="kabkota_id">
+                                                <option value="">Pilih Kabkota</option>
+                                                @foreach ($kabkotas as $kbkt)
+                                                    <option value="{{ $kbkt->id }}" {{ request('kabkota_id') == $kbkt->id ? 'selected' : '' }}>
+                                                        {{ $kbkt->nama }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                        
+                                        <div class="col-md-2">
+                                            <label for="kecamatan">Kecamatan</label>
+                                            <select class="form-control" id="userDistrict" name="district_id">
+                                                <option value="">Pilih Kecamatan</option>
+                                            </select>
+                                        </div>
+                        
+                                        <div class="col-md-2">
+                                            <label for="status">Status</label>
+                                            <select id="statusVerifikasi" name="status_verifikasi_id" class="form-control">
+                                                <option value="">Pilih Status</option>
+                                                @foreach ($statuss as $status)
+                                                    <option value="{{ $status->id }}" {{ request('status_verifikasi_id') == $status->id ? 'selected' : '' }}>
+                                                        {{ $status->nama }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                        
+                                        <div class="col-md-2">
+                                            <label for="tanggal">Tanggal Start</label>
+                                            <input type="date" class="form-control" name="tanggal_start" value="{{ request('tanggal_start') }}">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label for="tanggal">Tanggal End</label>
+                                            <input type="date" class="form-control" name="tanggal_end" value="{{ request('tanggal_end') }}">
+                                        </div>
+                                        <div class="col-md-2 mt-4">
+                                            <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                                            <a href="{{ route('dashboard') }}" class="btn btn-secondary btn-sm"><i class="menu-icon tf-icons bx bx-refresh"></i></a>
+                                        </div>
+                                    </div>
+                                </form>
                             </div>
-                            <div class="col-md-4">
-                                <label for="kecamatan">Kecamatan</label>
-                                <select class="form-control" id="kecamatan">
-                                    <option value="">Pilih Kecamatan</option>
-                                    <option value="kab1">Kec 1</option>
-                                    <option value="kab2">Kec 2</option>
-                                </select>
+          
                             </div>
-                            <div class="col-md-4">
-                                <label for="status">Status</label>
-                                <select class="form-control" id="status">
-                                    <option value="">Pilih Status</option>
-                                    <option value="aktif">Aktif</option>
-                                    <option value="nonaktif">Nonaktif</option>
-                                </select>
-                            </div>
-                            </div>
+
+
+    
 
                           
 
@@ -83,8 +114,8 @@
                                                     </div>
 
                                                 </div>
-                                                <span class="fw-semibold d-block mb-1">Jumlah Pelaporan</span>
-                                                <h3 class="card-title mb-2">10</h3>
+                                                <span class="fw-semibold d-block mb-1">Jumlah Pendataan</span>
+                                                <h3 class="card-title mb-2">{{ $data['total'] }}</h3>
                                                 <!-- <small class="text-success fw-semibold"><i class="bx bx-up-arrow-alt"></i> +72.80%</small> -->
                                             </div>
                                         </div>
@@ -100,8 +131,8 @@
                                                     </div>
 
                                                 </div>
-                                                <span class="fw-semibold d-block mb-1">Pelaporan Hari Ini</span>
-                                                <h3 class="card-title mb-2">18x</h3>
+                                                <span class="fw-semibold d-block mb-1">Menunggu  Verifikasi</span>
+                                                <h3 class="card-title mb-2">{{ $data['menunggu_verifikasi'] }}</h3>
                                                 <!-- <small class="text-success fw-semibold"><i class="bx bx-up-arrow-alt"></i> +72.80%</small> -->
                                             </div>
                                         </div>
@@ -117,8 +148,8 @@
                                                     </div>
 
                                                 </div>
-                                                <span class="fw-semibold d-block mb-1">Pelaporan bulan ini</span>
-                                                <h3 class="card-title mb-2">2500x</h3>
+                                                <span class="fw-semibold d-block mb-1">Terverifikasi</span>
+                                                <h3 class="card-title mb-2">{{ $data['verifikasi'] }}</h3>
                                                 <!-- <small class="text-success fw-semibold"><i class="bx bx-up-arrow-alt"></i> +72.80%</small> -->
                                             </div>
                                         </div>
@@ -134,94 +165,24 @@
                                                     </div>
 
                                                 </div>
-                                                <span class="fw-semibold d-block mb-1">Pelaporan tahun ini</span>
-                                                <h3 class="card-title mb-2">19000x</h3>
+                                                <span class="fw-semibold d-block mb-1">Verifikasi Ditolak</span>
+                                                <h3 class="card-title mb-2">{{ $data['ditolak'] }}</h3>
                                                 <!-- <small class="text-success fw-semibold"><i class="bx bx-up-arrow-alt"></i> +72.80%</small> -->
                                             </div>
                                         </div>
                                     </div>
+
+                                   
 
                                 </div>
+
+                              
                             </div>
 
-                            {{-- <div class="col-lg-12 col-md-4 order-1">
-                                <div class="row">
-
-                                    <div class="col-lg-3 col-md-12 col-4 mb-4">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <div class="card-title d-flex align-items-start justify-content-between">
-                                                    <div class="avatar flex-shrink-0">
-                                                        <img src="{{ asset('assets/nakerbisa_be/img/icons/unicons/chart-success.png') }}"
-                                                            alt="chart success" class="rounded" />
-                                                    </div>
-
-                                                </div>
-                                                <span class="fw-semibold d-block mb-1">Jumlah Verifikasi</span>
-                                                <h3 class="card-title mb-2">10</h3>
-                                                <!-- <small class="text-success fw-semibold"><i class="bx bx-up-arrow-alt"></i> +72.80%</small> -->
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-lg-3 col-md-12 col-4 mb-4">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <div class="card-title d-flex align-items-start justify-content-between">
-                                                    <div class="avatar flex-shrink-0">
-                                                        <img src="{{ asset('assets/nakerbisa_be/img/icons/unicons/chart-success.png') }}"
-                                                            alt="chart success" class="rounded" />
-                                                    </div>
-
-                                                </div>
-                                                <span class="fw-semibold d-block mb-1">Verifikasi Hari Ini</span>
-                                                <h3 class="card-title mb-2">18x</h3>
-                                                <!-- <small class="text-success fw-semibold"><i class="bx bx-up-arrow-alt"></i> +72.80%</small> -->
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-lg-3 col-md-12 col-4 mb-4">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <div class="card-title d-flex align-items-start justify-content-between">
-                                                    <div class="avatar flex-shrink-0">
-                                                        <img src="{{ asset('assets/nakerbisa_be/img/icons/unicons/chart-success.png') }}"
-                                                            alt="chart success" class="rounded" />
-                                                    </div>
-
-                                                </div>
-                                                <span class="fw-semibold d-block mb-1">Verifikasi bulan ini</span>
-                                                <h3 class="card-title mb-2">2500x</h3>
-                                                <!-- <small class="text-success fw-semibold"><i class="bx bx-up-arrow-alt"></i> +72.80%</small> -->
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-lg-3 col-md-12 col-4 mb-4">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <div class="card-title d-flex align-items-start justify-content-between">
-                                                    <div class="avatar flex-shrink-0">
-                                                        <img src="{{ asset('assets/nakerbisa_be/img/icons/unicons/chart-success.png') }}"
-                                                            alt="chart success" class="rounded" />
-                                                    </div>
-
-                                                </div>
-                                                <span class="fw-semibold d-block mb-1">Verifikasi tahun ini</span>
-                                                <h3 class="card-title mb-2">19000x</h3>
-                                                <!-- <small class="text-success fw-semibold"><i class="bx bx-up-arrow-alt"></i> +72.80%</small> -->
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                </div>
-                            </div> --}}
-
+                   
                            
                         </div>
 
-                        <div id="chartContainer" class="mt-4" style="height: 400px;"></div>
                     </div>
                     <!-- / Content -->
                     
@@ -240,42 +201,43 @@
 
 @push('js')
 
-<script src="https://code.highcharts.com/highcharts.js"></script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
 <script>
     $(document).ready(function() {
-        let initialData = {
-            kabupaten1: 10,
-            kabupaten2: 5,
-            status: 16
-        };
+        var selectedKabkota = $('#userKabkota').val();
+        var selectedDistrict = '{{ request('district_id') }}';
 
-        let chart = Highcharts.chart('chartContainer', {
-            chart: { type: 'column' },
-            title: { text: 'Statistik Pelaporan ' },
-            xAxis: { categories: ['Kabupaten'] },
-            yAxis: { title: { text: 'Jumlah Pelaporan' } },
-            series: [
-                { name: 'Semarang', data: [initialData.kabupaten1] },
-                { name: 'Kudus', data: [initialData.kabupaten2] },
-                { name: 'Demak', data: [initialData.status] }
-            ]
+        if (selectedKabkota) {
+            loadDistricts(selectedKabkota, selectedDistrict);
+        }
+
+        $('#userKabkota').on('change', function() {
+            var kabkotaId = $(this).val();
+            loadDistricts(kabkotaId, null);
         });
 
-        $('#updateChart').click(function() {
-            let newData = {
-                kabupaten1: parseInt($('#kabupaten1').val()),
-                kabupaten2: parseInt($('#kabupaten2').val()),
-                status: parseInt($('#status').val())
-            };
-
-            chart.series[0].setData([newData.kabupaten1]);
-            chart.series[1].setData([newData.kabupaten2]);
-            chart.series[2].setData([newData.status]);
-        });
+        function loadDistricts(kabkotaId, selectedDistrict) {
+            if (kabkotaId) {
+                $.ajax({
+                    url: '{{ route("getDistricts") }}',
+                    type: 'GET',
+                    data: { kabkota_id: kabkotaId },
+                    success: function(response) {
+                        var options = '<option value="">Pilih Kecamatan</option>';
+                        $.each(response.districts, function(index, district) {
+                            var isSelected = (selectedDistrict == district.id) ? 'selected' : '';
+                            options += '<option value="' + district.id + '" ' + isSelected + '>' + district.nama + '</option>';
+                        });
+                        $('#userDistrict').html(options);
+                    },
+                    error: function() {
+                        $('#userDistrict').html('<option value="">Error fetching districts</option>');
+                    }
+                });
+            } else {
+                $('#userDistrict').html('<option value="">Pilih Kecamatan</option>');
+            }
+        }
     });
 </script>
-
 
 @endpush

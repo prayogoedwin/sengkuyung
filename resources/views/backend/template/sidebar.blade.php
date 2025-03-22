@@ -53,6 +53,13 @@
                 </a>
             </li>
 
+            <li class="menu-item {{ request()->routeIs('rekap.index') ? 'active' : '' }}">
+                <a href="{{ route('rekap.index') }}" class="menu-link">
+                    <i class="menu-icon tf-icons bx bx-bar-chart-alt-2"></i>  {{-- Ikon Rekap --}}
+                    <div data-i18n="Analytics">Rekap</div>
+                </a>
+            </li>
+
             
         @else
             <li class="menu-item {{ request()->routeIs('user.index') ? 'active' : '' }}">

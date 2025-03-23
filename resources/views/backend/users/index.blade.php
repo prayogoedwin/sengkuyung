@@ -209,7 +209,7 @@
                             </div>
                             <div class="mb-3">
                                 <label for="editRole" class="form-label">Role</label>
-                                <select class="form-control" id="editRole" name="role_id" required>
+                                <select class="form-control" id="editRole" name="role_id" required disabled>
                                     <option value="">Select Role</option>
                                     @foreach ($roles as $role)
                                         <option value="{{ $role->id }}">{{ $role->name }}</option>
@@ -327,8 +327,13 @@
                     data: formData,
                     success: function(response) {
                         if (response.success) {
-                            alert('User berhasil ditambahkan');
+                            // alert('User berhasil ditambahkan');
                             $('#modal-report').modal('hide');
+                            Swal.fire({
+                                title: "Berhasil!",
+                                text: response.message,
+                                icon: "success"
+                            });
                             location.reload(); // Refresh halaman
                         } else {
                             // If validation errors are found, display them in an alert
@@ -340,9 +345,21 @@
                                             '\n'; // Gabungkan pesan error
                                     });
                                 });
-                                alert('Terjadi kesalahan:\n' + errorMessages);
+                                // alert('Terjadi kesalahan:\n' + errorMessages);
+
+                                Swal.fire({
+                                    title: "Gagal!",
+                                    text: errorMessages,
+                                    icon: "error"
+                                });
                             } else {
-                                alert('Gagal menambahkan user');
+
+                                Swal.fire({
+                                    title: "Gagal!",
+                                    text: "Gagal tambah user",
+                                    icon: "error"
+                                });
+                                // alert('Gagal menambahkan user');
                             }
                         }
                     },
@@ -391,71 +408,97 @@
 
     <script>
         function updateUser() {
-            // Get data from the modal form
+            // Ambil data dari modal
             var id = $('#editAdminId').val();
             var name = $('#editName').val();
             var email = $('#editEmail').val();
             var whatsapp = $('#editWhatsapp').val();
-            var role_id = $('#editRole').val();
+            // var role_id = $('#editRole').val();
 
+            // Tutup modal sebelum menampilkan alert
+            $('#modal-edit').modal('hide');
 
-
-
-            // Send the data to the update route
+            // Kirim AJAX request
             $.ajax({
                 url: "{{ route('user.update', ':id') }}".replace(':id', id),
-                type: 'PUT',
+                type: 'POST',
                 data: {
-                    _token: "{{ csrf_token() }}", // CSRF token for security
+                    _token: "{{ csrf_token() }}",
                     name: name,
                     email: email,
                     whatsapp: whatsapp,
-                    role_id: role_id
+                    // role_id: role_id
                 },
                 success: function(response) {
-                    if (response.success) {
-                        // Display success message
-                        alert(response.message);
-                        // Close modal
-                        $('#modal-edit').modal('hide');
-                        // Optionally, reload the table or page to reflect the update
+                    Swal.fire({
+                        title: "Berhasil!",
+                        text: response.message,
+                        icon: "success",
+                        showConfirmButton: true
+                    }).then(() => {
+                        // Reload halaman setelah klik OK
                         location.reload();
-                    } else {
-                        // Display error message
-                        alert('Error: ' + response.message);
-                    }
+                    });
                 },
                 error: function(xhr) {
-                    alert('Error: ' + xhr.responseText);
+                    let errorMessage = "Terjadi kesalahan.";
+
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+
+                    Swal.fire({
+                        title: "Gagal!",
+                        text: errorMessage,
+                        icon: "error"
+                    });
                 }
             });
         }
     </script>
 
 
+
+    
     <script>
         function confirmDelete(adminId) {
-            // Konfirmasi penghapusan
             var deleteUrl = "{{ route('user.softdelete', ':id') }}".replace(':id', adminId);
-            if (confirm("Are you sure you want to delete this admin?")) {
-                // Kirim request ke server untuk menghapus data
-                $.ajax({
-                    url: deleteUrl,
-                    type: 'DELETE',
-                    data: {
-                        _token: $('meta[name="csrf-token"]').attr('content'), // Menyertakan CSRF token
-                    },
-                    success: function(response) {
-                        // Jika berhasil, reload DataTable
-                        alert(response.message); // Menampilkan pesan
-                        $('#simpletable').DataTable().ajax.reload(); // Reload data tabel
-                    },
-                    error: function(xhr, status, error) {
-                        // Tampilkan error jika ada masalah
-                        alert('Error: ' + xhr.responseText);
-                    }
-                });
-            }
+
+            Swal.fire({
+                title: "Konfirmasi Hapus",
+                text: "Apakah Anda yakin ingin menghapus admin ini?",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#d33",
+                cancelButtonColor: "#3085d6",
+                confirmButtonText: "Ya, Hapus!",
+                cancelButtonText: "Batal"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: deleteUrl,
+                        type: 'DELETE',
+                        data: {
+                            _token: $('meta[name="csrf-token"]').attr('content')
+                        },
+                        success: function(response) {
+                            Swal.fire({
+                                title: "Berhasil!",
+                                text: response.message,
+                                icon: "success"
+                            });
+                            $('#simpletable').DataTable().ajax.reload();
+                        },
+                        error: function(xhr) {
+                            Swal.fire({
+                                title: "Gagal!",
+                                text: xhr.responseJSON ? xhr.responseJSON.message : "Terjadi kesalahan.",
+                                icon: "error"
+                            });
+                        }
+                    });
+                }
+            });
         }
     </script>
 

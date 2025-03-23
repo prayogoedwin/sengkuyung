@@ -107,7 +107,7 @@ class UserController extends Controller
         $user->assignRole($role);
 
 
-        return response()->json(['success' => true]);
+        return response()->json(['success' => true, 'message' => 'Tambah data berhasil']);
     }
 
     public function getAdmin($id)
@@ -143,29 +143,24 @@ class UserController extends Controller
             if ($user->whatsapp != $request->whatsapp) {
                 // Validasi untuk 'wa'
                 $request->validate([
-                    'whatsapp' => 'required|string|unique:users|max:15', // Sesuaikan dengan format whatsapp
+                    'whatsapp' => 'required|string|max:15', // Sesuaikan dengan format whatsapp
                 ]);
             }
 
-            // Validasi untuk 'role_id'
-            $request->validate([
-                'role_id' => 'required|exists:roles,id', // Pastikan role ada di tabel roles
-            ]);
+         
 
 
             // Cari admin berdasarkan ID
             // $admin = UserAdmin::findOrFail($id);
 
             // Perbarui data user terkait (user yang memiliki ID user_id di UserAdmin)
-            $user = $admin->user;  // Ambil user yang terkait dengan admin ini
+            // $user = $user->user;  // Ambil user yang terkait dengan admin ini
             $user->update([
                 'name' => $request->name,
                 'email' => $request->email,
                 'whatsapp' => $request->whatsapp,
             ]);
 
-            // Perbarui role untuk user terkait
-            $user->roles()->sync([$request->role_id]);  // Sinkronkan role baru dengan user
 
             return response()->json(['success' => true, 'message' => 'update data berhasil.']);
         } catch (\Exception $e) {

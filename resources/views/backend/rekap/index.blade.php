@@ -10,43 +10,56 @@
                 <div class="content-wrapper">
                     <!-- Content -->
                     <div class="container-xxl flex-grow-1 container-p-y">
-                        <div class="row">
-                            
-                            <div class="row" style="margin-bottom:14px">
-                            <div class="col-md-4">
-                                <label for="kabupaten1">Kabupaten</label>
-                                <select class="form-control" id="userKabkota" name="kabkota_id" >
-                                    <option value="">Pilih Kabkota</option>
-                                    @foreach ($kabkotas as $kbkt)
-                                        <option value="{{ $kbkt->id }}">{{ $kbkt->nama }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="kecamatan">Kecamatan</label>
-                                <select class="form-control" id="userDistrict" name="district_id" >
-                                    <option value="">Pilih Kecamatan</option>
-                                    @if(request('kabkota_id'))
-                                        @foreach ($districts as $district)
-                                            <option value="{{ $district->id }}" {{ request('district_id') == $district->id ? 'selected' : '' }}>
-                                                {{ $district->nama }}
-                                            </option>
-                                        @endforeach
-                                    @endif
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="status">Status</label>
-                                <select id="statusVerifikasi" name="status_verifikasi_id" class="form-control">
-                                    <option value="">Pilih Status</option>
-                                    @foreach ($status_verifikasis as $status)
-                                        <option value="{{ $status->id }}">
-                                            {{ $status->nama }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            </div>
+                        <div class="row mb-5">
+                       
+
+                            <form method="GET" action="{{ route('rekap.index') }}">
+                                <div class="row">
+                                    <div class="col-md-2">
+                                        <label for="kabupaten1">Kabupaten</label>
+                                        <select class="form-control" id="userKabkota" name="kabkota_id">
+                                            <option value="">Pilih Kabkota</option>
+                                            @foreach ($kabkotas as $kbkt)
+                                                <option value="{{ $kbkt->id }}" {{ request('kabkota_id') == $kbkt->id ? 'selected' : '' }}>
+                                                    {{ $kbkt->nama }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                    
+                                    <div class="col-md-2">
+                                        <label for="kecamatan">Kecamatan</label>
+                                        <select class="form-control" id="userDistrict" name="district_id">
+                                            <option value="">Pilih Kecamatan</option>
+                                        </select>
+                                    </div>
+                    
+                                    <div class="col-md-2">
+                                        <label for="status">Status</label>
+                                        <select id="statusVerifikasi" name="status_verifikasi_id" class="form-control">
+                                            <option value="">Pilih Status</option>
+                                            @foreach ($statuss as $status)
+                                                <option value="{{ $status->id }}" {{ request('status_verifikasi_id') == $status->id ? 'selected' : '' }}>
+                                                    {{ $status->nama }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                    
+                                    <div class="col-md-2">
+                                        <label for="tanggal">Tanggal Start</label>
+                                        <input type="date" class="form-control" name="tanggal_start" value="{{ request('tanggal_start') }}">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label for="tanggal">Tanggal End</label>
+                                        <input type="date" class="form-control" name="tanggal_end" value="{{ request('tanggal_end') }}">
+                                    </div>
+                                    <div class="col-md-2 mt-4">
+                                        <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                                        <a href="{{ route('rekap.index') }}" class="btn btn-secondary btn-sm"><i class="menu-icon tf-icons bx bx-refresh"></i></a>
+                                    </div>
+                                </div>
+                            </form>
 
                           
 
@@ -54,6 +67,65 @@
 
                            
                         </div>
+
+                        <div class="row text-center">
+                            <div class="col-md-2 col-sm-3 col-6">
+                                <div class="card mb-2">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-title">Potensi Kend</h6>
+                                        <h4>{{ number_format($data['total']) }}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        
+                            <div class="col-md-2 col-sm-3 col-6">
+                                <div class="card mb-2">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-title">PKB</h6>
+                                        <h4>{{ number_format($data['pkb']) }}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        
+                            <div class="col-md-2 col-sm-3 col-6">
+                                <div class="card mb-2">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-title">PKB Denda</h6>
+                                        <h4>{{ number_format($data['pkb_denda']) }}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        
+                            <div class="col-md-2 col-sm-3 col-6">
+                                <div class="card mb-2">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-title">PNBP</h6>
+                                        <h4>{{ number_format($data['pnbp']) }}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        
+                        
+                            <div class="col-md-2 col-sm-3 col-6">
+                                <div class="card mb-2">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-title">Jasa Raharja</h6>
+                                        <h4>{{ number_format($data['jr']) }}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        
+                            <div class="col-md-2 col-sm-3 col-6">
+                                <div class="card mb-2">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-title"> Jasa Raharja Denda</h6>
+                                        <h4>{{ number_format($data['jr_denda']) }}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        
 
                         <div id="chartContainer" class="mt-4" style="height: 400px;"></div>
                     </div>
@@ -80,35 +152,40 @@
 
 <script>
     $(document).ready(function() {
+        var selectedKabkota = $('#userKabkota').val();
+        var selectedDistrict = '{{ request('district_id') }}';
+
+        if (selectedKabkota) {
+            loadDistricts(selectedKabkota, selectedDistrict);
+        }
+
         $('#userKabkota').on('change', function() {
             var kabkotaId = $(this).val();
-    
+            loadDistricts(kabkotaId, null);
+        });
+
+        function loadDistricts(kabkotaId, selectedDistrict) {
             if (kabkotaId) {
                 $.ajax({
                     url: '{{ route("getDistricts") }}',
                     type: 'GET',
                     data: { kabkota_id: kabkotaId },
                     success: function(response) {
-                        if (response.success) {
-                            var districts = response.districts;
-                            var options = '<option value="">Select Kecamatan</option>';
-                            $.each(districts, function(index, district) {
-                                options += '<option value="' + district.id + '">' + district.nama + '</option>';
-                            });
-                            $('#userDistrict').html(options);
-                        } else {
-                            $('#userDistrict').html('<option value="">No districts found</option>');
-                        }
+                        var options = '<option value="">Pilih Kecamatan</option>';
+                        $.each(response.districts, function(index, district) {
+                            var isSelected = (selectedDistrict == district.id) ? 'selected' : '';
+                            options += '<option value="' + district.id + '" ' + isSelected + '>' + district.nama + '</option>';
+                        });
+                        $('#userDistrict').html(options);
                     },
-                    error: function(xhr, status, error) {
-                        console.error('Error fetching districts:', error);
+                    error: function() {
                         $('#userDistrict').html('<option value="">Error fetching districts</option>');
                     }
                 });
             } else {
-                $('#userDistrict').html('<option value="">Select District</option>');
+                $('#userDistrict').html('<option value="">Pilih Kecamatan</option>');
             }
-        });
+        }
     });
 </script>
 

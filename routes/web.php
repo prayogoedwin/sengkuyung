@@ -16,11 +16,12 @@ Route::middleware([LogActivity::class])->group(function () {
 
     Route::prefix('dapur')->middleware('auth')->group(function () {
         Route::get('/dashboard', [BackController::class, 'index'])->name('dashboard');
+        Route::get('/rekap', [RekapController::class, 'index'])->name('rekap.index');
 
         Route::get('/users', [UserController::class, 'index'])->name('user.index');
         Route::post('/user/add', [UserController::class, 'store'])->name('user.add');
         Route::get('/user/get/{id}', [UserController::class, 'getAdmin'])->name('user.detail');
-        Route::put('/user/update/{id}', [UserController::class, 'update'])->name('user.update');
+        Route::post('/user/update/{id}', [UserController::class, 'update'])->name('user.update');
         Route::delete('/user/delete/{id}', [UserController::class, 'softdelete'])->name('user.softdelete');
 
         Route::get('/verifikasi', [VerifikasiController::class, 'index'])->name('verifikasi.index');
@@ -32,7 +33,7 @@ Route::middleware([LogActivity::class])->group(function () {
         // Route::get('/verifikasi-detail', [BackController::class, 'verifikasi_detail'])->name('verifikasi-detail.index');
         Route::get('/pelaporan', [BackController::class, 'pelaporan'])->name('pelaporan.index');
 
-        Route::get('/rekap', [RekapController::class, 'index'])->name('rekap.index');
+     
 
 
         Route::get('/get-districts', [WilayahController::class, 'getDistricts'])->name('getDistricts');

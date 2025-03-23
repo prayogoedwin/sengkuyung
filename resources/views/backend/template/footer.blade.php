@@ -54,6 +54,8 @@
     <script src="{{ asset('assets') }}/plugins/moment.min.js"></script>
     <script src="{{ asset('assets') }}/plugins/bootstrap-datetimepicker.min.js"></script>
 
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Apex Chart -->
     <script src="{{ asset('assets') }}/etam_be/js/plugins/apexcharts.min.js"></script>
     <!-- custom-chart js -->

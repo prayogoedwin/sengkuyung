@@ -88,7 +88,7 @@
                                         </div>
                                         <div class="col-md-2 mt-4">
                                             <button type="submit" class="btn btn-primary btn-sm">Filter</button>
-                                            <a href="{{ route('dashboard') }}" class="btn btn-secondary btn-sm"><i class="menu-icon tf-icons bx bx-refresh"></i></a>
+                                            <a href="{{ route('dashboard') }}" class="btn btn-secondary btn-sm"><i class="menu-icon tf-icons bx bx-refresh" style="padding-left:7px"></i></a>
                                         </div>
                                     </div>
                                 </form>

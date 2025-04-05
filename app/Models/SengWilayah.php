@@ -18,6 +18,13 @@ class SengWilayah extends Model
         'id',
         'kode',
         'nama',
-        'id_up'
+        'id_up',
+        'lat',
+        'lng'
     ];
+
+    public function kecamatan()
+    {
+        return $this->hasMany(SengWilayah::class, 'kec', 'id');
+    }
 }

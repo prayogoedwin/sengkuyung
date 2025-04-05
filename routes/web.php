@@ -7,8 +7,12 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BackController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerifikasiController;
+use App\Http\Controllers\DownloadController;
 use App\Http\Controllers\WilayahController;
 use App\Http\Controllers\RekapController;
+use App\Http\Controllers\PelaporanController;
+
+
 
 Route::middleware([LogActivity::class])->group(function () {
     Route::get('/your-route', [YourController::class, 'yourMethod']);
@@ -28,10 +32,21 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::get('/verifikasi-detail/{id}', [VerifikasiController::class, 'show'])->name('verifikasi-detail.index');
         Route::post('/verifikasi-status', [VerifikasiController::class, 'verif'])->name('verifikasi.status');
 
-        Route::get('/download', [BackController::class, 'download'])->name('download.index');
+        Route::get('/download', [DownloadController::class, 'index'])->name('download.index');
+        Route::get('/download-csv', [DownloadController::class, 'downloadCsv'])->name('download.csv');
+        Route::get('/download-pdf', [DownloadController::class, 'downloadPdf'])->name('download.pdf');
+        
+
+
+        Route::get('/pelaporan', [PelaporanController::class, 'index'])->name('pelaporan.index');
+        Route::get('/pelaporan-csv', [PelaporanController::class, 'pelaporanCsv'])->name('pelaporan.csv');
+
+
+
+        // Route::get('/downloads', [BackController::class, 'download']);
         // Route::get('/verifikasi', [BackController::class, 'verifikasi'])->name('verifikasi.index');
         // Route::get('/verifikasi-detail', [BackController::class, 'verifikasi_detail'])->name('verifikasi-detail.index');
-        Route::get('/pelaporan', [BackController::class, 'pelaporan'])->name('pelaporan.index');
+        Route::get('/pelaporans', [BackController::class, 'pelaporan'])->name('pelaporan.index');
 
      
 

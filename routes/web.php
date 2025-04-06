@@ -46,7 +46,7 @@ Route::middleware([LogActivity::class])->group(function () {
         // Route::get('/downloads', [BackController::class, 'download']);
         // Route::get('/verifikasi', [BackController::class, 'verifikasi'])->name('verifikasi.index');
         // Route::get('/verifikasi-detail', [BackController::class, 'verifikasi_detail'])->name('verifikasi-detail.index');
-        Route::get('/pelaporans', [BackController::class, 'pelaporan'])->name('pelaporan.index');
+        Route::get('/pelaporans', [BackController::class, 'pelaporan'])->name('pelaporan.indexs');
 
      
 

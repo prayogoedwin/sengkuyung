@@ -69,7 +69,7 @@ class DownloadController extends Controller
             $verifikasis->where('kec', $request->district_id);
             $wilayah = SengWilayah::where('id', $request->district_id)->first();
             $kecjudul = $wilayah ? $wilayah->nama : '';
-            $kecjudul = ' '.$kecjudul;
+            $kecjudul = ' Kec. '.$kecjudul;
             $kecjudul_id = '_'.$request->district_id;
         }
 
@@ -172,7 +172,7 @@ class DownloadController extends Controller
             $verifikasis->where('kec', $request->district_id);
             $wilayah = SengWilayah::where('id', $request->district_id)->first();
             $kecjudul = $wilayah ? $wilayah->nama : '';
-            $kecjudul = ' '.$kecjudul;
+            $kecjudul = ' Kec. '.$kecjudul;
             $kecjudul_id = '_'.$request->district_id;
         }
 

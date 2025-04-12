@@ -154,19 +154,19 @@ class AuthController extends Controller
         //     'konfirmasi_password' => 'required|string|same:password_baru',
         // ]);
 
-        $validator = Validator::make($request->all(), [
-            'id' => 'required',
-            'password_baru' => 'required|string|min:6',
-            'konfirmasi_password' => 'required|string|same:password_baru',
-        ]);
+        // $validator = Validator::make($request->all(), [
+        //     'id' => 'required',
+        //     'password_baru' => 'required|string|min:6',
+        //     'konfirmasi_password' => 'required|string|same:password_baru',
+        // ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Validasi gagal',
-                'errors' => $validator->errors()
-            ], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
+        // if ($validator->fails()) {
+        //     return response()->json([
+        //         'status' => false,
+        //         'message' => 'Validasi gagal',
+        //         'errors' => $validator->errors()
+        //     ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        // }
 
         $id = $request->id;
 

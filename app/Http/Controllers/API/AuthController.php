@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Models\SengWilayah;
 use App\Helpers\Helper;
+use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
@@ -148,25 +149,19 @@ class AuthController extends Controller
     public function resetPassword(Request $request)
     {
         // Validasi input
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'id' => 'required',
             'password_baru' => 'required|string|min:6',
             'konfirmasi_password' => 'required|string|same:password_baru',
         ]);
 
-        // $validator = Validator::make($request->all(), [
-        //     'id' => 'required',
-        //     'password_baru' => 'required|string|min:6',
-        //     'konfirmasi_password' => 'required|string|same:password_baru',
-        // ]);
-
-        // if ($validator->fails()) {
-        //     return response()->json([
-        //         'status' => false,
-        //         'message' => 'Validasi gagal',
-        //         'errors' => $validator->errors()
-        //     ], Response::HTTP_UNPROCESSABLE_ENTITY);
-        // }
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
 
         $id = $request->id;
 

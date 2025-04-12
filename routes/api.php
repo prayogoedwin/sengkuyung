@@ -47,6 +47,7 @@ Route::middleware(['auth-api'])->group(function () {
         Route::apiResource('wilayah', SengWilayahController::class);
         Route::apiResource('status-file', SengStatusFileController::class);
         Route::get('rekap', [RekapController::class, 'index']);
+        Route::post('update_password', [AuthController::class, 'resetPassword']);
     });
 });
 

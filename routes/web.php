@@ -40,6 +40,7 @@ Route::middleware([LogActivity::class])->group(function () {
 
         Route::get('/pelaporan', [PelaporanController::class, 'index'])->name('pelaporan.index');
         Route::get('/pelaporan-csv', [PelaporanController::class, 'pelaporanCsv'])->name('pelaporan.csv');
+        Route::get('/pelaporan-pdf', [PelaporanController::class, 'pelaporanPdf'])->name('pelaporan.pdf');
 
 
 

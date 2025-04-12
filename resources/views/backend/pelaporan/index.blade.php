@@ -69,7 +69,8 @@
                                             </div>
                                            
                                             <div class="col-md-12 mt-2">
-                                                <button class="btn btn-primary mt-2" id="submitFilter">Download</button>
+                                                <button class="btn btn-primary mt-2" id="submitFilter">Download CSV</button>
+                                                <button class="btn btn-success mt-2" id="submitFilterPdf">Download PDF</button>
                                                 <button class="btn btn-secondary mt-2" id="resetFilter">Reset</button>
                                             </div>
                                         </div>
@@ -160,6 +161,37 @@
         document.querySelector("form").reset();
     });
 });
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        document.getElementById("submitFilterPdf").addEventListener("click", function (e) {
+            e.preventDefault();
+    
+            let statusVerifikasi = document.getElementById("statusVerifikasi").value;
+            let kabkota = document.getElementById("userKabkota").value;
+            let district = document.getElementById("userDistrict").value;
+            let tanggalStart = document.getElementById("tanggal_start").value;
+            let tanggalEnd = document.getElementById("tanggal_end").value;
+            let tipe = document.getElementById("tipe").value;
+    
+            let queryParams = new URLSearchParams({
+                status_verifikasi_id: statusVerifikasi,
+                kabkota_id: kabkota,
+                district_id: district,
+                tanggal_start: tanggalStart,
+                tanggal_end: tanggalEnd,
+                tipe: tipe
+            }).toString();
+    
+            window.location.href = `/dapur/pelaporan-pdf?${queryParams}`;
+        });
+    
+        document.getElementById("resetFilter").addEventListener("click", function (e) {
+            e.preventDefault();
+            document.querySelector("form").reset();
+        });
+    });
 </script>
 
  

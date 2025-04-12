@@ -180,7 +180,7 @@ document.addEventListener("DOMContentLoaded", function () {
             document.querySelector("form").reset();
         });
     });
-    </script>
+</script>
 
  
 @endpush

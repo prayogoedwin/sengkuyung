@@ -143,4 +143,48 @@ class AuthController extends Controller
             'message' => 'Logged out successfully',
         ]);
     }
+
+
+    public function resetPassword(Request $request)
+    {
+        // Validasi input
+        $request->validate([
+            'id' => 'required',
+            'password_baru' => 'required|string|min:6',
+            'konfirmasi_password' => 'required|string|same:password_baru',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $id = $request->id;
+
+        // Decode ID
+        $decodedId = Helper::decodeId($id);
+
+        // Cari user
+        $user = User::find($decodedId);
+
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'User tidak ditemukan'
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        // Update password
+        // $user->password = Hash::make($request->password_baru);
+        $user->password = bcrypt($request->password_baru);
+        $user->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Password berhasil direset'
+        ]);
+    }
 }

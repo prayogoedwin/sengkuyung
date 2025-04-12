@@ -148,7 +148,13 @@ class AuthController extends Controller
     public function resetPassword(Request $request)
     {
         // Validasi input
-        $request->validate([
+        // $request->validate([
+        //     'id' => 'required',
+        //     'password_baru' => 'required|string|min:6',
+        //     'konfirmasi_password' => 'required|string|same:password_baru',
+        // ]);
+
+        $validator = Validator::make($request->all(), [
             'id' => 'required',
             'password_baru' => 'required|string|min:6',
             'konfirmasi_password' => 'required|string|same:password_baru',

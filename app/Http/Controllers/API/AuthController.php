@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\SengWilayah;
 use App\Helpers\Helper;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\Response;
 
 class AuthController extends Controller
 {

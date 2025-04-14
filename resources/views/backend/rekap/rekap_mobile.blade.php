@@ -43,7 +43,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach($data as $no => $verifikasi)
+          
             <tr>
              
                 <td>{{ $verifikasi->total ?? 'N/A' }}</td>
@@ -51,7 +51,7 @@
                 <td>'{{ $verifikasi->verifikasi ?? 'N/A' }}'</td>
                 <td>{{ $verifikasi->ditolak ?? 'N/A' }}</td>
             </tr>
-            @endforeach
+  
         </tbody>
     </table>
 

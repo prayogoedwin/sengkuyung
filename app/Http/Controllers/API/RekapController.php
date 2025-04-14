@@ -40,11 +40,11 @@ class RekapController extends Controller
         $ditolak = (clone $verifikasis)->where('status_verifikasi', 3)->count();
 
         $pkb= (clone $verifikasis)->sum('pkb_pokok');
-        $pkb_denda= (clone $verifikasis)->sum('pkb_denda');
-        $pnbp = (clone $verifikasis)->sum('pnbp');
-        // $pnbp_denda = (clone $verifikasis)->sum('pnbp_denda');
-        $jr = (clone $verifikasis)->sum('jr');
-        $jr_denda = (clone $verifikasis)->sum('jr_denda');
+        // $pkb_denda= (clone $verifikasis)->sum('pkb_denda');
+        // $pnbp = (clone $verifikasis)->sum('pnbp');
+        // // $pnbp_denda = (clone $verifikasis)->sum('pnbp_denda');
+        // $jr = (clone $verifikasis)->sum('jr');
+        // $jr_denda = (clone $verifikasis)->sum('jr_denda');
     
         // Simpan data statistik
         $data = [
@@ -53,10 +53,10 @@ class RekapController extends Controller
             'verifikasi' => $verifikasi,
             'ditolak' => $ditolak,
             'pkb' => $pkb,
-            'pkb_denda'=>$pkb_denda,
-            'pnbp' => $pnbp,
-            'jr' => $jr,
-            'jr_denda' => $jr_denda,
+            // 'pkb_denda'=>$pkb_denda,
+            // 'pnbp' => $pnbp,
+            // 'jr' => $jr,
+            // 'jr_denda' => $jr_denda,
         ];
     
         return response()->json([
@@ -66,6 +66,34 @@ class RekapController extends Controller
         ]);
     }
 
+    public function jurnalPreview(Request $request)
+    {
+        $user = Auth::user();
 
+        $verifikasis = SengPendataanKendaraan::query();
+
+        // Apply filters based on user role
+        $verifikasis->where('created_by',  $user->id);
+
+        if ($request->status_verifikasi_id) {
+            $verifikasis->where('status_verifikasi', $request->status_verifikasi_id);
+        }
+
+        if ($request->kabkota_id) {
+            $verifikasis->where('kota', $request->kabkota_id);
+        }
+
+        if ($request->district_id) {
+            $verifikasis->where('kec', $request->district_id);
+        }
+
+        if ($request->tanggal_start && $request->tanggal_end) {
+            $verifikasis->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
+        }
+
+        $data = $verifikasis->get();
+
+        return view('backend.rekap.jurnal_mobile', compact('data', 'request'));
+    }
     
 }

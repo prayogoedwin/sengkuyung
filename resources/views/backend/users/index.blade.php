@@ -264,14 +264,24 @@
         $(document).ready(function() {
         // Function to hide all elements
 
+            // function hideAllElements() {
+            //     $('#uptdContainer').hide();
+            //     $('#kabkotaContainer').hide();
+            //     $('#districtContainer').hide();
+            //     $('#kelurahanContainer').hide();
+            //     $('#rwContainer').hide();
+            //     $('#rtContainer').hide();
+            //     $('#alamatContainer').hide();
+            // }
+
             function hideAllElements() {
-                $('#uptdContainer').hide();
-                $('#kabkotaContainer').hide();
-                $('#districtContainer').hide();
-                $('#kelurahanContainer').hide();
-                $('#rwContainer').hide();
-                $('#rtContainer').hide();
-                $('#alamatContainer').hide();
+                $('#uptdContainer').hide().find('select, input').removeAttr('required');
+                $('#kabkotaContainer').hide().find('select, input').removeAttr('required');
+                $('#districtContainer').hide().find('select, input').removeAttr('required');
+                $('#kelurahanContainer').hide().find('input').removeAttr('required');
+                $('#rwContainer').hide().find('input').removeAttr('required');
+                $('#rtContainer').hide().find('input').removeAttr('required');
+                $('#alamatContainer').hide().find('input').removeAttr('required');
             }
     
             // Call hideAllElements on page load

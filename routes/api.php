@@ -47,7 +47,8 @@ Route::middleware(['auth-api'])->group(function () {
         Route::apiResource('wilayah', SengWilayahController::class);
         Route::apiResource('status-file', SengStatusFileController::class);
         Route::get('rekap', [RekapController::class, 'index']);
-        Route::get('rekap_jurnal', [RekapController::class, 'jurnalPreview']);
+        Route::get('jurnal_download', [RekapController::class, 'jurnalPreview']);
+        Route::get('rekap_download', [RekapController::class, 'jurnalPreview']);
         Route::post('update_password', [AuthController::class, 'resetPassword']);
     });
 });

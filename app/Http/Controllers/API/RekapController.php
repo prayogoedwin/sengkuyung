@@ -91,9 +91,26 @@ class RekapController extends Controller
             $verifikasis->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
         }
 
-        $data = $verifikasis->get();
+        // Hitung jumlah total data dan berdasarkan status_verifikasi
+        $total = (clone $verifikasis)->count();
+        $menunggu_verifikasi = (clone $verifikasis)->where('status_verifikasi', 1)->count();
+        $verifikasi = (clone $verifikasis)->where('status_verifikasi', 2)->count();
+        $ditolak = (clone $verifikasis)->where('status_verifikasi', 3)->count();
 
-        return view('backend.rekap.jurnal_mobile', compact('data', 'request'));
+        // $data = $verifikasis->get();
+        $data = [
+            'total' => $total,
+            'menunggu_verifikasi' => $menunggu_verifikasi,
+            'verifikasi' => $verifikasi,
+            'ditolak' => $ditolak,
+            // 'pkb' => $pkb,
+            // 'pkb_denda'=>$pkb_denda,
+            // 'pnbp' => $pnbp,
+            // 'jr' => $jr,
+            // 'jr_denda' => $jr_denda,
+        ];
+
+        return view('backend.rekap.rekap_mobile', compact('data', 'request'));
     }
     
 }

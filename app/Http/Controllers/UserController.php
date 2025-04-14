@@ -91,7 +91,7 @@ class UserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'whatsapp' => $request->whatsapp,
-            'password' => bcrypt($request->name), // Set password default atau sesuai logika Anda
+            'password' => bcrypt($request->email), // Set password default atau sesuai logika Anda
             'uptd_id' =>  $request->uptd_id,
             'provinsi' =>  $request->kabkota_id,
             'kota' =>  $request->kabkota_id,
@@ -107,7 +107,7 @@ class UserController extends Controller
         $user->assignRole($role);
 
 
-        return response()->json(['success' => true, 'message' => 'Tambah data berhasil']);
+        return response()->json(['success' => true, 'message' => 'Tambah data berhasil, password default sesuai email akun: '.$request->email]);
     }
 
     public function getAdmin($id)

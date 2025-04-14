@@ -26,6 +26,14 @@ class User extends Authenticatable
         'email',
         'whatsapp',
         'password',
+        'uptd_id',
+        'provinsi',
+        'kota',
+        'kecamatan',
+        'kelurahan',
+        'rw',
+        'rt',
+        'alamat_lengkap',
         'remember_token'
     ];
 

@@ -47,7 +47,7 @@
 
                                 <form method="GET" action="{{ route('dashboard') }}">
                                     <div class="row">
-                                        <div class="col-md-2">
+                                        {{-- <div class="col-md-2">
                                             <label for="kabupaten1">Kabupaten</label>
                                             <select class="form-control" id="userKabkota" name="kabkota_id">
                                                 <option value="">Pilih Kabkota</option>
@@ -55,6 +55,27 @@
                                                     <option value="{{ $kbkt->id }}" {{ request('kabkota_id') == $kbkt->id ? 'selected' : '' }}>
                                                         {{ $kbkt->nama }}
                                                     </option>
+                                                @endforeach
+                                            </select>
+                                        </div> --}}
+
+                                        @php
+                                        $userRoleId = Auth::user()->roles[0]->id ?? null;
+                                        $userKotaId = Auth::user()->kota ?? null;
+                                        @endphp
+
+                                        <div class="col-md-2">
+                                            <label for="userKabkota">Kabupaten/Kota</label>
+                                            <select class="form-control" id="userKabkota" name="kabkota_id">
+                                                <option value="">Pilih Kabkota</option>
+                                                @foreach ($kabkotas as $kbkt)
+                                                    @if ($userRoleId == 3 || $userRoleId == 4)
+                                                        @if ($kbkt->id == $userKotaId)
+                                                            <option value="{{ $kbkt->id }}" selected>{{ $kbkt->nama }}</option>
+                                                        @endif
+                                                    @else
+                                                        <option value="{{ $kbkt->id }}">{{ $kbkt->nama }}</option>
+                                                    @endif
                                                 @endforeach
                                             </select>
                                         </div>

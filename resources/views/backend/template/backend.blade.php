@@ -1,10 +1,12 @@
 @include('backend.template.header')
 
-@if (Auth::user()->roles[0]['name'] == 'super-admin')
+{{-- @if (Auth::user()->roles[0]['name'] == 'super-admin')
     @include('backend.template.sidebar')
-@endif
+@endif --}}
 
-@if (Auth::user()->roles[0]['name'] == 'tenaga-kerja')
+@include('backend.template.sidebar')
+
+{{-- @if (Auth::user()->roles[0]['name'] == 'tenaga-kerja')
     @include('backend.template.sidebar-pencari')
 @endif
 
@@ -14,7 +16,7 @@
 
 @if (Auth::user()->roles[0]['name'] == 'admin-bkk')
     @include('backend.template.sidebar-bkk')
-@endif
+@endif --}}
 
 
 <body>

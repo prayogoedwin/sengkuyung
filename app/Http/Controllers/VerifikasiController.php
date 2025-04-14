@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use App\Helpers\Helper;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 
 class VerifikasiController extends Controller
 {
@@ -21,30 +22,47 @@ class VerifikasiController extends Controller
     {
         if ($request->ajax()) {
 
-            $userRole = auth()->user()->role; 
+            $userId = Auth::user()->id ?? null;
+            $userRoleId = Auth::user()->roles[0]->id ?? null;
+            $userKotaId = Auth::user()->kota ?? null;
+
+            // $userRole = auth()->user()->role; 
             // Cari admin berdasarkan ID
-            $user = User::findOrFail(auth()->id());
+            // $user = User::findOrFail(auth()->id());
             // $verifikasis = SengPendataanKendaraan::select('*')->get();
             $verifikasis = SengPendataanKendaraan::query();
 
+
+            // Jika bukan role 1 atau 2, dan tidak ada filter, maka kembalikan data kosong
+            if (!in_array($userRoleId, [1, 2])) {
+                $noFilters = !$request->status_verifikasi_id && !$request->kabkota_id && !$request->district_id && 
+                            !$request->tanggal_start && !$request->tanggal_end;
+
+                if ($noFilters) {
+                    $verifikasis->whereRaw('1 = 0'); // data kosong
+                }
+            }
+
             // Apply filters based on user role
-            if ($userRole == 1 || $userRole == 2) {
+            if ($userRoleId == 1 || $userRoleId == 2) {
                 // No additional WHERE clause for roles 1 and 2
-            } elseif ($userRole == 4) {
+                if ($request->kabkota_id) {
+                    $verifikasis->where('kota', $request->kabkota_id);
+                }
+            } elseif ($userRoleId == 4 || $userRoleId == 3) {
                 // Add WHERE clause for role 4
-                $verifikasis->where('kota', $user->kota);
-            } elseif ($userRole == 7) {
+                $verifikasis->where('kota', $userKotaId);
+
+            } elseif ($userRoleId == 7) {
                 // Add WHERE clause for role 7
-                $verifikasis->where('created_by', auth()->id());
+                $verifikasis->where('created_by', $userId);
             }
 
             // Filter berdasarkan input dari form
             if ($request->status_verifikasi_id) {
                 $verifikasis->where('status_verifikasi', $request->status_verifikasi_id);
             }
-            if ($request->kabkota_id) {
-                $verifikasis->where('kota', $request->kabkota_id);
-            }
+            
             if ($request->district_id) {
                 $verifikasis->where('kec', $request->district_id);
             }
@@ -52,34 +70,76 @@ class VerifikasiController extends Controller
                 $verifikasis->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
             }
 
-            return DataTables::of($verifikasis)
-                ->addIndexColumn()
-                ->addColumn('nopol', function ($verifikasi) {
-                    return $verifikasi->nopol ? $verifikasi->nopol : 'N/A';
-                })
-                ->addColumn('tanggal_pendataan', function ($verifikasi) {
-                    return $verifikasi->created_at ?  Carbon::parse($verifikasi->created_at)->format('Y-m-d H:i:s') : 'N/A';
-                })
-                ->addColumn('nama', function ($verifikasi) {
-                    return $verifikasi->nama ? $verifikasi->nama : 'N/A';
-                })
-                ->addColumn('nohp', function ($verifikasi) {
-                    return $verifikasi->nohp ? $verifikasi->nohp : 'N/A';
-                })
-                ->addColumn('status_name', function ($verifikasi) {
-                    return $verifikasi->status_name ? $verifikasi->status_name : 'N/A';
-                })
-                ->addColumn('status_verifikasi_name', function ($verifikasi) {
-                    return $verifikasi->status_verifikasi_name ? $verifikasi->status_verifikasi_name : 'N/A';
-                })
-                ->addColumn('options', function ($verifikasi) {
-                    return '
-                        <a href="' . route('verifikasi-detail.index', ['id' => Helper::encodeId($verifikasi->id)]) . '" class="btn btn-primary btn-sm">Verif</a>
-                        <button hidden class="btn btn-danger btn-sm" onclick="confirmDelete(' . Helper::encodeId($verifikasi->id) . ')">Delete</button>
-                    ';
-                })
-                ->rawColumns(['options'])  // Pastikan menambahkan ini untuk kolom options
-                ->make(true);
+                // return DataTables::of($verifikasis)
+                // ->addIndexColumn()
+                // ->addColumn('nopol', function ($verifikasi) {
+                //     return $verifikasi->nopol ? $verifikasi->nopol : 'N/A';
+                // })
+                // ->addColumn('tanggal_pendataan', function ($verifikasi) {
+                //     return $verifikasi->created_at ?  Carbon::parse($verifikasi->created_at)->format('Y-m-d H:i:s') : 'N/A';
+                // })
+                // ->addColumn('nama', function ($verifikasi) {
+                //     return $verifikasi->nama ? $verifikasi->nama : 'N/A';
+                // })
+                // ->addColumn('nohp', function ($verifikasi) {
+                //     return $verifikasi->nohp ? $verifikasi->nohp : 'N/A';
+                // })
+                // ->addColumn('status_name', function ($verifikasi) {
+                //     return $verifikasi->status_name ? $verifikasi->status_name : 'N/A';
+                // })
+                // ->addColumn('status_verifikasi_name', function ($verifikasi) {
+                //     return $verifikasi->status_verifikasi_name ? $verifikasi->status_verifikasi_name : 'N/A';
+                // })
+
+                
+                // ->addColumn('options', function ($verifikasi) {
+                //     return '
+                //         <a href="' . route('verifikasi-detail.index', ['id' => Helper::encodeId($verifikasi->id)]) . '" class="btn btn-primary btn-sm">Verif</a>
+                //         <button hidden class="btn btn-danger btn-sm" onclick="confirmDelete(' . Helper::encodeId($verifikasi->id) . ')">Delete</button>
+                //     ';
+                // })
+                // ->rawColumns(['options'])  // Pastikan menambahkan ini untuk kolom options
+                // ->make(true);
+
+                $datatable = DataTables::of($verifikasis)
+                    ->addIndexColumn()
+                    ->addColumn('nopol', function ($verifikasi) {
+                        return $verifikasi->nopol ?? 'N/A';
+                    })
+                    ->addColumn('tanggal_pendataan', function ($verifikasi) {
+                        return $verifikasi->created_at ? Carbon::parse($verifikasi->created_at)->format('Y-m-d H:i:s') : 'N/A';
+                    })
+                    ->addColumn('nama', function ($verifikasi) {
+                        return $verifikasi->nama ?? 'N/A';
+                    })
+                    ->addColumn('nohp', function ($verifikasi) {
+                        return $verifikasi->nohp ?? 'N/A';
+                    })
+                    ->addColumn('status_name', function ($verifikasi) {
+                        return $verifikasi->status_name ?? 'N/A';
+                    })
+                    ->addColumn('status_verifikasi_name', function ($verifikasi) {
+                        return $verifikasi->status_verifikasi_name ?? 'N/A';
+                    });
+
+                // Tambahkan kolom options berdasarkan role
+                if ($userRoleId == 1 || $userRoleId == 2 || $userRoleId == 3) {
+                    $datatable->addColumn('options', function ($verifikasi) {
+                        return '
+                            <a href="' . route('verifikasi-detail.index', ['id' => Helper::encodeId($verifikasi->id)]) . '" class="btn btn-primary btn-sm">Verif</a>
+                            <button hidden class="btn btn-danger btn-sm" onclick="confirmDelete(' . Helper::encodeId($verifikasi->id) . ')">Delete</button>
+                        ';
+                    });
+                } else {
+                    $datatable->addColumn('options', function ($verifikasi) {
+                        return '-';
+                    });
+                }
+
+                return $datatable
+                    ->rawColumns(['options'])
+                    ->make(true);
+
         }
 
         $status_verifikasis = SengStatusVerifikasi::select('*')->get();

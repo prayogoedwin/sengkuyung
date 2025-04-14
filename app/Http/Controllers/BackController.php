@@ -11,24 +11,43 @@ use App\Models\SengStatusFile;
 use App\Models\SengWilayah;
 use App\Models\SengPendataanKendaraan;
 
+
 class BackController extends Controller
 {
 
     public function index(Request $request)
     {
-        $userRole = auth()->user()->role;
-        $user = User::findOrFail(auth()->id());
-    
+        // $userRole = auth()->user()->role;
+        // $user = User::findOrFail(auth()->id());
+
+        $userId = Auth::user()->id ?? null;
+        $userRoleId = Auth::user()->roles[0]->id ?? null;
+        $userKotaId = Auth::user()->kota ?? null;
+
         // Query awal
         $verifikasis = SengPendataanKendaraan::query();
     
         // Apply filters based on user role
-        if ($userRole == 1 || $userRole == 2) {
+        // if ($userRoleId == 1 || $userRoleId == 2) {
+        //     // No additional WHERE clause for roles 1 and 2
+        // } elseif ($userRoleId == 4 || $userRoleId == 4) {
+        //     $verifikasis->where('kota', $user->kota);
+        // } elseif ($userRoleId == 7) {
+        //     $verifikasis->where('created_by', auth()->id());
+        // }
+
+        if ($userRoleId == 1 || $userRoleId == 2) {
             // No additional WHERE clause for roles 1 and 2
-        } elseif ($userRole == 4) {
-            $verifikasis->where('kota', $user->kota);
-        } elseif ($userRole == 7) {
-            $verifikasis->where('created_by', auth()->id());
+            if ($request->kabkota_id) {
+                $verifikasis->where('kota', $request->kabkota_id);
+            }
+        } elseif ($userRoleId == 4 || $userRoleId == 3) {
+            // Add WHERE clause for role 4
+            $verifikasis->where('kota', $userKotaId);
+
+        } elseif ($userRoleId == 7) {
+            // Add WHERE clause for role 7
+            $verifikasis->where('created_by', $userId);
         }
     
         // Filter berdasarkan input dari form
@@ -36,9 +55,10 @@ class BackController extends Controller
         //     $verifikasis->where('status_verifikasi', $request->status_verifikasi_id);
         // }
 
-        if ($request->kabkota_id) {
-            $verifikasis->where('kota', $request->kabkota_id);
-        }
+        // if ($request->kabkota_id) {
+        //     $verifikasis->where('kota', $request->kabkota_id);
+        // }
+
         if ($request->district_id) {
             $verifikasis->where('kec', $request->district_id);
         }

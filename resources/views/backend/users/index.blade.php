@@ -291,6 +291,7 @@
             $('#userRole').on('change', function() {
                 hideAllElements(); // Hide all elements first
                 var selectedRole = $(this).val();
+                // alert(selectedRole)
 
                 if (selectedRole == 3) {
                     $('#uptdContainer').show().find('select, input').attr('required', 'required');
@@ -320,6 +321,9 @@
             $('#registerForm').submit(function(e) {
                 e.preventDefault(); // Prevent form from submitting normally
 
+                var form = $('#registerForm')[0]; // Ambil elemen form
+                var formData = new FormData(form); // Ini langsung ambil semua input di form
+
                 // Clear previous error messages
                 $('#errorMessages').html('').addClass('d-none');
 
@@ -327,6 +331,15 @@
                     name: $('#name').val(),
                     email: $('#email').val(),
                     whatsapp: $('#whatsapp').val(),
+                    role_id: $('#userRole').val(),
+                    uptd_id: $('#userUptd').val(),
+                    kabkota_id: $('#userKabkota').val(),
+                    district_id: $('#userDistrict').val(),
+                    kelurahan: $('#kelurahan').val(),
+                    rw: $('#rw').val(),
+                    rt: $('#rt').val(),
+                    alamat_lengkap: $('#alamat_lengkap').val(),
+
                     role_id: $('#userRole').val(),
                     _token: '{{ csrf_token() }}' // Add CSRF token for security
                 };

@@ -62,13 +62,22 @@
 
             
         @else
+            <li class="menu-item {{ request()->routeIs('verifikasi.index') ? 'active' : '' }}">
+                <a href="{{ route('verifikasi.index') }}" class="menu-link">
+                    <i class="menu-icon tf-icons bx bx-check-shield"></i>  {{-- Ikon Verifikasi --}}
+                    <div data-i18n="Analytics">Verifikasi</div>
+                </a>
+            </li>
+
+            @if (Auth::user()->roles[0]['name'] == 'kabkota')
             <li class="menu-item {{ request()->routeIs('user.index') ? 'active' : '' }}">
                 <a href="{{ route('user.index') }}" class="menu-link">
                     {{-- <i class="menu-icon tf-icons bx bx-home-circle"></i> --}}
-                    <i class="menu-icon tf-icons bx bx-cog"></i>
-                    <div data-i18n="Analytics">Mutasi</div>
+                    <i class="menu-icon tf-icons bx bx-lock-open-alt"></i>
+                    <div data-i18n="Analytics">Users</div>
                 </a>
             </li>
+            @endif
         @endif
 
 

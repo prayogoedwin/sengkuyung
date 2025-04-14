@@ -38,15 +38,31 @@
                                                     @endforeach
                                                 </select>
                                             </div>
+                                           
+                                            @php
+                                                $userRoleId = Auth::user()->roles[0]->id ?? null;
+                                                $userKotaId = Auth::user()->kota ?? null;
+                                            @endphp
+
+                                            {{-- {{ $userRoleId }} --}}
+
                                             <div class="col-md-3">
                                                 <label for="userKabkota">Kabupaten/Kota</label>
-                                                <select class="form-control" id="userKabkota" name="kabkota_id" >
+                                                <select class="form-control" id="userKabkota" name="kabkota_id">
                                                     <option value="">Pilih Kabkota</option>
                                                     @foreach ($kabkotas as $kbkt)
-                                                        <option value="{{ $kbkt->id }}">{{ $kbkt->nama }}</option>
+                                                        @if ($userRoleId == 3 || $userRoleId == 4)
+                                                            @if ($kbkt->id == $userKotaId)
+                                                                <option value="{{ $kbkt->id }}" selected>{{ $kbkt->nama }}</option>
+                                                            @endif
+                                                        @else
+                                                            <option value="{{ $kbkt->id }}">{{ $kbkt->nama }}</option>
+                                                        @endif
                                                     @endforeach
                                                 </select>
                                             </div>
+
+
                                             <div class="col-md-3">
                                                 <label for="kecamatan">Kecamatan</label>
                                                 <select class="form-control" id="userDistrict" name="district_id" >

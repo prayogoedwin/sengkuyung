@@ -12,7 +12,7 @@ use App\Models\WilayahSamsat;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
-
+use Illuminate\Support\Facades\Auth;
 
 // class UserController extends Controller implements HasMiddleware
 class UserController extends Controller 
@@ -25,9 +25,35 @@ class UserController extends Controller
     // }
     public function index(Request $request)
     {
+
+        $userId = Auth::user()->id ?? null;
+        $userRoleId = Auth::user()->roles[0]->id ?? null;
+        $userKotaId = Auth::user()->kota ?? null;
+
         if ($request->ajax()) {
             // $users = User::select('*')->where('email != ');
-            $users = User::select('*')->where('email', '!=', 'superadmin@example.com')->get();
+
+            
+
+            // $users = User::select('*')->where('email', '!=', 'superadmin@example.com')->get();
+
+            // Ambil data user dasar
+            $usersQuery = User::where('email', '!=', 'superadmin@example.com');
+
+            // Jika role-nya 4, filter berdasarkan kota milik user
+            if ($userRoleId == 4) {
+                $usersQuery->where('kota', $userKotaId);
+                $usersQuery->whereHas('roles', function ($q) {
+                    $q->where('id', 7);
+                });
+            }
+
+             // Jika role-nya 4, filter berdasarkan kota milik user
+             if ($userRoleId != 4 && $userRoleId != 1 && $userRoleId != 2) {
+                $usersQuery->where('kota', 'KuotaMaya');
+            }
+
+            $users = $usersQuery->get();
 
             return DataTables::of($users)
                 ->addIndexColumn()
@@ -57,16 +83,33 @@ class UserController extends Controller
                 ->make(true);
         }
 
-        // Ambil data roles untuk dikirim ke view
-        $roles = Role::select('id', 'name')
-        ->whereIn('id', [2, 3, 4,7])
-        ->get();
+        if ($userRoleId == 4) {
+
+            // Ambil data roles untuk dikirim ke view
+            $roles = Role::select('id', 'name')
+            ->whereIn('id', [7])
+            ->get();
+
+            $kabkotas = SengWilayah::select('*')
+            ->where('id', $userKotaId)
+            ->get();
+
+        }else{
+
+            // Ambil data roles untuk dikirim ke view
+            $roles = Role::select('id', 'name')
+            ->whereIn('id', [2, 3, 4,7])
+            ->get();
+
+            $kabkotas = SengWilayah::select('*')
+            ->where('id_up', 33)
+            ->get();
+
+        }
 
         $samsats = WilayahSamsat::select('*')->get();
 
-        $kabkotas = SengWilayah::select('*')
-        ->where('id_up', 33)
-        ->get();
+       
         return view('backend.users.index',  compact('roles', 'kabkotas', 'samsats'));
     }
 
@@ -85,6 +128,12 @@ class UserController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()]);
         }
 
+        if($request->role_id == 3){
+            $wilayah = WilayahSamsat::find($request->uptd_id);
+            $kota = $wilayah->kabkota;
+        }else{
+            $kota = $request->kabkota_id;
+        }
 
         // Menyimpan data ke tabel users
         $user = User::create([
@@ -93,8 +142,8 @@ class UserController extends Controller
             'whatsapp' => $request->whatsapp,
             'password' => bcrypt($request->email), // Set password default atau sesuai logika Anda
             'uptd_id' =>  $request->uptd_id,
-            'provinsi' =>  $request->kabkota_id,
-            'kota' =>  $request->kabkota_id,
+            'provinsi' =>  33,
+            'kota' =>  $kota,
             'kecamatan' =>  $request->district_id,
             'kelurahan' =>  $request->kelurahan,
             'rw' =>  $request->rw,

@@ -68,12 +68,13 @@ class RekapController extends Controller
 
     public function jurnalPreview(Request $request)
     {
-        $user = Auth::user();
+        // $user = Auth::user();
+        $user = decodeId($request->petugas);
 
         $verifikasis = SengPendataanKendaraan::query();
 
         // Apply filters based on user role
-        $verifikasis->where('created_by',  $user->id);
+        $verifikasis->where('created_by',  $user);
 
         if ($request->status_verifikasi_id) {
             $verifikasis->where('status_verifikasi', $request->status_verifikasi_id);
@@ -99,12 +100,12 @@ class RekapController extends Controller
 
     public function rekapPreview(Request $request)
     {
-        $user = Auth::user();
+        $user = decodeId($request->petugas);
 
         $verifikasis = SengPendataanKendaraan::query();
 
         // Apply filters based on user role
-        $verifikasis->where('created_by',  $user->id);
+        $verifikasis->where('created_by',  $user);
 
         if ($request->status_verifikasi_id) {
             $verifikasis->where('status_verifikasi', $request->status_verifikasi_id);

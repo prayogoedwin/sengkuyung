@@ -48,8 +48,12 @@ Route::middleware(['auth-api'])->group(function () {
         Route::apiResource('status-file', SengStatusFileController::class);
         Route::get('rekap', [RekapController::class, 'index']);
         Route::get('jurnal_download', [RekapController::class, 'jurnalPreview']);
-        Route::get('rekap_download', [RekapController::class, 'rekapPreview']);
-        Route::post('update_password', [AuthController::class, 'resetPassword']);
     });
+ 
 });
+
+Route::get('rekap_download', [RekapController::class, 'rekapPreview']);
+Route::post('update_password', [AuthController::class, 'resetPassword']);
+
+
 

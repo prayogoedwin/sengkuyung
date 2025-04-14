@@ -70,7 +70,7 @@ class RekapController extends Controller
     public function jurnalPreview(Request $request)
     {
         // $user = Auth::user();
-        $user = decodeId($request->petugas);
+        $user = Helper::decodeId($request->petugas);
 
         $verifikasis = SengPendataanKendaraan::query();
 
@@ -101,7 +101,7 @@ class RekapController extends Controller
 
     public function rekapPreview(Request $request)
     {
-        $user = decodeId($request->petugas);
+        $user = Helper::decodeId($request->petugas);
 
         $verifikasis = SengPendataanKendaraan::query();
 

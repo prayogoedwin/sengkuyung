@@ -90,6 +90,37 @@ class RekapController extends Controller
         if ($request->tanggal_start && $request->tanggal_end) {
             $verifikasis->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
         }
+        
+
+        $data = $verifikasis->get();
+
+        return view('backend.rekap.jurnal_mobile', compact('data', 'request'));
+    }
+
+    public function rekapPreview(Request $request)
+    {
+        $user = Auth::user();
+
+        $verifikasis = SengPendataanKendaraan::query();
+
+        // Apply filters based on user role
+        $verifikasis->where('created_by',  $user->id);
+
+        if ($request->status_verifikasi_id) {
+            $verifikasis->where('status_verifikasi', $request->status_verifikasi_id);
+        }
+
+        if ($request->kabkota_id) {
+            $verifikasis->where('kota', $request->kabkota_id);
+        }
+
+        if ($request->district_id) {
+            $verifikasis->where('kec', $request->district_id);
+        }
+
+        if ($request->tanggal_start && $request->tanggal_end) {
+            $verifikasis->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
+        }
 
         // Hitung jumlah total data dan berdasarkan status_verifikasi
         $total = (clone $verifikasis)->count();

@@ -35,7 +35,7 @@
     <table>
         <thead>
             <tr>
-                <th>No</th>
+         
                 <th>Terdata</th>
                 <th>Menunggu</th>
                 <th>Terverifikasi</th>
@@ -45,7 +45,7 @@
         <tbody>
             @foreach($data as $no => $verifikasi)
             <tr>
-                <td>{{ $no + 1 }}</td>
+             
                 <td>{{ $verifikasi->total ?? 'N/A' }}</td>
                 <td>{{ $verifikasi->menunggu_verifikasi ?? 'N/A' }}</td>
                 <td>'{{ $verifikasi->verifikasi ?? 'N/A' }}'</td>

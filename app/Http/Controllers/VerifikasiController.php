@@ -61,6 +61,8 @@ class VerifikasiController extends Controller
             // Filter berdasarkan input dari form
             if ($request->status_verifikasi_id) {
                 $verifikasis->where('status_verifikasi', $request->status_verifikasi_id);
+            }else{
+                $verifikasis->where('status_verifikasi', 1); //status menunggu verifikasi
             }
             
             if ($request->district_id) {

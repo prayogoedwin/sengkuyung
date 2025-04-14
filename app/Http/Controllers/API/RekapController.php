@@ -130,20 +130,7 @@ class RekapController extends Controller
         $verifikasi = (clone $verifikasis)->where('status_verifikasi', 2)->count();
         $ditolak = (clone $verifikasis)->where('status_verifikasi', 3)->count();
 
-        // $data = $verifikasis->get();
-        $data = [
-            'total' => $total,
-            'menunggu_verifikasi' => $menunggu_verifikasi,
-            'verifikasi' => $verifikasi,
-            'ditolak' => $ditolak,
-            // 'pkb' => $pkb,
-            // 'pkb_denda'=>$pkb_denda,
-            // 'pnbp' => $pnbp,
-            // 'jr' => $jr,
-            // 'jr_denda' => $jr_denda,
-        ];
-
-        return view('backend.rekap.rekap_mobile', compact('data', 'request'));
+        return view('backend.rekap.rekap_mobile', compact('total', 'menunggu_verifikasi', 'verifikasi', 'ditolak', 'request'));
     }
     
 }

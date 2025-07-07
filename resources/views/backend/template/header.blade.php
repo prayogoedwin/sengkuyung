@@ -139,14 +139,14 @@
                         <li>
                             <div class="dropdown-divider"></div>
                         </li>
-                        @if (Auth::check() && Auth::user()->roles[0]['name'] == 'tenaga-kerja')
+                       
                             <li>
-                                <a class="dropdown-item" href="{{ route('profil.index') }}">
+                                <a class="dropdown-item" href="{{ route('user.ganti') }}">
                                     <i class="bx bx-user me-2"></i>
-                                    <span class="align-middle">Profil</span>
+                                    <span class="align-middle">Ganti Password</span>
                                 </a>
                             </li>
-                        @endif
+                  
 
                         <li>
                             <a href="{{ route('logout') }}" class="dropdown-item" href="#">

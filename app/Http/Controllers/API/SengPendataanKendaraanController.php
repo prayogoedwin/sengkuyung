@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\SengPendataanKendaraan;
 use App\Models\SengStatus;
 use App\Models\SengStatusVerifikasi;
+use App\Models\SengSaamsat;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
 use App\Helpers\Helper;
@@ -81,12 +82,15 @@ class SengPendataanKendaraanController extends Controller
 
         $dStatus_verifikasi = Helper::decodeId($request->status_verifikasi);
         $status_verifikasi = SengStatusVerifikasi::find($dStatus_verifikasi);
+        $kota_dagri = SengSaamsat::find($request->kabkota);
+        
 
         $requestData = array_merge($request->all(), [
             'status' => $status->id,
             'status_name' => $status->nama,
             'status_verifikasi' => $status_verifikasi->id,
             'status_verifikasi_name' => $status_verifikasi->nama,
+            'kota_dagri' => $kota_dagri,
             'created_by' => $user->id,
             'updated_by' => $user->id
         ]);
@@ -100,7 +104,21 @@ class SengPendataanKendaraanController extends Controller
 
         $data->id = Helper::encodeId($data->id);
 
-        return response()->json(['status' => true, 'message' => 'Data berhasil ditambahkan', 'data' => $responseData], Response::HTTP_CREATED);
+        $html = null;
+        if($dStatus == 2){
+            $data = [
+                'nama' => $request->nama, // Ganti dengan variabel atau data dari DB
+                'alamat' => $request->alamat.''.$request->desa_name.''.$request->kec_name,
+                'kota' => $request->kota_name,
+                'no_polisi' => $request->nopol,
+                'merk' => $request->merk,
+                'tipe' => $request->tipe,
+                'tanggal' => now()->format('d F Y') // Format tanggal: 20 Februari 2025
+            ];
+            $html = view('html/surat_pernyataan', $data)->render();
+        }
+
+        return response()->json(['status' => true, 'message' => 'Data berhasil ditambahkan', 'data' => $responseData, 'html' => $html], Response::HTTP_CREATED);
     }
 
     public function upload(Request $request, $id)

@@ -23,9 +23,14 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::get('/rekap', [RekapController::class, 'index'])->name('rekap.index');
 
         Route::get('/users', [UserController::class, 'index'])->name('user.index');
+        Route::get('/user/ganti', [UserController::class, 'ganti_password'])->name('user.ganti');
+
+        Route::put('/user/{id}/update-password', [UserController::class, 'ganti_password_action'])->name('user.ganti_password');
+
         Route::post('/user/add', [UserController::class, 'store'])->name('user.add');
         Route::get('/user/get/{id}', [UserController::class, 'getAdmin'])->name('user.detail');
         Route::post('/user/update/{id}', [UserController::class, 'update'])->name('user.update');
+
         Route::delete('/user/delete/{id}', [UserController::class, 'softdelete'])->name('user.softdelete');
 
         Route::get('/verifikasi', [VerifikasiController::class, 'index'])->name('verifikasi.index');

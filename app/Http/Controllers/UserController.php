@@ -41,6 +41,11 @@ class UserController extends Controller
             $usersQuery = User::where('email', '!=', 'superadmin@example.com');
 
             // Jika role-nya 4, filter berdasarkan kota milik user
+            if ($userRoleId == 7) {
+                $usersQuery->where('id', $userId);
+            }
+
+            // Jika role-nya 4, filter berdasarkan kota milik user
             if ($userRoleId == 4) {
                 $usersQuery->where('kota', $userKotaId);
                 $usersQuery->whereHas('roles', function ($q) {
@@ -49,9 +54,11 @@ class UserController extends Controller
             }
 
              // Jika role-nya 4, filter berdasarkan kota milik user
-             if ($userRoleId != 4 && $userRoleId != 1 && $userRoleId != 2) {
+            if ($userRoleId != 4 && $userRoleId != 1 && $userRoleId != 2) {
                 $usersQuery->where('kota', 'KuotaMaya');
             }
+
+           
 
             $users = $usersQuery->get();
 
@@ -111,6 +118,38 @@ class UserController extends Controller
 
        
         return view('backend.users.index',  compact('roles', 'kabkotas', 'samsats'));
+    }
+
+     public function ganti_password(Request $request)
+    {
+        $userId = Auth::user()->id ?? null;
+        $userRoleId = Auth::user()->roles[0]->id ?? null;
+        $userKotaId = Auth::user()->kota ?? null;
+        $user = User::find($userId); // This returns a single user or null
+        return view('backend.users.ganti', compact('user'));
+    }
+
+    public function ganti_password_action(Request $request, $id)
+    {
+        try {
+            // Validasi untuk password
+            // $request->validate([
+            //     'password' => 'required|string|min:8|confirmed',
+            // ]);
+
+            $user = User::findOrFail($id);
+
+            $user->update([
+                'password' => bcrypt($request->password),
+            ]);
+
+            // return response()->json(['success' => true, 'message' => 'Password berhasil diupdate.']);
+            return redirect()->route('user.ganti')->with('success', 'Password berhasil diupdate.');
+        } catch (\Exception $e) {
+            // return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+            // For non-AJAX requests (fallback)
+            return redirect()->route('user.ganti')->with('success', 'Password gagal diupdate.');
+        }
     }
 
     // Method untuk menyimpan data user baru

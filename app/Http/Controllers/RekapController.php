@@ -40,7 +40,7 @@ class RekapController extends Controller
         if ($userRole == 1 || $userRole == 2) {
             // No additional WHERE clause for roles 1 and 2
         } elseif ($userRole == 4) {
-            $verifikasis->where('kota', $user->kota);
+            $verifikasis->where('kota', $user->uptd_id);
         } elseif ($userRole == 7) {
             $verifikasis->where('created_by', auth()->id());
         }
@@ -51,7 +51,12 @@ class RekapController extends Controller
         // }
 
         if ($request->kabkota_id) {
-            $verifikasis->where('kota', $request->kabkota_id);
+            if($userRole == 4){
+                $verifikasis->where('kota', $user->uptd_id);
+            }else{
+                $verifikasis->where('kota_dagri', $request->kabkota_id);
+            }
+           
         }
         if ($request->district_id) {
             $verifikasis->where('kec', $request->district_id);

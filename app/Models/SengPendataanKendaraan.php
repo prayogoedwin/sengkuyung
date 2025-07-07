@@ -14,7 +14,11 @@ class SengPendataanKendaraan extends Model
 
     protected $fillable = [
         'nohp', 'email', 'nik', 'tgl_ctk', 'nopol', 'nama', 'alamat',
-        'desa_name', 'kec_name', 'kota_name', 'prov_name', 'desa', 'kec', 'kota', 'provinsi',
+        'desa_name', 'kec_name', 'kota_name', 'prov_name', 
+        'desa', 'kel_dagri',
+        'kec', 'kec_dagri',
+        'kota', 'kota_dagri',
+        'provinsi',
         'merk', 'tipe', 'tahun', 'tnkb', 'warna', 'jenis_kbm', 'jatuh_tempo',
         'pkb_pokok', 'pkb_denda', 'pkb', 'tanggal_akhir_Pkb',
         'jr_pokok', 'jr_denda', 'jr', 'pnbp_stnk', 'pnbp_tnkb', 'pnbp',

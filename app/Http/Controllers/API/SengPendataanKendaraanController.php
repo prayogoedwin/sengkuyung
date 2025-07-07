@@ -115,7 +115,7 @@ class SengPendataanKendaraanController extends Controller
                 'tipe' => $request->tipe,
                 'tanggal' => now()->format('d F Y') // Format tanggal: 20 Februari 2025
             ];
-            $html = view('html/surat_pernyataan', $data)->render();
+            $html = view('backend/html/surat_pernyataan', $data)->render();
         }
 
         return response()->json(['status' => true, 'message' => 'Data berhasil ditambahkan', 'data' => $responseData, 'html' => $html], Response::HTTP_CREATED);

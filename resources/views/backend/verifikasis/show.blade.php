@@ -100,17 +100,21 @@
 
 
                                                 <h5 class="fw-bold mt-4">LAMPIRAN</h5>
-                                                <table class="table table-bordered">
-                                                    <tr>
-                                                        <th width="30%">{{ $data->file0_ket }}</th>
-                                                        <td><a href="{{ asset($data->file0_url) }}" target="BLANK_"><img src="{{ asset($data->file0_url) }}" alt="{{ $data->file0_ket }}" style="width: 50%;"></a></td>
-                                                    </tr>
-                                                    <tr>
-                                                        <th>{{ $data->file1_ket }}</th>
-                                                        <td><a href="{{ asset($data->file1_url) }}" target="BLANK_"><img src="{{ asset($data->file1_url) }}" alt="{{ $data->file1_ket }}" style="width: 50%;"></a></td>
-                                                    </tr>
-                                                   
-                                                </table>
+                                                @if($data->status != 2)
+                                                    <table class="table table-bordered">
+                                                        <tr>
+                                                            <th width="30%">{{ $data->file0_ket }}</th>
+                                                            <td><a href="{{ asset($data->file0_url) }}" target="BLANK_"><img src="{{ asset($data->file0_url) }}" alt="{{ $data->file0_ket }}" style="width: 50%;"></a></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>{{ $data->file1_ket }}</th>
+                                                            <td><a href="{{ asset($data->file1_url) }}" target="BLANK_"><img src="{{ asset($data->file1_url) }}" alt="{{ $data->file1_ket }}" style="width: 50%;"></a></td>
+                                                        </tr>
+                                                    
+                                                    </table>
+                                                @else
+                                                      <iframe srcdoc="{!! htmlentities($html) !!}" style="width:100%; height:500px; border:1px solid #ddd;"></iframe>
+                                                @endif
 
                                                 <h5 class="fw-bold mt-4">VERIFIKASI STATUS KENDARAAN</h5>
                                                 <form action="{{ route('verifikasi.status') }}" method="POST"> <!-- Replace with your actual route -->

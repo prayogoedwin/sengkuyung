@@ -172,8 +172,22 @@ class VerifikasiController extends Controller
             ], Response::HTTP_NOT_FOUND);
         }
 
+        $html = null;
+        if($data->status == 2){
+            $data_html = [
+                'nama' => $data->nama, // Ganti dengan variabel atau data dari DB
+                'alamat' => $data->alamat.''.$data->desa_name.''.$data->kec_name,
+                'kota' => $data->kota_name,
+                'no_polisi' => $data->nopol,
+                'merk' => $data->merk,
+                'tipe' => $data->tipe,
+                'tanggal' => now()->format('d F Y') // Format tanggal: 20 Februari 2025
+            ];
+            $html = view('backend/html/surat_pernyataan', $data_html)->render();
+        }
+
         // Return the view with the data
-        return view('backend.verifikasis.show',  compact('data', 'status_verifikasis'));
+        return view('backend.verifikasis.show',  compact('data', 'status_verifikasis', 'html'));
     }
 
     public function verif(Request $request)

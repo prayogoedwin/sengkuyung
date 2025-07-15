@@ -90,7 +90,7 @@ class SengPendataanKendaraanController extends Controller
             'status_name' => $status->nama,
             'status_verifikasi' => $status_verifikasi->id,
             'status_verifikasi_name' => $status_verifikasi->nama,
-            'kota_dagri' => $kota_dagri,
+            'kota_dagri' => $kota_dagri->kabkota,
             'created_by' => $user->id,
             'updated_by' => $user->id
         ]);

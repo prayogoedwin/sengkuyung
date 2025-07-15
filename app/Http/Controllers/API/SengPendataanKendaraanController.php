@@ -87,9 +87,20 @@ class SengPendataanKendaraanController extends Controller
         $kec_dagri = SengWilayahKec::where('id_kecamatan', $request->kec)->first();
 
 
+
         if($user->kota != $kota_dagri->kabkota){
             return response()->json(['status' => false, 'message' => 'Nopol tidak berada di wilayah pencatatan Anda'], Response::HTTP_BAD_REQUEST);
         }
+
+        $pengecekan = SengPendataanKendaraan::where('nopol', $request->nopol)->first();
+        if($pengecekan) {
+            if(date('Y', strtotime($pengecekan->created_at)) == date('Y')) {
+                return response()->json([
+                    'status' => false, 
+                    'message' => 'Nomor polisi sudah pernah didata tahun ini'
+                ], Response::HTTP_BAD_REQUEST);
+            }
+        }     
         
 
         $requestData = array_merge($request->all(), [

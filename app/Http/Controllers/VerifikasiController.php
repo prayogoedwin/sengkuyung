@@ -9,6 +9,7 @@ use App\Models\SengStatus;
 use App\Models\SengStatusVerifikasi;
 use App\Models\SengStatusFile;
 use App\Models\SengWilayah;
+use App\Models\SengWilayahKec;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
@@ -47,11 +48,11 @@ class VerifikasiController extends Controller
             if ($userRoleId == 1 || $userRoleId == 2) {
                 // No additional WHERE clause for roles 1 and 2
                 if ($request->kabkota_id) {
-                    $verifikasis->where('kota', $request->kabkota_id);
+                    $verifikasis->where('kota_dagri', $request->kabkota_id);
                 }
             } elseif ($userRoleId == 4 || $userRoleId == 3) {
                 // Add WHERE clause for role 4
-                $verifikasis->where('kota', $userKotaId);
+                $verifikasis->where('kota_dagri', $userKotaId);
 
             } elseif ($userRoleId == 7) {
                 // Add WHERE clause for role 7

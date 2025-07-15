@@ -8,6 +8,7 @@ use App\Models\SengPendataanKendaraan;
 use App\Models\SengStatus;
 use App\Models\SengStatusVerifikasi;
 use App\Models\SengSaamsat;
+use App\Models\SengWilayahKec;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
 use App\Helpers\Helper;
@@ -82,7 +83,13 @@ class SengPendataanKendaraanController extends Controller
 
         $dStatus_verifikasi = Helper::decodeId($request->status_verifikasi);
         $status_verifikasi = SengStatusVerifikasi::find($dStatus_verifikasi);
-        $kota_dagri = SengSaamsat::find($request->kabkota);
+        $kota_dagri = SengSaamsat::where('id_wilayah_samsat', $request->kota)->first();
+        $kec_dagri = SengWilayahKec::where('id_kecamatan', $request->kec)->first();
+
+
+        if($user->kota != $kota_dagri->kabkota){
+            return response()->json(['status' => false, 'message' => 'Nopol tidak berada di wilayah pencatatan Anda'], Response::HTTP_BAD_REQUEST);
+        }
         
 
         $requestData = array_merge($request->all(), [
@@ -91,6 +98,7 @@ class SengPendataanKendaraanController extends Controller
             'status_verifikasi' => $status_verifikasi->id,
             'status_verifikasi_name' => $status_verifikasi->nama,
             'kota_dagri' => $kota_dagri->kabkota,
+            'kec_dagri' => $kec_dagri->kode_dagri,
             'created_by' => $user->id,
             'updated_by' => $user->id
         ]);

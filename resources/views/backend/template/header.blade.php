@@ -67,6 +67,22 @@
     /* .hidden {
         display: none;
     } */
+
+    .blink {
+        opacity: 0;
+        animation: blinking 1s linear infinite;
+    }
+
+    @keyframes blinking {
+    from,
+    49.9% {
+        opacity: 0;
+    }
+    50%,
+    to {
+        opacity: 1;
+    }
+    }
     </style>
 
 </head>
@@ -81,8 +97,8 @@
 
         <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
             <!-- Search -->
-            <!-- <div class="navbar-nav align-items-center">
-                      <div class="nav-item d-flex align-items-center">
+             <div class="navbar-nav align-items-center">
+                      {{-- <div class="nav-item d-flex align-items-center">
                         <i class="bx bx-search fs-4 lh-0"></i>
                         <input
                           type="text"
@@ -90,8 +106,9 @@
                           placeholder="Search..."
                           aria-label="Search..."
                         />
-                      </div>
-                    </div> -->
+                      </div> --}}
+                      <span class="blink">Ganti password secara berkala&nbsp;&nbsp;<a href="{{ route('user.ganti') }}">klik disini</a></span>
+                    </div>
             <!-- /Search -->
 
             <ul class="navbar-nav flex-row align-items-center ms-auto">

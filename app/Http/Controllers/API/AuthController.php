@@ -78,7 +78,7 @@ class AuthController extends Controller
 
         // Ambil informasi wilayah
         $keamatan = $user->wilayah_kec; // Relasi ke SengWilayah
-        $kodeWilayah = $kelurahan->id ?? null; // Kode wilayah kelurahan
+        $kodeWilayah = $keamatan->id ?? null; // Kode wilayah kelurahan
 
         if ($kodeWilayah) {
             // Query satu kali dengan LIKE

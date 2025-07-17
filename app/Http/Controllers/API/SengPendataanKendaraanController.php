@@ -83,8 +83,16 @@ class SengPendataanKendaraanController extends Controller
 
         $dStatus_verifikasi = Helper::decodeId($request->status_verifikasi);
         $status_verifikasi = SengStatusVerifikasi::find($dStatus_verifikasi);
-        $kota_dagri = SengSaamsat::where('id_wilayah_samsat', $request->kota)->first();
+       
         $kec_dagri = SengWilayahKec::where('id_kecamatan', $request->kec)->first();
+
+        // Buat variabel untuk menampung nilai dengan format khusus
+        $kode_simpan = $request->kota;
+        if (strlen($kode_simpan) === 2 && $kode_simpan[0] === '0' && $kode_simpan[1] >= '1' && $kode_simpan[1] <= '9') {
+            $kode_simpan = $kode_simpan[1];
+        }
+
+        $kota_dagri = SengSaamsat::where('id', $kode_simpan)->first();
 
 
 

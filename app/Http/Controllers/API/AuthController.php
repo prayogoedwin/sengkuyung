@@ -77,7 +77,7 @@ class AuthController extends Controller
         $responseData['id'] = Helper::encodeId($user->id);
 
         // Ambil informasi wilayah
-        $kelurahan = $user->wilayah; // Relasi ke SengWilayah
+        $keamatan = $user->wilayah_kec; // Relasi ke SengWilayah
         $kodeWilayah = $kelurahan->id ?? null; // Kode wilayah kelurahan
 
         if ($kodeWilayah) {
@@ -90,7 +90,8 @@ class AuthController extends Controller
                 ->keyBy('id'); // Mengelompokkan hasil berdasarkan ID
 
             // Masukkan ke responseData
-            $responseData['nama_kelurahan'] = $wilayahData[$kodeWilayah]->nama ?? null;
+            // $responseData['nama_kelurahan'] = $wilayahData[$kodeWilayah]->nama ?? null;
+            $responseData['nama_kelurahan'] = $user->kelurahan;
             $responseData['nama_kecamatan'] = $wilayahData[substr($kodeWilayah, 0, 6)]->nama ?? null;
             $responseData['nama_kota'] = $wilayahData[substr($kodeWilayah, 0, 4)]->nama ?? null;
             $responseData['nama_provinsi'] = $wilayahData[substr($kodeWilayah, 0, 2)]->nama ?? null;

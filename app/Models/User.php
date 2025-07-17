@@ -64,4 +64,9 @@ class User extends Authenticatable
     {
         return $this->belongsTo(SengWilayah::class, 'kelurahan', 'id');
     }
+
+    public function wilayah_kec()
+    {
+        return $this->belongsTo(SengWilayah::class, 'kecamatan', 'id');
+    }
 }

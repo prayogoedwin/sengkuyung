@@ -222,4 +222,37 @@ class VerifikasiController extends Controller
         }
     }
 
+    public function suratPernyataan($id)
+    {
+        // Decode ID from request
+        $decodedId = Helper::decodeId($id);
+
+        // Find data based on ID
+        $data = SengPendataanKendaraan::find($decodedId);
+
+        // If data is not found
+        if (!$data) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Data tidak ditemukan'
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        // Prepare data for the view
+        $suratData = [
+            'nama' => $data->nama,
+            'alamat' => $data->alamat,
+            'desa' => $data->desa_name ?? '',
+            'kecamatan' => $data->kec_name ?? '',
+            'kota' => $data->kota_name ?? '',
+            'no_polisi' => $data->nopol,
+            'merk' => $data->merk,
+            'tipe' => $data->tipe,
+            'tanggal' => now()->locale('id')->isoFormat('D MMMM YYYY') // Format: 20 Februari 2025
+        ];
+
+        // Return the view with the data
+        return view('backend.template_surat.surat_pernyataan', $suratData);
+    }
+
 }

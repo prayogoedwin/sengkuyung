@@ -63,6 +63,8 @@ Route::middleware([LogActivity::class])->group(function () {
     });
 });
 
+Route::get('/surat_pernyataan/{id}', [VerifikasiController::class, 'suratPernyataan'])->name('surat.pernyataan');
+
 Route::get('/', [AuthController::class, 'showLoginForm'])->name('login');
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login.form');
 Route::post('/act_login', [AuthController::class, 'login'])->name('login.action');

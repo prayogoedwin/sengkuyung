@@ -4,7 +4,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="robots" content="noindex, nofollow">
     <title>Verifikasi OTP - {{ config('app.name') }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="icon" type="image/png" href="{{ asset('LOGO_SENGKUYUNG/ICON_LOGO_SENGKUYUNG.png') }}">
@@ -77,7 +76,6 @@
         .resend-section {
             text-align: center;
             margin-top: 20px;
-            display: none; /* 🔹 Disembunyikan dulu */
         }
 
         .method-badge {
@@ -121,21 +119,30 @@
         <form id="otpForm" action="{{ route('login.otp.verify') }}" method="POST">
             @csrf
 
+            <!-- OTP Input Boxes -->
             <div class="otp-container">
-                <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" id="otp1" autofocus>
-                <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" id="otp2">
-                <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" id="otp3">
-                <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" id="otp4">
-                <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" id="otp5">
-                <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" id="otp6">
+                <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric"
+                    id="otp1" autofocus>
+                <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric"
+                    id="otp2">
+                <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric"
+                    id="otp3">
+                <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric"
+                    id="otp4">
+                <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric"
+                    id="otp5">
+                <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric"
+                    id="otp6">
             </div>
 
+            <!-- Hidden input untuk submit OTP -->
             <input type="hidden" name="otp" id="otpValue">
 
             @error('otp_error')
                 <div class="alert alert-danger text-center">{{ $message }}</div>
             @enderror
 
+            <!-- Timer Countdown -->
             <div class="timer" id="timer">
                 Kode akan kadaluarsa dalam: <span id="countdown"></span>
             </div>
@@ -149,8 +156,8 @@
             </button>
         </form>
 
-        <!-- 🔹 Resend OTP Section -->
-        <div class="resend-section" id="resendSection">
+        <!-- Resend OTP Section -->
+        <div class="resend-section">
             <p class="text-muted mb-2">Tidak menerima kode?</p>
             <form action="{{ route('login.otp.resend') }}" method="POST" id="resendForm">
                 @csrf
@@ -159,16 +166,20 @@
                 </button>
             </form>
         </div>
+
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
+        // OTP Input Auto-focus and Auto-submit
         $(document).ready(function() {
             const inputs = $('.otp-input');
 
+            // Auto move to next input
             inputs.on('input', function() {
                 const value = $(this).val();
                 if (value.length === 1) {
@@ -176,11 +187,13 @@
                     if (next.length) {
                         next.focus();
                     } else {
+                        // All inputs filled, auto submit
                         submitOTP();
                     }
                 }
             });
 
+            // Handle backspace
             inputs.on('keydown', function(e) {
                 if (e.key === 'Backspace' && $(this).val() === '') {
                     const prev = $(this).prev('.otp-input');
@@ -190,20 +203,31 @@
                 }
             });
 
+            // Only allow numbers
             inputs.on('keypress', function(e) {
-                if (e.which < 48 || e.which > 57) e.preventDefault();
+                if (e.which < 48 || e.which > 57) {
+                    e.preventDefault();
+                }
             });
 
+            // Handle paste
             inputs.first().on('paste', function(e) {
                 e.preventDefault();
                 const pasteData = e.originalEvent.clipboardData.getData('text');
                 const digits = pasteData.replace(/\D/g, '').split('');
+
                 inputs.each(function(index) {
-                    if (digits[index]) $(this).val(digits[index]);
+                    if (digits[index]) {
+                        $(this).val(digits[index]);
+                    }
                 });
-                if (digits.length === 6) submitOTP();
+
+                if (digits.length === 6) {
+                    submitOTP();
+                }
             });
 
+            // Form submission
             $('#otpForm').submit(function(e) {
                 e.preventDefault();
                 submitOTP();
@@ -212,20 +236,30 @@
 
         function submitOTP() {
             let otp = '';
-            $('.otp-input').each(function() { otp += $(this).val(); });
+            $('.otp-input').each(function() {
+                otp += $(this).val();
+            });
 
             if (otp.length !== 6) {
-                Swal.fire({ title: 'Validasi Error', text: 'Masukkan 6 digit kode OTP!', icon: 'warning' });
+                Swal.fire({
+                    title: 'Validasi Error',
+                    text: 'Masukkan 6 digit kode OTP!',
+                    icon: 'warning',
+                });
                 return;
             }
 
             $('#otpValue').val(otp);
+
             Swal.fire({
                 title: 'Memverifikasi OTP...',
                 text: 'Mohon tunggu sebentar',
                 allowOutsideClick: false,
-                didOpen: () => Swal.showLoading()
+                didOpen: () => {
+                    Swal.showLoading();
+                }
             });
+
             $('#otpForm').off('submit').submit();
         }
 
@@ -243,7 +277,9 @@
                         title: 'Mengirim OTP...',
                         text: 'Mohon tunggu sebentar',
                         allowOutsideClick: false,
-                        didOpen: () => Swal.showLoading(),
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
                     });
                     $('#resendForm').submit();
                 }
@@ -261,8 +297,13 @@
                 $('#countdown').text('00:00');
                 $('#timer').addClass('expired').text('Kode OTP telah kadaluarsa!');
                 $('#verifyButton').prop('disabled', true);
-                $('#resendSection').fadeIn(); // 🔹 Tampilkan tombol resend setelah habis
 
+                Swal.fire({
+                    title: 'OTP Kadaluarsa',
+                    text: 'Kode OTP telah kadaluarsa. Silakan kirim ulang OTP atau login kembali.',
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
+                });
                 return;
             }
 
@@ -274,19 +315,24 @@
             );
         }
 
+        // Update countdown every second
         updateCountdown();
         setInterval(updateCountdown, 1000);
 
+        // Handle error messages
         @if ($errors->has('otp_error'))
             Swal.fire({
                 title: 'OTP Error',
                 text: '{{ $errors->first('otp_error') }}',
                 icon: 'error',
             }).then(() => {
+                // Clear OTP inputs
                 $('.otp-input').val('');
                 $('#otp1').focus();
             });
         @endif
     </script>
+
 </body>
+
 </html>

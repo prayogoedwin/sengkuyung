@@ -24,7 +24,7 @@ class SengPendataanKendaraanController extends Controller
     // Definisikan aturan validasi sebagai property
     protected $rules = [
         'nohp' => 'required|digits_between:10,15|numeric',
-        'email' => 'required|email',
+        // 'email' => 'required|email',
         'nik' => 'required|digits:16|numeric',
         'nopol' => 'required',
         'nama' => 'required',

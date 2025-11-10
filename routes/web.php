@@ -70,6 +70,11 @@ Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login.form
 Route::post('/act_login', [AuthController::class, 'login'])->name('login.action');
 Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
 
+// OTP Routes
+Route::get('/otp', [AuthController::class, 'showOtpForm'])->name('login.otp.form');
+Route::post('/otp/verify', [AuthController::class, 'verifyOtp'])->name('login.otp.verify');
+Route::post('/otp/resend', [AuthController::class, 'resendOtp'])->name('login.otp.resend');
+
 
 
 

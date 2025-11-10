@@ -25,6 +25,9 @@ class User extends Authenticatable
         'name',
         'email',
         'whatsapp',
+        'otp',                // Kode OTP
+        'otp_expired_at',     // Waktu expired OTP
+        'otp_method',         // Metode OTP (email/wa)
         'password',
         'uptd_id',
         'provinsi',

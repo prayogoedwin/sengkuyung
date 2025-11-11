@@ -38,7 +38,11 @@ class UserController extends Controller
             // $users = User::select('*')->where('email', '!=', 'superadmin@example.com')->get();
 
             // Ambil data user dasar
-            $usersQuery = User::where('email', '!=', 'superadmin@example.com');
+            // $usersQuery = User::where('email', '!=', 'prayogo.edwin@gmail.com');
+            $usersQuery = User::whereNotIn('email', [
+                'prayogo.edwin@gmail.com',
+                'ucitech13@gmail.com'
+            ]);
 
             // Jika role-nya 4, filter berdasarkan kota milik user
             if ($userRoleId == 7) {

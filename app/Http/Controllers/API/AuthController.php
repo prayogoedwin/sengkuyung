@@ -167,11 +167,16 @@ class AuthController extends Controller
             $sent = Helper::fungsi_wa($no_wa, $subjek, $text);
         }
 
+        $datas = array(
+            'email' => $user->email,
+            'otp'   => $otp,
+            'expired_minutes' => '5'
+        );
+
         return response()->json([
             'status' => true,
-            'message' => 'OTP expire 5 menit',
-            'data' => $user->email,
-            'expired_minutes' => '5'
+            'message' => 'OTP Tergenerate, dengan expire 5 menit',
+            'data' => $datas,
         ]);
     }
 

@@ -146,6 +146,7 @@ class AuthController extends Controller
             
             $sent = Helper::fungsi_email($user->email, $subjek, $text);
         } else {
+            
             // Pastikan user punya nomor WA
             if (empty($user->whatsapp)) {
                 // return back()->withErrors(['login_error' => 'Nomor WhatsApp tidak terdaftar. Silakan gunakan email.']);
@@ -169,7 +170,7 @@ class AuthController extends Controller
 
         $datas = array(
             'email' => $user->email,
-            'otp'   => $otp,
+            // 'otp'   => $otp,
             'expired_minutes' => '5'
         );
 

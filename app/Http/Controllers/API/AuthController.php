@@ -188,7 +188,7 @@ class AuthController extends Controller
                 'otp' => 'required|string|size:6',
             ]);
 
-            $user = User::where('email', $request->otp)->first();
+            $user = User::where('email', $request->email)->first();
 
             if (!$user) {
                 return response()->json([

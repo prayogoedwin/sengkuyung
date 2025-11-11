@@ -145,6 +145,19 @@ class AuthController extends Controller
             ])->render();
             
             $sent = Helper::fungsi_email($user->email, $subjek, $text);
+
+             $datas = array(
+            'email' => $user->email,
+            // 'otp'   => $otp,
+            'expired_minutes' => '5'
+        );
+
+        return response()->json([
+            'status' => true,
+            'message' => 'OTP Tergenerate, dengan expire 5 menit',
+            'data' => $datas,
+        ]);
+        
         } else {
             
             // Pastikan user punya nomor WA
@@ -166,9 +179,8 @@ class AuthController extends Controller
                     "Jangan bagikan kode ini kepada siapapun.";
             
             $sent = Helper::fungsi_wa($no_wa, $subjek, $text);
-        }
 
-        $datas = array(
+             $datas = array(
             'email' => $user->email,
             // 'otp'   => $otp,
             'expired_minutes' => '5'
@@ -179,6 +191,9 @@ class AuthController extends Controller
             'message' => 'OTP Tergenerate, dengan expire 5 menit',
             'data' => $datas,
         ]);
+        }
+
+       
     }
 
       public function verifyOtp(Request $request)

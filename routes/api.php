@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Middleware\LogActivity;
 
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login_with_otp', [AuthController::class, 'login_otp']);
+Route::post('/verifikasi_otp', [AuthController::class, 'verifyOtp']);
 
 
 // Route::get('/user', function (Request $request) {

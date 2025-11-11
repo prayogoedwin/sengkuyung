@@ -188,7 +188,16 @@ class AuthController extends Controller
                 'otp' => 'required|string|size:6',
             ]);
 
-            $user = User::where('email', $request->otp)->first()->makeHidden([
+            $user = User::where('email', $request->otp)->first();
+
+            if (!$user) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User Tidak Ditemukan, Login Ulang',
+                ], 401);
+            }
+
+            $user->makeHidden([
                 'email_verified_at',
                 'created_at',
                 'created_by',
@@ -198,7 +207,7 @@ class AuthController extends Controller
                 'deleted_by'
             ]);
 
-            if (!$user || !$user->otp) {
+             if (!$user->otp) {
                 return response()->json([
                     'status' => false,
                     'message' => 'Data OTP tidak ditemukan. Silakan login ulang.',

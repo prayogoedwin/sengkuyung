@@ -130,6 +130,10 @@ class AuthController extends Controller
             'deleted_by'
         ]);
 
+         // Generate OTP
+        $otp = Helper::generate_otp(6);
+        $expired_at = Carbon::now()->addMinutes(5); // OTP berlaku 5 menit
+
         if ($request->otp_method === 'email') {
             $destination = $user->email;
             $subjek = 'Kode OTP Login - ' . config('app.name');

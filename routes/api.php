@@ -44,6 +44,7 @@ Route::middleware(['auth-api'])->group(function () {
         // Route::apiResource('profil', [AuthController::class, 'show']);
         Route::apiResource('pendataan', SengPendataanKendaraanController::class);
         Route::post('pendataan/{id}/upload', [SengPendataanKendaraanController::class, 'upload']); // Rute khusus upload
+        Route::get('/secure-file/{id}/{fileIndex}', [SengPendataanKendaraanController::class, 'getSecureFile']);
         Route::apiResource('status', SengStatusController::class);
         Route::apiResource('status-verifikasi', SengStatusVerifikasiController::class);
         Route::apiResource('wilayah', SengWilayahController::class);

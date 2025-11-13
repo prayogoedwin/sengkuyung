@@ -14,6 +14,7 @@ use Illuminate\Http\Response;
 use App\Helpers\Helper;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
+use App\Helpers\FileEncryption;
 
 use Illuminate\Support\Facades\Auth;
 
@@ -149,7 +150,7 @@ class SengPendataanKendaraanController extends Controller
         return response()->json(['status' => true, 'message' => 'Data berhasil ditambahkan', 'data' => $responseData, 'html' => $html], Response::HTTP_CREATED);
     }
 
-    public function upload(Request $request, $id)
+    public function upload_bak(Request $request, $id)
     {
         // Decode ID dari request
         $decodedId = Helper::decodeId($id);
@@ -224,6 +225,230 @@ class SengPendataanKendaraanController extends Controller
             'message' => 'File berhasil diunggah',
             'data' => $responseData
         ]);
+    }
+
+    public function upload_bulan_th(Request $request, $id)
+    {
+        // Decode ID dari request
+        $decodedId = Helper::decodeId($id);
+
+        $validator = Validator::make($request->all(), [
+            'file_ke' => 'required|string|in:file0,file1,file2,file3,file4,file5,file6,file7,file8,file9',
+            'file' => 'required|file|max:2048', // Maksimum 2MB
+            'keterangan' => 'required'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()], Response::HTTP_BAD_REQUEST);
+        }
+
+        $data = SengPendataanKendaraan::find($decodedId);
+        if (!$data) {
+            return response()->json(['status' => false, 'message' => 'Data tidak ditemukan'], Response::HTTP_NOT_FOUND);
+        }
+
+        $user = Auth::user();
+        $file_ke = $request->file_ke;
+        $tahun = Carbon::now()->year;
+        $bulan = Carbon::now()->format('m'); // Format bulan 01-12
+        $timestamp = Carbon::now()->format('YmdHis'); // Format waktu
+
+        $file = $request->file('file');
+        $extension = $file->getClientOriginalExtension();
+        $nama_file = hash('sha256', $timestamp . $decodedId . $request->keterangan) . '.' . $extension;
+        $path = "uploads/$tahun/$bulan/$nama_file";
+
+        // Ambil URL file lama dari database
+        $oldFileUrl = $data->{"{$file_ke}_url"};
+
+        if ($oldFileUrl) {
+            // Ekstrak nama file dari URL (biasanya "storage/uploads/2024/01/nama_file.ext")
+            $oldFilePath = str_replace('storage/', '', $oldFileUrl);
+
+            // Cek dan hapus file lama jika ada
+            if (Storage::disk('public')->exists($oldFilePath)) {
+                Storage::disk('public')->delete($oldFilePath);
+            }
+        }
+
+        // Simpan file baru
+        $file->storeAs("uploads/$tahun/$bulan", $nama_file, 'public');
+
+        // Update database
+        $data->update([
+            'updated_by' => $user->id,
+            $file_ke => $nama_file,
+            "{$file_ke}_url" => "storage/$path",
+            "{$file_ke}_ket" => $request->keterangan
+        ]);
+
+        // Buat salinan data untuk response
+        $responseData = $data->toArray();
+        $responseData['id'] = Helper::encodeId($data->id);
+
+        $baseUrl = config('app.url'); // Ambil BASE_URL dari .env
+
+        for ($i = 0; $i <= 9; $i++) {
+            $fileKey = "file{$i}_url";
+            
+            if (!empty($data[$fileKey])) {
+                $responseData[$fileKey] = $baseUrl . '/' . $data[$fileKey];
+            }
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'File berhasil diunggah',
+            'data' => $responseData
+        ]);
+    }
+
+    public function upload(Request $request, $id)
+    {
+        // Decode ID dari request
+        $decodedId = Helper::decodeId($id);
+
+        $validator = Validator::make($request->all(), [
+            'file_ke' => 'required|string|in:file0,file1,file2,file3,file4,file5,file6,file7,file8,file9',
+            'file' => 'required|file|max:2048', // Maksimum 2MB
+            'keterangan' => 'required'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()], Response::HTTP_BAD_REQUEST);
+        }
+
+        $data = SengPendataanKendaraan::find($decodedId);
+        if (!$data) {
+            return response()->json(['status' => false, 'message' => 'Data tidak ditemukan'], Response::HTTP_NOT_FOUND);
+        }
+
+        $user = Auth::user();
+        $file_ke = $request->file_ke;
+        $tahun = Carbon::now()->year;
+        $bulan = Carbon::now()->format('m');
+        $timestamp = Carbon::now()->format('YmdHis');
+
+        $file = $request->file('file');
+        $extension = $file->getClientOriginalExtension();
+        
+        // Untuk KTP, gunakan extension .enc agar orang tidak bisa langsung buka
+        $isKTP = strtoupper($request->keterangan) === 'KTP';
+        $finalExtension = $isKTP ? 'enc' : $extension;
+        
+        $nama_file = hash('sha256', $timestamp . $decodedId . $request->keterangan) . '.' . $finalExtension;
+        $path = "uploads/$tahun/$bulan/$nama_file";
+
+        // Ambil URL file lama dari database
+        $oldFileUrl = $data->{"{$file_ke}_url"};
+
+        if ($oldFileUrl) {
+            $oldFilePath = str_replace('storage/', '', $oldFileUrl);
+            if (Storage::disk('public')->exists($oldFilePath)) {
+                Storage::disk('public')->delete($oldFilePath);
+            }
+        }
+
+        // Proses file
+        if ($isKTP) {
+            // Encrypt file untuk KTP
+            $fileContent = file_get_contents($file->getRealPath());
+            $encryptedContent = FileEncryption::encryptFile($fileContent);
+            
+            // Simpan encrypted file
+            Storage::disk('public')->put("uploads/$tahun/$bulan/$nama_file", $encryptedContent);
+        } else {
+            // Simpan file biasa
+            $file->storeAs("uploads/$tahun/$bulan", $nama_file, 'public');
+        }
+
+        // Update database - tambah field untuk track file type
+        $data->update([
+            'updated_by' => $user->id,
+            $file_ke => $nama_file,
+            "{$file_ke}_url" => "storage/$path",
+            "{$file_ke}_ket" => $request->keterangan,
+            "{$file_ke}_encrypted" => $isKTP ? 1 : 0, // Track apakah file ter-encrypt
+            "{$file_ke}_original_ext" => $extension // Simpan extension asli
+        ]);
+
+        // Buat salinan data untuk response
+        $responseData = $data->toArray();
+        $responseData['id'] = Helper::encodeId($data->id);
+
+        $baseUrl = config('app.url');
+
+        for ($i = 0; $i <= 9; $i++) {
+            $fileKey = "file{$i}_url";
+            
+            if (!empty($data[$fileKey])) {
+                // Jika file encrypted, gunakan route khusus
+                $isEncrypted = $data["{$fileKey}_encrypted"] ?? 0;
+                if ($isEncrypted) {
+                    $responseData[$fileKey] = $baseUrl . "/api/secure-file/" . Helper::encodeId($data->id) . "/$i";
+                } else {
+                    $responseData[$fileKey] = $baseUrl . '/' . $data[$fileKey];
+                }
+            }
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'File berhasil diunggah',
+            'data' => $responseData
+        ]);
+    }
+
+    public function getSecureFile($id, $fileIndex)
+    {
+        $decodedId = Helper::decodeId($id);
+        
+        $data = SengPendataanKendaraan::find($decodedId);
+        if (!$data) {
+            abort(404, 'Data tidak ditemukan');
+        }
+
+        $fileKey = "file{$fileIndex}";
+        $isEncrypted = $data["{$fileKey}_encrypted"] ?? 0;
+        
+        if (!$isEncrypted) {
+            abort(403, 'File tidak ter-enkripsi');
+        }
+
+        $fileUrl = $data["{$fileKey}_url"];
+        $originalExt = $data["{$fileKey}_original_ext"] ?? 'jpg';
+        
+        if (!$fileUrl) {
+            abort(404, 'File tidak ditemukan');
+        }
+
+        $filePath = str_replace('storage/', '', $fileUrl);
+        
+        if (!Storage::disk('public')->exists($filePath)) {
+            abort(404, 'File tidak ada di storage');
+        }
+
+        // Baca encrypted file
+        $encryptedContent = Storage::disk('public')->get($filePath);
+        
+        // Decrypt file
+        $decryptedContent = FileEncryption::decryptFile($encryptedContent);
+        
+        // Tentukan mime type berdasarkan extension asli
+        $mimeTypes = [
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'pdf' => 'application/pdf',
+        ];
+        
+        $mimeType = $mimeTypes[$originalExt] ?? 'application/octet-stream';
+        
+        // Return decrypted file
+        return response($decryptedContent)
+            ->header('Content-Type', $mimeType)
+            ->header('Content-Disposition', 'inline');
     }
 
 

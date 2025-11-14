@@ -104,6 +104,8 @@ class VerifikasiController extends Controller
                 // ->rawColumns(['options'])  // Pastikan menambahkan ini untuk kolom options
                 // ->make(true);
 
+                $verifikasis->orderBy('id', 'desc');
+
                 $datatable = DataTables::of($verifikasis)
                     ->addIndexColumn()
                     ->addColumn('nopol', function ($verifikasi) {

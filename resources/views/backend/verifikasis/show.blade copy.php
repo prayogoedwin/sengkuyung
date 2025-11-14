@@ -102,44 +102,18 @@
                                                 <h5 class="fw-bold mt-4">LAMPIRAN</h5>
                                                 @if($data->status != 2)
                                                     <table class="table table-bordered">
-                                                        {{-- File 0 --}}
                                                         <tr>
                                                             <th width="30%">{{ $data->file0_ket }}</th>
-                                                            <td>
-                                                                @if(isset($decryptedFiles['file0']))
-                                                                    {{-- File encrypted (KTP) - tampilkan dari base64 --}}
-                                                                    <a href="{{ $decryptedFiles['file0'] }}" target="_blank">
-                                                                        <img src="{{ $decryptedFiles['file0'] }}" alt="{{ $data->file0_ket }}" style="width: 50%;">
-                                                                    </a>
-                                                                @else
-                                                                    {{-- File biasa - tampilkan normal --}}
-                                                                    <a href="{{ asset($data->file0_url) }}" target="_blank">
-                                                                        <img src="{{ asset($data->file0_url) }}" alt="{{ $data->file0_ket }}" style="width: 50%;">
-                                                                    </a>
-                                                                @endif
-                                                            </td>
+                                                            <td><a href="{{ asset($data->file0_url) }}" target="BLANK_"><img src="{{ asset($data->file0_url) }}" alt="{{ $data->file0_ket }}" style="width: 50%;"></a></td>
                                                         </tr>
-
-                                                        {{-- File 1 --}}
                                                         <tr>
                                                             <th>{{ $data->file1_ket }}</th>
-                                                            <td>
-                                                                @if(isset($decryptedFiles['file1']))
-                                                                    {{-- File encrypted (KTP) - tampilkan dari base64 --}}
-                                                                    <a href="{{ $decryptedFiles['file1'] }}" target="_blank">
-                                                                        <img src="{{ $decryptedFiles['file1'] }}" alt="{{ $data->file1_ket }}" style="width: 50%;">
-                                                                    </a>
-                                                                @else
-                                                                    {{-- File biasa - tampilkan normal --}}
-                                                                    <a href="{{ asset($data->file1_url) }}" target="_blank">
-                                                                        <img src="{{ asset($data->file1_url) }}" alt="{{ $data->file1_ket }}" style="width: 50%;">
-                                                                    </a>
-                                                                @endif
-                                                            </td>
+                                                            <td><a href="{{ asset($data->file1_url) }}" target="BLANK_"><img src="{{ asset($data->file1_url) }}" alt="{{ $data->file1_ket }}" style="width: 50%;"></a></td>
                                                         </tr>
+                                                    
                                                     </table>
                                                 @else
-                                                    <iframe srcdoc="{!! htmlentities($html) !!}" style="width:100%; height:500px; border:1px solid #ddd;"></iframe>
+                                                      <iframe srcdoc="{!! htmlentities($html) !!}" style="width:100%; height:500px; border:1px solid #ddd;"></iframe>
                                                 @endif
 
                                                 <h5 class="fw-bold mt-4">VERIFIKASI STATUS KENDARAAN</h5>

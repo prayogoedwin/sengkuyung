@@ -16,6 +16,8 @@ use Carbon\Carbon;
 use App\Helpers\Helper;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use App\Helpers\FileEncryption;
+use Illuminate\Support\Facades\Storage;
 
 class VerifikasiController extends Controller
 {
@@ -157,7 +159,7 @@ class VerifikasiController extends Controller
     }
 
     // Show a single record
-    public function show($id)
+    public function show_bak($id)
     {
         // Decode ID from request
 
@@ -191,6 +193,80 @@ class VerifikasiController extends Controller
 
         // Return the view with the data
         return view('backend.verifikasis.show',  compact('data', 'status_verifikasis', 'html'));
+    }
+
+    public function show($id)
+    {
+        $decodedId = Helper::decodeId($id);
+        $data = SengPendataanKendaraan::find($decodedId);
+        $status_verifikasis = SengStatusVerifikasi::select('*')->get();
+
+        if (!$data) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Data tidak ditemukan'
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        $html = null;
+        if($data->status == 2){
+            $data_html = [
+                'nama' => $data->nama,
+                'alamat' => $data->alamat.''.$data->desa_name.''.$data->kec_name,
+                'kota' => $data->kota_name,
+                'no_polisi' => $data->nopol,
+                'merk' => $data->merk,
+                'tipe' => $data->tipe,
+                'tanggal' => now()->format('d F Y')
+            ];
+            $html = view('backend/html/surat_pernyataan', $data_html)->render();
+        }
+
+        // Decrypt files jika encrypted
+        $decryptedFiles = [];
+        for ($i = 0; $i <= 9; $i++) {
+            $fileKey = "file{$i}";
+            $fileUrl = $data->{$fileKey . "_url"};
+            $fileKet = $data->{$fileKey . "_ket"};
+            $isEncrypted = $data->{$fileKey . "_encrypted"} ?? 0;
+            
+            if ($fileUrl && $isEncrypted && strtoupper($fileKet) === 'KTP') {
+                // File adalah KTP yang ter-encrypt
+                $filePath = str_replace('storage/', '', $fileUrl);
+                
+                if (Storage::disk('public')->exists($filePath)) {
+                    // Baca file encrypted
+                    $encryptedContent = Storage::disk('public')->get($filePath);
+                    
+                    // Decrypt file
+                    $decryptedContent = FileEncryption::decryptFile($encryptedContent);
+                    
+                    // Convert ke base64
+                    $originalExt = $data->{$fileKey . "_original_ext"} ?? 'jpg';
+                    $mimeType = $this->getMimeType($originalExt);
+                    $base64 = 'data:' . $mimeType . ';base64,' . base64_encode($decryptedContent);
+                    
+                    $decryptedFiles[$fileKey] = $base64;
+                }
+            }
+        }
+
+        return view('backend.verifikasis.show', compact('data', 'status_verifikasis', 'html', 'decryptedFiles'));
+    }
+
+    // Helper method untuk get mime type
+    private function getMimeType($extension)
+    {
+        $mimeTypes = [
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            'pdf' => 'application/pdf',
+        ];
+        
+        return $mimeTypes[strtolower($extension)] ?? 'application/octet-stream';
     }
 
     public function verif(Request $request)

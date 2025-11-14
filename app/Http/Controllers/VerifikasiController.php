@@ -249,23 +249,24 @@ class VerifikasiController extends Controller
                     $decryptedFiles[$fileKey] = $base64;
                 }
 
-            }else{
-
-                $filePath = str_replace('storage/', '', $fileUrl);
-                
-                if (Storage::disk('public')->exists($filePath)) {
-                    // Baca file encrypted
-                    $encryptedContent = Storage::disk('public')->get($filePath);
-                    
-                    // Convert ke base64
-                    $originalExt = $data->{$fileKey . "_original_ext"} ?? 'jpg';
-                    $mimeType = $this->getMimeType($originalExt);
-                    $base64 = 'data:' . $mimeType . ';base64,' . base64_encode($encryptedContent);
-                    
-                    $decryptedFiles[$fileKey] = $base64;
-                }
-
             }
+            // else{
+
+            //     $filePath = str_replace('storage/', '', $fileUrl);
+                
+            //     if (Storage::disk('public')->exists($filePath)) {
+            //         // Baca file encrypted
+            //         $encryptedContent = Storage::disk('public')->get($filePath);
+                    
+            //         // Convert ke base64
+            //         $originalExt = $data->{$fileKey . "_original_ext"} ?? 'jpg';
+            //         $mimeType = $this->getMimeType($originalExt);
+            //         $base64 = 'data:' . $mimeType . ';base64,' . base64_encode($encryptedContent);
+                    
+            //         $decryptedFiles[$fileKey] = $base64;
+            //     }
+
+            // }
         }
 
         return view('backend.verifikasis.show', compact('data', 'status_verifikasis', 'html', 'decryptedFiles'));

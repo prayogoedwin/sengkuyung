@@ -124,17 +124,21 @@
                                                         <tr>
                                                             <th>{{ $data->file1_ket }}</th>
                                                             <td>
-                                                                @if(isset($decryptedFiles['file1']))
-                                                                    {{-- File encrypted (KTP) - tampilkan dari base64 --}}
+                                                                {{-- @if(isset($decryptedFiles['file1']))
+                                                                   
                                                                     <a href="{{ $decryptedFiles['file1'] }}" target="_blank">
                                                                         <img src="{{ $decryptedFiles['file1'] }}" alt="{{ $data->file1_ket }}" style="width: 50%;">
                                                                     </a>
                                                                 @else
-                                                                    {{-- File biasa - tampilkan normal --}}
+                                                              
                                                                     <a href="{{ asset($data->file1_url) }}" target="_blank">
                                                                         <img src="{{ asset($data->file1_url) }}" alt="{{ $data->file1_ket }}" style="width: 50%;">
                                                                     </a>
-                                                                @endif
+                                                                @endif --}}
+
+                                                                <a href="{{ asset($data->file1_url) }}" target="_blank">
+                                                                        <img src="{{ asset($data->file1_url) }}" alt="{{ $data->file1_ket }}" style="width: 50%;">
+                                                                </a>
                                                             </td>
                                                         </tr>
                                                     </table>

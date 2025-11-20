@@ -26,7 +26,7 @@ class SengPendataanKendaraanController extends Controller
     protected $rules = [
         'nohp' => 'required|digits_between:10,15|numeric',
         // 'email' => 'required|email',
-        'nik' => 'required|digits:16|numeric',
+        // 'nik' => 'required|digits:16|numeric',
         'nopol' => 'required',
         'nama' => 'required',
         'alamat' => 'required',
@@ -110,7 +110,52 @@ class SengPendataanKendaraanController extends Controller
                     'data' => ''
                 ], Response::HTTP_BAD_REQUEST);
             }
-        }     
+        }    
+        
+        
+         if($status->id == 1){
+            $nikValidator = Validator::make($request->all(), [
+                'nik' => [
+                    'required',
+                    'string',
+                    'digits:16', // Harus 16 digit
+                    'regex:/^[0-9]{16}$/' // Hanya angka
+                ]
+            ], [
+                'nik.required' => 'NIK wajib diisi',
+                'nik.digits' => 'NIK harus 16 digit',
+                'nik.regex' => 'NIK harus berupa angka'
+            ]);
+
+            if ($nikValidator->fails()) {
+                return response()->json([
+                    'status' => false, 
+                    'message' => $nikValidator->errors()
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            // Validasi tambahan format NIK (opsional)
+            // $nik = $request->nik;
+            // $tanggal = (int)substr($nik, 0, 2);
+            // $bulan = (int)substr($nik, 2, 2);
+            
+            // Validasi tanggal (1-31 untuk laki-laki, 41-71 untuk perempuan)
+            // if (!(($tanggal >= 1 && $tanggal <= 31) || ($tanggal >= 41 && $tanggal <= 71))) {
+            //     return response()->json([
+            //         'status' => false, 
+            //         'message' => ['nik' => ['Format NIK tidak valid (tanggal lahir salah)']]
+            //     ], Response::HTTP_BAD_REQUEST);
+            // }
+
+            // Validasi bulan (1-12)
+            // if ($bulan < 1 || $bulan > 12) {
+            //     return response()->json([
+            //         'status' => false, 
+            //         'message' => ['nik' => ['Format NIK tidak valid (bulan lahir salah)']]
+            //     ], Response::HTTP_BAD_REQUEST);
+            // }
+        }
+
         
 
         $requestData = array_merge($request->all(), [

@@ -25,5 +25,10 @@ class ActivityLog extends Model
         'request_data' => 'array',
         'response_data' => 'array',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }
 

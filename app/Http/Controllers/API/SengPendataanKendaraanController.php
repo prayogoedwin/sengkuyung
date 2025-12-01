@@ -496,7 +496,6 @@ class SengPendataanKendaraanController extends Controller
             ->header('Content-Disposition', 'inline');
     }
 
-
     // Show a single record
     public function show($id)
     {
@@ -594,7 +593,6 @@ class SengPendataanKendaraanController extends Controller
             'data' => $responseData
         ]);
     }
-
 
     // Delete a record (Soft Delete jika pakai SoftDeletes)
     public function destroy($id)

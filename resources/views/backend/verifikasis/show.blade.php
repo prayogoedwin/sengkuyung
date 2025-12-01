@@ -147,7 +147,8 @@
                                                 @endif
 
                                                 <h5 class="fw-bold mt-4">VERIFIKASI STATUS KENDARAAN</h5>
-                                                <form action="{{ route('verifikasi.status') }}" method="POST"> <!-- Replace with your actual route -->
+                                                
+                                                <form action="{{ route('verifikasi.status', ['id' => \App\Helpers\Helper::encodeId($data->id)]) }}" method="POST">
                                                 @csrf <!-- Include CSRF token for security -->
                                                     <table class="table table-bordered">
                                                         <tr>

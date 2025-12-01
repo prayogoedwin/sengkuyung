@@ -18,6 +18,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use App\Helpers\FileEncryption;
 use Illuminate\Support\Facades\Storage;
+use App\Models\ActivityLog;
 
 class VerifikasiController extends Controller
 {
@@ -287,7 +288,7 @@ class VerifikasiController extends Controller
         return $mimeTypes[strtolower($extension)] ?? 'application/octet-stream';
     }
 
-    public function verif(Request $request)
+    public function verif(Request $request, $id)
     {
         // Decode ID from request
         $decodedId = Helper::decodeId($request->id);

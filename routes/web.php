@@ -35,7 +35,7 @@ Route::middleware([LogActivity::class])->group(function () {
 
         Route::get('/verifikasi', [VerifikasiController::class, 'index'])->name('verifikasi.index');
         Route::get('/verifikasi-detail/{id}', [VerifikasiController::class, 'show'])->name('verifikasi-detail.index');
-        Route::post('/verifikasi-status', [VerifikasiController::class, 'verif'])->name('verifikasi.status');
+        Route::post('/verifikasi-status/{id}', [VerifikasiController::class, 'verif'])->name('verifikasi.status');
 
         Route::get('/download', [DownloadController::class, 'index'])->name('download.index');
         Route::get('/download-csv', [DownloadController::class, 'downloadCsv'])->name('download.csv');

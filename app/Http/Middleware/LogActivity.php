@@ -20,6 +20,13 @@ class LogActivity
     {
         $response = $next($request);
 
+         // Cek route ada atau tidak
+        $route = $request->route();
+        
+        if (!$route) {
+            return $response;
+        }
+
         // Hanya log jika request adalah AJAX atau JSON
         // if ($request->ajax() || $request->wantsJson()) {
         //     return $response;
@@ -34,8 +41,15 @@ class LogActivity
             $origin = 'api';
         }
 
+        $idKode = null;
+        $parameters = $route->parameters();
+        if (!empty($parameters)) {
+            $idKode = (string) array_values($parameters)[0];
+        }
+
         $log = new ActivityLog();
         $log->user_id = Auth::id();
+        $log->id_kode = $idKode;
         $log->url = $request->fullUrl();
         $log->method = $request->method();
         $log->request_data = json_encode($request->all());

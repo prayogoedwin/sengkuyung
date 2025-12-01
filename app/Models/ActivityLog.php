@@ -20,5 +20,10 @@ class ActivityLog extends Model
         'response_data',
         'ip_address',
     ];
+
+    protected $casts = [
+        'request_data' => 'array',
+        'response_data' => 'array',
+    ];
 }
 

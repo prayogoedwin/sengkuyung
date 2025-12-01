@@ -574,9 +574,20 @@ class SengPendataanKendaraanController extends Controller
 
 
         // Merge request data dengan updated_by
+        // $requestData = array_merge($request->all(), [
+        //     'status_name' => $status->nama,
+        //     'status_verifikasi_name' => $status_verifikasi->nama,
+        //     'updated_by' => $user->id
+        // ]);
+
         $requestData = array_merge($request->all(), [
-            'status_name' => $status->nama,
-            'status_verifikasi_name' => $status_verifikasi->nama,
+            // 'status' => $status->id,
+            // 'status_name' => $status->nama,
+            'status_verifikasi' => 5,
+            'status_verifikasi_name' => 'SUDAH DIPERBAIKI',
+            'nik' => $request->nik,
+            'nohp' =>$request->nohp,
+            'email' => $request->email,
             'updated_by' => $user->id
         ]);
 

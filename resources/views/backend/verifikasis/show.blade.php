@@ -178,93 +178,133 @@
                                             </div>
                                         </div>
 
-                                        {{-- ACTIVITY LOGS SECTION --}}
+                                        {{-- ACTIVITY LOGS SECTION - TOGGLE --}}
                                         <div class="row mt-4">
                                             <div class="col-12">
-                                                <h5 class="fw-bold">RIWAYAT AKTIVITAS</h5>
-                                                
-                                                @if($activityLogs->isEmpty())
-                                                    <div class="alert alert-info">Belum ada riwayat aktivitas.</div>
-                                                @else
-                                                    @foreach($activityLogs as $index => $log)
-                                                        @php
-                                                            $requestData = is_string($log->request_data) 
-                                                                ? json_decode($log->request_data, true) 
-                                                                : $log->request_data;
-                                                            
-                                                            // Hapus _token dari tampilan
-                                                            if (is_array($requestData)) {
-                                                                unset($requestData['_token']);
-                                                            }
-                                                        @endphp
-                                                        
-                                                        <div class="card mb-3 border">
-                                                            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                                                                <span>
-                                                                    <strong>#{{ $index + 1 }}</strong> - 
-                                                                    <span class="badge {{ $log->method == 'POST' ? 'bg-success' : 'bg-warning' }}">
-                                                                        {{ $log->method }}
-                                                                    </span>
-                                                                </span>
-                                                                <small class="text-muted">{{ $log->created_at->format('d M Y H:i:s') }}</small>
-                                                            </div>
-                                                            <div class="card-body">
-                                                                <div class="row">
-                                                                    {{-- Info Log --}}
-                                                                    <div class="col-md-4">
-                                                                        <table class="table table-sm table-borderless">
-                                                                            <tr>
-                                                                                <th width="40%">User</th>
-                                                                                <td>{{ $log->user->name ?? 'Guest' }}</td>
-                                                                            </tr>
-                                                                            <tr>
-                                                                                <th>IP Address</th>
-                                                                                <td>{{ $log->ip_address }}</td>
-                                                                            </tr>
-                                                                            <tr>
-                                                                                <th>Waktu</th>
-                                                                                <td>{{ $log->created_at->format('d M Y H:i:s') }}</td>
-                                                                            </tr>
-                                                                        </table>
-                                                                    </div>
+                                                <div class="card border">
+                                                    <div class="card-header d-flex justify-content-between align-items-center py-3" 
+                                                         style="cursor: pointer; background-color: #f8f9fa;" 
+                                                         data-bs-toggle="collapse" 
+                                                         data-bs-target="#activityLogsCollapse" 
+                                                         aria-expanded="false" 
+                                                         aria-controls="activityLogsCollapse">
+                                                        <h5 class="fw-bold mb-0">
+                                                            <i class="bx bx-chevron-right me-1" id="collapseIcon" style="transition: transform 0.3s;"></i>
+                                                            RIWAYAT AKTIVITAS 
+                                                            <span class="badge bg-primary ms-2">{{ $activityLogs->count() }}</span>
+                                                        </h5>
+                                                        <small class="text-muted">
+                                                            <i class="bx bx-mouse"></i> Klik untuk melihat
+                                                        </small>
+                                                    </div>
+                                                    
+                                                    <div class="collapse" id="activityLogsCollapse">
+                                                        <div class="card-body">
+                                                            @if($activityLogs->isEmpty())
+                                                                <div class="alert alert-info mb-0">
+                                                                    <i class="bx bx-info-circle me-1"></i>
+                                                                    Belum ada riwayat aktivitas.
+                                                                </div>
+                                                            @else
+                                                                @foreach($activityLogs as $index => $log)
+                                                                    @php
+                                                                        $requestData = is_string($log->request_data) 
+                                                                            ? json_decode($log->request_data, true) 
+                                                                            : $log->request_data;
+                                                                        
+                                                                        if (is_array($requestData)) {
+                                                                            unset($requestData['_token']);
+                                                                        }
+                                                                    @endphp
                                                                     
-                                                                    {{-- Request Data --}}
-                                                                    <div class="col-md-8">
-                                                                        <strong>Request Data:</strong>
-                                                                        @if(is_array($requestData) && count($requestData) > 0)
-                                                                            <table class="table table-sm table-bordered mt-2">
-                                                                                <thead class="table-light">
-                                                                                    <tr>
-                                                                                        <th width="30%">Field</th>
-                                                                                        <th>Value</th>
-                                                                                    </tr>
-                                                                                </thead>
-                                                                                <tbody>
-                                                                                    @foreach($requestData as $key => $value)
+                                                                    <div class="card mb-3 border shadow-sm">
+                                                                        <div class="card-header d-flex justify-content-between align-items-center" 
+                                                                             style="background-color: #e9ecef;">
+                                                                            <span>
+                                                                                <strong>#{{ $index + 1 }}</strong> - 
+                                                                                <span class="badge {{ $log->method == 'POST' ? 'bg-success' : 'bg-warning' }}">
+                                                                                    {{ $log->method }}
+                                                                                </span>
+                                                                                <span class="badge bg-info ms-1">{{ $log->origin ?? 'unknown' }}</span>
+                                                                            </span>
+                                                                            <small class="text-muted">
+                                                                                <i class="bx bx-time me-1"></i>
+                                                                                {{ $log->created_at->format('d M Y H:i:s') }}
+                                                                            </small>
+                                                                        </div>
+                                                                        <div class="card-body">
+                                                                            <div class="row">
+                                                                                {{-- Info Log --}}
+                                                                                <div class="col-md-4">
+                                                                                    <h6 class="fw-bold text-muted mb-2">
+                                                                                        <i class="bx bx-user me-1"></i> Info
+                                                                                    </h6>
+                                                                                    <table class="table table-sm table-borderless mb-0">
                                                                                         <tr>
-                                                                                            <td><code>{{ $key }}</code></td>
+                                                                                            <th width="40%">User</th>
                                                                                             <td>
-                                                                                                @if(is_array($value))
-                                                                                                    <pre class="mb-0">{{ json_encode($value, JSON_PRETTY_PRINT) }}</pre>
-                                                                                                @elseif(is_null($value))
-                                                                                                    <em class="text-muted">null</em>
-                                                                                                @else
-                                                                                                    {{ $value }}
-                                                                                                @endif
+                                                                                                <span class="badge bg-secondary">
+                                                                                                    {{ $log->user->name ?? 'Guest' }}
+                                                                                                </span>
                                                                                             </td>
                                                                                         </tr>
-                                                                                    @endforeach
-                                                                                </tbody>
-                                                                            </table>
-                                                                        @else
-                                                                            <p class="text-muted mt-2">Tidak ada data</p>
-                                                                        @endif
+                                                                                        <tr>
+                                                                                            <th>IP Address</th>
+                                                                                            <td><code>{{ $log->ip_address }}</code></td>
+                                                                                        </tr>
+                                                                                        <tr>
+                                                                                            <th>Waktu</th>
+                                                                                            <td>{{ $log->created_at->format('d M Y H:i:s') }}</td>
+                                                                                        </tr>
+                                                                                    </table>
+                                                                                </div>
+                                                                                
+                                                                                {{-- Request Data --}}
+                                                                                <div class="col-md-8">
+                                                                                    <h6 class="fw-bold text-muted mb-2">
+                                                                                        <i class="bx bx-data me-1"></i> Request Data
+                                                                                    </h6>
+                                                                                    @if(is_array($requestData) && count($requestData) > 0)
+                                                                                        <div class="table-responsive">
+                                                                                            <table class="table table-sm table-bordered mb-0">
+                                                                                                <thead class="table-light">
+                                                                                                    <tr>
+                                                                                                        <th width="30%">Field</th>
+                                                                                                        <th>Value</th>
+                                                                                                    </tr>
+                                                                                                </thead>
+                                                                                                <tbody>
+                                                                                                    @foreach($requestData as $key => $value)
+                                                                                                        <tr>
+                                                                                                            <td><code>{{ $key }}</code></td>
+                                                                                                            <td>
+                                                                                                                @if(is_array($value))
+                                                                                                                    <pre class="mb-0 bg-light p-2 rounded" style="font-size: 12px;">{{ json_encode($value, JSON_PRETTY_PRINT) }}</pre>
+                                                                                                                @elseif(is_null($value))
+                                                                                                                    <em class="text-muted">null</em>
+                                                                                                                @else
+                                                                                                                    {{ $value }}
+                                                                                                                @endif
+                                                                                                            </td>
+                                                                                                        </tr>
+                                                                                                    @endforeach
+                                                                                                </tbody>
+                                                                                            </table>
+                                                                                        </div>
+                                                                                    @else
+                                                                                        <p class="text-muted mb-0">
+                                                                                            <em>Tidak ada data</em>
+                                                                                        </p>
+                                                                                    @endif
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                            </div>
+                                                                @endforeach
+                                                            @endif
                                                         </div>
-                                                    @endforeach
-                                                @endif
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                         {{-- END ACTIVITY LOGS --}}
@@ -291,5 +331,20 @@
 @endsection
 
 @push('js')
-
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const collapseEl = document.getElementById('activityLogsCollapse');
+        const icon = document.getElementById('collapseIcon');
+        
+        if (collapseEl && icon) {
+            collapseEl.addEventListener('shown.bs.collapse', function () {
+                icon.style.transform = 'rotate(90deg)';
+            });
+            
+            collapseEl.addEventListener('hidden.bs.collapse', function () {
+                icon.style.transform = 'rotate(0deg)';
+            });
+        }
+    });
+</script>
 @endpush

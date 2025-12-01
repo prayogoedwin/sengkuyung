@@ -14,6 +14,7 @@
                                 <div class="card">
                                     <div class="card-body">
 
+
                                         <div class="row">
                                             <!-- Data Subjek Pajak -->
                                             <div class="col-md-6 mb-4">
@@ -94,30 +95,49 @@
                                                             </a>
                                                         </td>
                                                     </tr>
+                                                    
                                                 </table>
+
 
                                                 <h5 class="fw-bold mt-4">LAMPIRAN</h5>
                                                 @if($data->status != 2)
                                                     <table class="table table-bordered">
+                                                        {{-- File 0 --}}
                                                         <tr>
                                                             <th width="30%">{{ $data->file0_ket }}</th>
                                                             <td>
                                                                 @if(isset($decryptedFiles['file0']))
+                                                                    {{-- File encrypted (KTP) - tampilkan dari base64 --}}
                                                                     <a href="{{ $decryptedFiles['file0'] }}" target="_blank">
                                                                         <img src="{{ $decryptedFiles['file0'] }}" alt="{{ $data->file0_ket }}" style="width: 50%;">
                                                                     </a>
                                                                 @else
+                                                                    {{-- File biasa - tampilkan normal --}}
                                                                     <a href="{{ asset($data->file0_url) }}" target="_blank">
                                                                         <img src="{{ asset($data->file0_url) }}" alt="{{ $data->file0_ket }}" style="width: 50%;">
                                                                     </a>
                                                                 @endif
                                                             </td>
                                                         </tr>
+
+                                                        {{-- File 1 --}}
                                                         <tr>
                                                             <th>{{ $data->file1_ket }}</th>
                                                             <td>
+                                                                {{-- @if(isset($decryptedFiles['file1']))
+                                                                   
+                                                                    <a href="{{ $decryptedFiles['file1'] }}" target="_blank">
+                                                                        <img src="{{ $decryptedFiles['file1'] }}" alt="{{ $data->file1_ket }}" style="width: 50%;">
+                                                                    </a>
+                                                                @else
+                                                              
+                                                                    <a href="{{ asset($data->file1_url) }}" target="_blank">
+                                                                        <img src="{{ asset($data->file1_url) }}" alt="{{ $data->file1_ket }}" style="width: 50%;">
+                                                                    </a>
+                                                                @endif --}}
+
                                                                 <a href="{{ asset($data->file1_url) }}" target="_blank">
-                                                                    <img src="{{ asset($data->file1_url) }}" alt="{{ $data->file1_ket }}" style="width: 50%;">
+                                                                        <img src="{{ asset($data->file1_url) }}" alt="{{ $data->file1_ket }}" style="width: 50%;">
                                                                 </a>
                                                             </td>
                                                         </tr>
@@ -129,7 +149,7 @@
                                                 <h5 class="fw-bold mt-4">VERIFIKASI STATUS KENDARAAN</h5>
                                                 
                                                 <form action="{{ route('verifikasi.status', ['id' => \App\Helpers\Helper::encodeId($data->id)]) }}" method="POST">
-                                                @csrf
+                                                @csrf <!-- Include CSRF token for security -->
                                                     <table class="table table-bordered">
                                                         <tr>
                                                             <th width="30%">STATUS</th>
@@ -138,20 +158,22 @@
                                                         <tr>
                                                             <th width="30%">VERIFIKASI</th>
                                                             <td>
-                                                                <input type="hidden" name="id" value="{{ \App\Helpers\Helper::encodeId($data->id) }}">
+                                                                {{-- {{ $data->status_verifikasi_name }} --}}
+                                                                <input  type="hidden" name="id" value="{{ \App\Helpers\Helper::encodeId($data->id) }}">
 
                                                                 @php
+                                                                    // Determine the background color based on the status
                                                                     $backgroundColor = '';
                                                                     if ($data->status_verifikasi == 1) {
-                                                                        $backgroundColor = 'background-color: yellow; color: black;';
+                                                                        $backgroundColor = 'background-color: yellow; color: black;'; // Blue
                                                                     } elseif ($data->status_verifikasi == 2) {
-                                                                        $backgroundColor = 'background-color: green; color: white;';
+                                                                        $backgroundColor = 'background-color: green; color: white;'; // green
                                                                     } elseif ($data->status_verifikasi == 3) {
-                                                                        $backgroundColor = 'background-color: red; color: white;';
+                                                                        $backgroundColor = 'background-color: red; color: white;'; // Red
                                                                     }
                                                                 @endphp
 
-                                                                <select class="form-control" id="statusVerifikasi" name="status_verifikasi_id" required style="{{ $backgroundColor }}">
+                                                                <select class="form-control" id="statusVerifikasi" name="status_verifikasi_id" required  style="{{ $backgroundColor }}">
                                                                     <option value="">PILIH STATUS</option>
                                                                     @foreach ($status_verifikasis as $status)
                                                                         <option value="{{ $status->id }}" 
@@ -160,120 +182,36 @@
                                                                         </option>
                                                                     @endforeach
                                                                 </select>
+
                                                             </td>
+
                                                         </tr>
                                                         <tr>
                                                             <th>Keterangan</th>
                                                             <td>
-                                                                <textarea name="keterangan" style="width:100%">{{ $data->file9_ket }}</textarea>
+                                                                <textarea name="keterangan" style="widht:100%">{{ $data->file9_ket }}</textarea>
                                                             </td>
                                                         </tr>
                                                         <tr>
-                                                            <th colspan=2 style="text-align:right">
-                                                                <button type="submit" class="btn btn-primary">Update Status</button>
-                                                            </th>
+                                                            <th colspan=2 style="text-align:right"> <button type="submit" class="btn btn-primary">Update Status</button></th>
+
                                                         </tr>
                                                     </table>
+                                                
                                                 </form>
                                             </div>
                                         </div>
-
-                                        {{-- ACTIVITY LOGS SECTION --}}
-                                        <div class="row mt-4">
-                                            <div class="col-12">
-                                                <h5 class="fw-bold">RIWAYAT AKTIVITAS</h5>
-                                                
-                                                @if($activityLogs->isEmpty())
-                                                    <div class="alert alert-info">Belum ada riwayat aktivitas.</div>
-                                                @else
-                                                    @foreach($activityLogs as $index => $log)
-                                                        @php
-                                                            $requestData = is_string($log->request_data) 
-                                                                ? json_decode($log->request_data, true) 
-                                                                : $log->request_data;
-                                                            
-                                                            // Hapus _token dari tampilan
-                                                            if (is_array($requestData)) {
-                                                                unset($requestData['_token']);
-                                                            }
-                                                        @endphp
-                                                        
-                                                        <div class="card mb-3 border">
-                                                            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                                                                <span>
-                                                                    <strong>#{{ $index + 1 }}</strong> - 
-                                                                    <span class="badge {{ $log->method == 'POST' ? 'bg-success' : 'bg-warning' }}">
-                                                                        {{ $log->method }}
-                                                                    </span>
-                                                                </span>
-                                                                <small class="text-muted">{{ $log->created_at->format('d M Y H:i:s') }}</small>
-                                                            </div>
-                                                            <div class="card-body">
-                                                                <div class="row">
-                                                                    {{-- Info Log --}}
-                                                                    <div class="col-md-4">
-                                                                        <table class="table table-sm table-borderless">
-                                                                            <tr>
-                                                                                <th width="40%">User</th>
-                                                                                <td>{{ $log->user->name ?? 'Guest' }}</td>
-                                                                            </tr>
-                                                                            <tr>
-                                                                                <th>IP Address</th>
-                                                                                <td>{{ $log->ip_address }}</td>
-                                                                            </tr>
-                                                                            <tr>
-                                                                                <th>Waktu</th>
-                                                                                <td>{{ $log->created_at->format('d M Y H:i:s') }}</td>
-                                                                            </tr>
-                                                                        </table>
-                                                                    </div>
-                                                                    
-                                                                    {{-- Request Data --}}
-                                                                    <div class="col-md-8">
-                                                                        <strong>Request Data:</strong>
-                                                                        @if(is_array($requestData) && count($requestData) > 0)
-                                                                            <table class="table table-sm table-bordered mt-2">
-                                                                                <thead class="table-light">
-                                                                                    <tr>
-                                                                                        <th width="30%">Field</th>
-                                                                                        <th>Value</th>
-                                                                                    </tr>
-                                                                                </thead>
-                                                                                <tbody>
-                                                                                    @foreach($requestData as $key => $value)
-                                                                                        <tr>
-                                                                                            <td><code>{{ $key }}</code></td>
-                                                                                            <td>
-                                                                                                @if(is_array($value))
-                                                                                                    <pre class="mb-0">{{ json_encode($value, JSON_PRETTY_PRINT) }}</pre>
-                                                                                                @elseif(is_null($value))
-                                                                                                    <em class="text-muted">null</em>
-                                                                                                @else
-                                                                                                    {{ $value }}
-                                                                                                @endif
-                                                                                            </td>
-                                                                                        </tr>
-                                                                                    @endforeach
-                                                                                </tbody>
-                                                                            </table>
-                                                                        @else
-                                                                            <p class="text-muted mt-2">Tidak ada data</p>
-                                                                        @endif
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    @endforeach
-                                                @endif
-                                            </div>
-                                        </div>
-                                        {{-- END ACTIVITY LOGS --}}
-
+                        
                                         <!-- Tombol Aksi -->
                                         <div class="d-flex justify-content-end mt-4">
                                             <button class="btn btn-warning me-2" hidden>Batal</button>
                                             <button class="btn btn-info text-white" hidden>Simpan</button>
                                         </div>
+                                    </div>
+
+                                        
+                                        
+                                    
                                     </div>
                                 </div>
                             </div>
@@ -289,6 +227,7 @@
         </div>
     </div>
 @endsection
+
 
 @push('js')
 

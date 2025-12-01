@@ -209,6 +209,11 @@ class VerifikasiController extends Controller
             ], Response::HTTP_NOT_FOUND);
         }
 
+        $activityLogs = ActivityLog::where('id_kode', $id)
+        ->whereIn('method', ['POST', 'PUT'])
+        ->orderBy('created_at', 'desc')
+        ->get();
+
         $html = null;
         if($data->status == 2){
             $data_html = [
@@ -270,7 +275,7 @@ class VerifikasiController extends Controller
             // }
         }
 
-        return view('backend.verifikasis.show', compact('data', 'status_verifikasis', 'html', 'decryptedFiles'));
+        return view('backend.verifikasis.show', compact('data', 'status_verifikasis', 'html', 'decryptedFiles', 'activityLogs'));
     }
 
     // Helper method untuk get mime type

@@ -20,6 +20,10 @@ class LogActivity
     {
         $response = $next($request);
 
+        if (!in_array($request->method(), ['POST', 'PUT'])) {
+            return $response;
+        }
+
          // Cek route ada atau tidak
         $route = $request->route();
         

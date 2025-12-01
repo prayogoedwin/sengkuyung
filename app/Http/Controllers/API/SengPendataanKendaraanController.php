@@ -174,13 +174,15 @@ class SengPendataanKendaraanController extends Controller
         // Simpan data
         $data = SengPendataanKendaraan::create($requestData);
 
+        $encodedId = Helper::encodeId($data->id);
+
         // Buat salinan data untuk response
         $responseData = $data->toArray();
-        $responseData['id'] = Helper::encodeId($data->id);
+        $responseData['id'] = $encodedId;
 
-        $data->id = Helper::encodeId($data->id);
+        $data->id = $encodedId;
 
-        Helper::logActivity($request, Helper::encodeId($data->id), 'POST', $response);
+        Helper::logActivity($request, $encodedId, 'POST', $responseData);
 
         $html = null;
         if($dStatus == 2){

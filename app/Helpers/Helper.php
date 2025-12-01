@@ -4,6 +4,7 @@ namespace App\Helpers;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use App\Models\ActivityLog;
 
 class Helper
 {
@@ -119,7 +120,59 @@ class Helper
         }
         
         return $no_wa;
-    }    
+    }
+    
+    
+    /**
+     * Log Activity Manual
+     * 
+     * @param Request $request
+     * @param string $idKode - ID yang sudah di-encode
+     * @param string $method - POST, PUT, DELETE
+     * @param array $response - Response data
+     * @param string $origin - 'api' atau 'web'
+     * @return ActivityLog
+     */
+    public static function logActivity(Request $request, string $idKode, string $method, array $response, string $origin = 'api')
+    {
+        return ActivityLog::create([
+            'user_id' => Auth::id(),
+            'id_kode' => $idKode,
+            'url' => $request->fullUrl(),
+            'method' => $method,
+            'request_data' => $request->all(),
+            'response_data' => $response,
+            'ip_address' => $request->ip(),
+            'origin' => $origin,
+        ]);
+    }
+    //  Helper::logActivity($request, Helper::encodeId($data->id), 'POST', $response);
+
+    /**
+     * Log Activity dengan custom request data (untuk exclude sensitive data)
+     */
+    public static function logActivityCustom(
+        Request $request, 
+        string $idKode, 
+        string $method, 
+        array $requestData,
+        array $response, 
+        string $origin = 'api'
+    ) {
+        return ActivityLog::create([
+            'user_id' => Auth::id(),
+            'id_kode' => $idKode,
+            'url' => $request->fullUrl(),
+            'method' => $method,
+            'request_data' => $requestData,
+            'response_data' => $response,
+            'ip_address' => $request->ip(),
+            'origin' => $origin,
+        ]);
+    }
+
+    // $safeRequestData = $request->except(['password', 'password_confirmation', '_token']);
+    // Helper::logActivityCustom($request, $id, 'POST', $safeRequestData, $response);
 
 }
 

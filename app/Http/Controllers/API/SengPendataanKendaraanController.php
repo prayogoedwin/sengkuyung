@@ -18,6 +18,8 @@ use App\Helpers\FileEncryption;
 
 use Illuminate\Support\Facades\Auth;
 
+use App\Models\ActivityLog;
+
 
 class SengPendataanKendaraanController extends Controller
 {
@@ -177,6 +179,8 @@ class SengPendataanKendaraanController extends Controller
         $responseData['id'] = Helper::encodeId($data->id);
 
         $data->id = Helper::encodeId($data->id);
+
+        Helper::logActivity($request, Helper::encodeId($data->id), 'POST', $response);
 
         $html = null;
         if($dStatus == 2){

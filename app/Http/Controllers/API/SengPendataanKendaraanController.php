@@ -158,8 +158,6 @@ class SengPendataanKendaraanController extends Controller
             // }
         }
 
-        
-
         $requestData = array_merge($request->all(), [
             'status' => $status->id,
             'status_name' => $status->nama,

@@ -103,16 +103,27 @@ class SengPendataanKendaraanController extends Controller
             return response()->json(['status' => false, 'message' => 'Nopol tidak berada di wilayah pencatatan Anda', 'data' => ''], Response::HTTP_BAD_REQUEST);
         }
 
-        $pengecekan = SengPendataanKendaraan::where('nopol', $request->nopol)->first();
-        if($pengecekan) {
-            if(date('Y', strtotime($pengecekan->created_at)) == date('Y')) {
+        // $pengecekan = SengPendataanKendaraan::where('nopol', $request->nopol)->first();
+        // if($pengecekan) {
+        //     if(date('Y', strtotime($pengecekan->created_at)) == date('Y')) {
+        //         return response()->json([
+        //             'status' => false, 
+        //             'message' => 'Nomor polisi sudah pernah didata tahun ini',
+        //             'data' => ''
+        //         ], Response::HTTP_BAD_REQUEST);
+        //     }
+        // }    
+
+        $pengecekan = SengPendataanKendaraan::where('nopol', $request->nopol)->latest()->first();
+        if ($pengecekan) {
+            if ($pengecekan->created_at->year == now()->year) {
                 return response()->json([
-                    'status' => false, 
+                    'status' => false,
                     'message' => 'Nomor polisi sudah pernah didata tahun ini',
                     'data' => ''
                 ], Response::HTTP_BAD_REQUEST);
             }
-        }    
+        }
         
         
          if($status->id == 1){

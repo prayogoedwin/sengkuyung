@@ -5,12 +5,19 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Carbon\Carbon;
 
 class SengPendataanKendaraan extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected $table = 'seng_pendataan_kendaraan';
+
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
+    ];
 
     protected $fillable = [
         'nohp', 'email', 'nik', 'tgl_ctk', 'nopol', 'nama', 'alamat',
@@ -20,10 +27,11 @@ class SengPendataanKendaraan extends Model
         'kota', 'kota_dagri',
         'provinsi',
         'merk', 'tipe', 'tahun', 'tnkb', 'warna', 'jenis_kbm', 'jatuh_tempo',
-        'pkb_pokok', 'pkb_denda', 'pkb', 'tanggal_akhir_Pkb',
+        'pkb_pokok', 'pkb_denda', 'pkb', 'tanggal_akhir_Pkb', 'pkb_pokok_opsen',
         'jr_pokok', 'jr_denda', 'jr', 'pnbp_stnk', 'pnbp_tnkb', 'pnbp',
         'is_setuju', 'ttd', 'lat', 'lng', 'status', 'status_name', 'status_verifikasi',
         'status_verifikasi_name', 'created_by', 'updated_by', 'deleted_by',
+        'kode_samsat', 'kode_kecamatan_samsat', 'kode_kelurahan_samsat',
         'file0', 'file0_url', 'file0_ket', 'file0_encrypted', 'file0_original_ext',
         'file1', 'file1_url', 'file1_ket', 'file1_encrypted', 'file1_original_ext',
         'file2', 'file2_url', 'file2_ket', 'file2_encrypted', 'file2_original_ext',

@@ -44,6 +44,11 @@ class RekapController extends Controller
         } elseif ($userRole == 7) {
             $verifikasis->where('created_by', auth()->id());
         }
+
+        // ✅ Default filter tahun ini, kecuali ada filter tanggal dari request
+        if (!$request->tanggal_start && !$request->tanggal_end) {
+            $verifikasis->whereYear('created_at', now()->year);
+        }
     
         // Filter berdasarkan input dari form
         // if ($request->status_verifikasi_id) {

@@ -32,7 +32,7 @@
                 </a>
             </li>
 
-            <li class="menu-item {{ request()->routeIs('download.index') ? 'active' : '' }}">
+            <li class="menu-item {{ request()->routeIs('download.index') ? 'active' : '' }}" hidden>
                 <a href="{{ route('download.index') }}" class="menu-link">
                     <i class="menu-icon tf-icons bx bx-download"></i>  {{-- Ikon Download --}}
                     <div data-i18n="Analytics">Download</div>

@@ -37,7 +37,7 @@ class AuthController extends Controller
         $request->validate([
             'username' => 'required|string',
             'password' => 'required|string',
-            'captcha' => 'required|captcha',
+            // 'captcha' => 'required|captcha',
             'otp_method' => 'required|in:email,wa',
         ], [
             'otp_method.required' => 'Pilih metode pengiriman OTP',

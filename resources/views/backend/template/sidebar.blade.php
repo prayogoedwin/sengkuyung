@@ -69,6 +69,16 @@
 
             
         @else
+
+            @if (Auth::user()->roles[0]['name'] == 'uptd' || Auth::user()->roles[0]['name'] == 'admin')
+            <li class="menu-item {{ request()->routeIs('perbandingan-kode-wilayah.index') ? 'active' : '' }}">
+                <a href="{{ route('perbandingan-kode-wilayah.index') }}" class="menu-link">
+                    <i class="menu-icon tf-icons bx bx-git-compare"></i>
+                    <div data-i18n="Analytics">Perbandingan Kode Wilayah</div>
+                </a>
+            </li>
+            @endif
+
             <li class="menu-item {{ request()->routeIs('verifikasi.index') ? 'active' : '' }}">
                 <a href="{{ route('verifikasi.index') }}" class="menu-link">
                     <i class="menu-icon tf-icons bx bx-check-shield"></i>  {{-- Ikon Verifikasi --}}

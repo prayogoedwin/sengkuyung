@@ -38,6 +38,7 @@ class SengWilayahController extends Controller
                 'kode' => $item->kode,
                 'nama' => $item->nama,
                 'id_up' => $item->id_up,
+                'kode_samsat' => $item->kode_samsat,
             ];
         });
 

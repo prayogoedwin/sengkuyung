@@ -23,7 +23,7 @@
             </a>
         </li>
 
-        @if (Auth::user()->roles[0]['name'] == 'super-admin')
+        @if (Auth::user()->roles[0]['name'] == 'super-admin' || Auth::user()->roles[0]['name'] == 'admin')
             <li class="menu-item {{ request()->routeIs('user.index') ? 'active' : '' }}">
                 <a href="{{ route('user.index') }}" class="menu-link">
                     {{-- <i class="menu-icon tf-icons bx bx-home-circle"></i> --}}
@@ -70,7 +70,7 @@
             
         @else
 
-            @if (Auth::user()->roles[0]['name'] == 'uptd' || Auth::user()->roles[0]['name'] == 'admin')
+            @if (Auth::user()->roles[0]['name'] == 'uptd')
             <li class="menu-item {{ request()->routeIs('perbandingan-kode-wilayah.index') ? 'active' : '' }}">
                 <a href="{{ route('perbandingan-kode-wilayah.index') }}" class="menu-link">
                     <i class="menu-icon tf-icons bx bx-git-compare"></i>

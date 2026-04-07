@@ -19,6 +19,7 @@ class SengWilayah extends Model
         'kode',
         'nama',
         'id_up',
+        'kode_samsat',
         'lat',
         'lng'
     ];

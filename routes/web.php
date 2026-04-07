@@ -11,6 +11,7 @@ use App\Http\Controllers\DownloadController;
 use App\Http\Controllers\WilayahController;
 use App\Http\Controllers\RekapController;
 use App\Http\Controllers\PelaporanController;
+use App\Http\Controllers\PerbandinganKodeWilayahController;
 
 
 
@@ -58,6 +59,14 @@ Route::middleware([LogActivity::class])->group(function () {
 
 
         Route::get('/get-districts', [WilayahController::class, 'getDistricts'])->name('getDistricts');
+        Route::get('/perbandingan-kode-wilayah', [PerbandinganKodeWilayahController::class, 'index'])->name('perbandingan-kode-wilayah.index');
+        Route::post('/perbandingan-kode-wilayah/update-wilayah', [PerbandinganKodeWilayahController::class, 'updateKodeSamsatWilayah'])->name('perbandingan-kode-wilayah.update-wilayah');
+        Route::post('/perbandingan-kode-wilayah/update-kelurahan', [PerbandinganKodeWilayahController::class, 'updateKodeDagriKelurahan'])->name('perbandingan-kode-wilayah.update-kelurahan');
+        Route::get('/perbandingan-kode-wilayah/wilayah-children', [PerbandinganKodeWilayahController::class, 'getWilayahChildren'])->name('perbandingan-kode-wilayah.wilayah-children');
+        Route::get('/perbandingan-kode-wilayah/wilayah-detail', [PerbandinganKodeWilayahController::class, 'getWilayahDetail'])->name('perbandingan-kode-wilayah.wilayah-detail');
+        Route::get('/perbandingan-kode-wilayah/kecamatan-by-samsat', [PerbandinganKodeWilayahController::class, 'getKecamatanBySamsat'])->name('perbandingan-kode-wilayah.kecamatan-by-samsat');
+        Route::get('/perbandingan-kode-wilayah/kelurahan-by-kecamatan', [PerbandinganKodeWilayahController::class, 'getKelurahanByKecamatan'])->name('perbandingan-kode-wilayah.kelurahan-by-kecamatan');
+        Route::get('/perbandingan-kode-wilayah/kelurahan-detail', [PerbandinganKodeWilayahController::class, 'getKelurahanDetail'])->name('perbandingan-kode-wilayah.kelurahan-detail');
 
         
     });

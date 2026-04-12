@@ -68,7 +68,7 @@ class SengPendataanKendaraanController extends Controller
     public function store(Request $request)
     {
 
-        dd($requestData['kode_samsat'] ?? 'NOT SET', $request->kota);
+        // dd($requestData['kode_samsat'] ?? 'NOT SET', $request->kota);
         $validator = Validator::make($request->all(), $this->rules);
 
         if ($validator->fails()) {

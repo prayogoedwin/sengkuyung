@@ -67,6 +67,8 @@ class SengPendataanKendaraanController extends Controller
     // Store a new record
     public function store(Request $request)
     {
+
+        dd($requestData['kode_samsat'] ?? 'NOT SET', $request->kota);
         $validator = Validator::make($request->all(), $this->rules);
 
         if ($validator->fails()) {

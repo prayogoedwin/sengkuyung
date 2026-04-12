@@ -27,7 +27,7 @@ class SengPendataanKendaraan extends Model
         'kota', 'kota_dagri',
         'provinsi',
         'merk', 'tipe', 'tahun', 'tnkb', 'warna', 'jenis_kbm', 'jatuh_tempo',
-        'pkb_pokok', 'pkb_denda', 'pkb', 'tanggal_akhir_Pkb', 'pkb_pokok_opsen',
+        'pkb_pokok', 'pkb_denda', 'pkb', 'tanggal_akhir_Pkb', 'pkb_pokok_opsen', 
         'jr_pokok', 'jr_denda', 'jr', 'pnbp_stnk', 'pnbp_tnkb', 'pnbp',
         'is_setuju', 'ttd', 'lat', 'lng', 'status', 'status_name', 'status_verifikasi',
         'status_verifikasi_name', 'created_by', 'updated_by', 'deleted_by',

@@ -141,6 +141,29 @@
 
             requestInterceptor: function(request) {
                 request.headers['X-CSRF-TOKEN'] = '{{ csrf_token() }}';
+                @php
+                    $swaggerAppBase = rtrim((string) config('app.url'), '/');
+                @endphp
+                const swaggerAppBase = @json($swaggerAppBase);
+                try {
+                    if (!swaggerAppBase || !request.url || String(request.url).indexOf('http') !== 0) {
+                        return request;
+                    }
+                    const req = new URL(request.url);
+                    const base = new URL(swaggerAppBase);
+                    const basePath = (base.pathname || '').replace(/\/$/, '');
+                    if (
+                        basePath !== '' &&
+                        basePath !== '/' &&
+                        req.origin === base.origin &&
+                        req.pathname.indexOf(basePath) !== 0 &&
+                        (req.pathname.startsWith('/api/') || req.pathname.startsWith('/sanctum/'))
+                    ) {
+                        req.pathname = basePath + req.pathname;
+                        request.url = req.toString();
+                    }
+                } catch (e) {
+                }
                 return request;
             },
 

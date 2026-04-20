@@ -5,20 +5,14 @@
         "description": "Dokumentasi API untuk aplikasi Sengkuyung.",
         "version": "1.0.0"
     },
-    "servers": [
-        {
-            "url": "/",
-            "description": "Server utama"
-        }
-    ],
     "paths": {
-        "/api/login": {
+        "api/login": {
             "post": {
                 "tags": [
                     "Auth"
                 ],
                 "summary": "Login menggunakan email dan password",
-                "operationId": "97161f393db7be9187637d9afc9c9619",
+                "operationId": "2ed6dc5febcb13bc773fd496c2bbb3f3",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -92,13 +86,13 @@
                 }
             }
         },
-        "/api/login_with_otp": {
+        "api/login_with_otp": {
             "post": {
                 "tags": [
                     "Auth"
                 ],
                 "summary": "Login dan generate OTP",
-                "operationId": "cf0c4d94b3dfbadd8728e67fd2323152",
+                "operationId": "9abedaabe48c385bd2d01b664d6f6410",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -160,13 +154,13 @@
                 }
             }
         },
-        "/api/verifikasi_otp": {
+        "api/verifikasi_otp": {
             "post": {
                 "tags": [
                     "Auth"
                 ],
                 "summary": "Verifikasi OTP untuk login",
-                "operationId": "1c2216a573e1c32e079ec3d57258281f",
+                "operationId": "4c556362188351921fe864571775551d",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -202,13 +196,13 @@
                 }
             }
         },
-        "/api/update_password": {
+        "api/update_password": {
             "post": {
                 "tags": [
                     "Auth"
                 ],
                 "summary": "Ubah password user",
-                "operationId": "e3b60b09473f5b66c1712bbd6d2700c4",
+                "operationId": "595f82615ef7e54b14580c711be10263",
                 "requestBody": {
                     "required": true,
                     "content": {

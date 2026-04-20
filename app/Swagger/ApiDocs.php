@@ -5,7 +5,6 @@ namespace App\Swagger;
 use OpenApi\Attributes as OA;
 
 #[OA\Info(title: 'Sengkuyung API', version: '1.0.0', description: 'Dokumentasi API untuk aplikasi Sengkuyung.')]
-#[OA\Server(url: '/', description: 'Server utama')]
 #[OA\SecurityScheme(
     securityScheme: 'bearerAuth',
     type: 'http',
@@ -16,7 +15,7 @@ use OpenApi\Attributes as OA;
 class ApiDocs
 {
     #[OA\Post(
-        path: '/api/login',
+        path: 'api/login',
         tags: ['Auth'],
         summary: 'Login menggunakan email dan password',
         requestBody: new OA\RequestBody(
@@ -58,7 +57,7 @@ class ApiDocs
     }
 
     #[OA\Post(
-        path: '/api/login_with_otp',
+        path: 'api/login_with_otp',
         tags: ['Auth'],
         summary: 'Login dan generate OTP',
         requestBody: new OA\RequestBody(
@@ -91,7 +90,7 @@ class ApiDocs
     }
 
     #[OA\Post(
-        path: '/api/verifikasi_otp',
+        path: 'api/verifikasi_otp',
         tags: ['Auth'],
         summary: 'Verifikasi OTP untuk login',
         requestBody: new OA\RequestBody(
@@ -114,7 +113,7 @@ class ApiDocs
     }
 
     #[OA\Post(
-        path: '/api/update_password',
+        path: 'api/update_password',
         tags: ['Auth'],
         summary: 'Ubah password user',
         security: [['bearerAuth' => []]],

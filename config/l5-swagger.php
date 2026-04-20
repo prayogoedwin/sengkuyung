@@ -162,7 +162,7 @@ return [
              * Allows to generate specs either for OpenAPI 3.0.0 or OpenAPI 3.1.0.
              * By default the spec will be in version 3.0.0
              */
-            'open_api_spec_version' => env('L5_SWAGGER_OPEN_API_SPEC_VERSION', \L5Swagger\Generator::OPEN_API_DEFAULT_SPEC_VERSION),
+            'open_api_spec_version' => env('L5_SWAGGER_OPEN_API_SPEC_VERSION', '3.0.0'),
         ],
 
         /*
@@ -312,7 +312,14 @@ return [
          * Constants which can be used in annotations
          */
         'constants' => [
-            'L5_SWAGGER_CONST_HOST' => env('L5_SWAGGER_CONST_HOST', 'http://my-default-host.com'),
+            /*
+             * Base URL untuk "Try it out" di Swagger UI. Wajib sama dengan URL publik aplikasi,
+             * termasuk subpath (mis. https://domain/sengkuyung/). Bisa override lewat .env L5_SWAGGER_CONST_HOST.
+             */
+            'L5_SWAGGER_CONST_HOST' => env(
+                'L5_SWAGGER_CONST_HOST',
+                rtrim((string) env('APP_URL', 'http://localhost'), '/') . '/'
+            ),
         ],
     ],
 ];

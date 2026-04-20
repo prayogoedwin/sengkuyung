@@ -33,7 +33,7 @@ class WilayahController extends Controller
 
         $samsats = SengSaamsat::where('kabkota', $kabkotaId)
             ->orderBy('lokasi')
-            ->get(['id', 'lokasi']);
+            ->get(['id', 'id_wilayah_samsat', 'lokasi']);
 
         return response()->json(['success' => true, 'samsats' => $samsats]);
     }
@@ -46,7 +46,13 @@ class WilayahController extends Controller
             return response()->json(['success' => false, 'message' => 'Lokasi Samsat ID is required.'], 400);
         }
 
-        $kecamatans = SengWilayahKec::where('id_lokasi_samsat', $lokasiSamsatId)
+        $kecamatans = SengWilayahKec::where(function ($query) use ($lokasiSamsatId) {
+                $query->where('id_lokasi_samsat', $lokasiSamsatId);
+
+                if (is_numeric($lokasiSamsatId)) {
+                    $query->orWhereRaw('CAST(id_lokasi_samsat AS UNSIGNED) = ?', [(int) $lokasiSamsatId]);
+                }
+            })
             ->orderBy('kecamatan')
             ->get(['id_kecamatan', 'kecamatan']);
 

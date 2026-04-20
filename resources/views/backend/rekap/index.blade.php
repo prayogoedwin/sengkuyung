@@ -126,15 +126,11 @@
                       
 
                         <div class="row mt-2">
-                            <div class="col-md-12">
-                                <div id="map" style="height: 420px; width: 100%;"></div>
+                            <div class="col-md-6">
+                                <div id="chartPerbandinganNominal" style="width:100%; height:320px;"></div>
                             </div>
-                        </div>
-
-
-                        <div class="row mt-3" >
-                            <div class="col-md-12">
-                                <div id="chartPerbandinganNominal" style="width:100%; height:420px;"></div>
+                            <div class="col-md-6">
+                                <div id="map" style="height: 320px; width: 100%;"></div>
                             </div>
                         </div>
 
@@ -386,16 +382,28 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const barChartData = @json($barChartData);
+        const categories = (barChartData && Array.isArray(barChartData.categories) && barChartData.categories.length)
+            ? barChartData.categories
+            : ['-'];
+        const potensiData = (barChartData && Array.isArray(barChartData.potensi) && barChartData.potensi.length)
+            ? barChartData.potensi
+            : [0];
+        const terdataData = (barChartData && Array.isArray(barChartData.terdata) && barChartData.terdata.length)
+            ? barChartData.terdata
+            : [0];
+        const pkbData = (barChartData && Array.isArray(barChartData.pkb) && barChartData.pkb.length)
+            ? barChartData.pkb
+            : [0];
 
         Highcharts.chart('chartPerbandinganNominal', {
             chart: {
                 type: 'column'
             },
             title: {
-                text: barChartData.title
+                text: (barChartData && barChartData.title) ? barChartData.title : 'Perbandingan Data'
             },
             xAxis: {
-                categories: barChartData.categories,
+                categories: categories,
                 crosshair: true
             },
             yAxis: {
@@ -417,13 +425,13 @@
             },
             series: [{
                 name: 'Potensi Kendaraan',
-                data: barChartData.potensi
+                data: potensiData
             }, {
                 name: 'Sudah Terdata',
-                data: barChartData.terdata
+                data: terdataData
             }, {
                 name: 'Nominal PKB',
-                data: barChartData.pkb
+                data: pkbData
             }]
         });
     });
@@ -461,6 +469,10 @@
                     .bindPopup(`<b>${city.wilayah}</b><br>Total Kendaraan: ${city.total_vehicles}`);
             }
         });
+
+        setTimeout(function () {
+            map.invalidateSize();
+        }, 250);
 
     });
 </script>

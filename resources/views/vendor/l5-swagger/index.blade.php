@@ -3,9 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <title>{{ $documentationTitle }}</title>
-    <link rel="stylesheet" type="text/css" href="{{ l5_swagger_asset($documentation, 'swagger-ui.css') }}">
-    <link rel="icon" type="image/png" href="{{ l5_swagger_asset($documentation, 'favicon-32x32.png') }}" sizes="32x32"/>
-    <link rel="icon" type="image/png" href="{{ l5_swagger_asset($documentation, 'favicon-16x16.png') }}" sizes="16x16"/>
+    @php
+        $swaggerAppBase = rtrim((string) config('app.url'), '/');
+        $swaggerAssetBase = $swaggerAppBase . '/docs/asset';
+    @endphp
+    <link rel="stylesheet" type="text/css" href="{{ $swaggerAssetBase }}/swagger-ui.css">
+    <link rel="icon" type="image/png" href="{{ $swaggerAssetBase }}/favicon-32x32.png" sizes="32x32"/>
+    <link rel="icon" type="image/png" href="{{ $swaggerAssetBase }}/favicon-16x16.png" sizes="16x16"/>
     <style>
     html
     {
@@ -119,8 +123,8 @@
 <body @if(config('l5-swagger.defaults.ui.display.dark_mode')) id="dark-mode" @endif>
 <div id="swagger-ui"></div>
 
-<script src="{{ l5_swagger_asset($documentation, 'swagger-ui-bundle.js') }}"></script>
-<script src="{{ l5_swagger_asset($documentation, 'swagger-ui-standalone-preset.js') }}"></script>
+<script src="{{ $swaggerAssetBase }}/swagger-ui-bundle.js"></script>
+<script src="{{ $swaggerAssetBase }}/swagger-ui-standalone-preset.js"></script>
 <script>
     window.onload = function() {
         const urls = [];
@@ -141,9 +145,6 @@
 
             requestInterceptor: function(request) {
                 request.headers['X-CSRF-TOKEN'] = '{{ csrf_token() }}';
-                @php
-                    $swaggerAppBase = rtrim((string) config('app.url'), '/');
-                @endphp
                 const swaggerAppBase = @json($swaggerAppBase);
                 try {
                     if (!swaggerAppBase || !request.url || String(request.url).indexOf('http') !== 0) {

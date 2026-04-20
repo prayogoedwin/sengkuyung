@@ -246,6 +246,133 @@
                     }
                 ]
             }
+        },
+        "api/data-tertagih/list": {
+            "post": {
+                "tags": [
+                    "Data Tertagih"
+                ],
+                "summary": "Daftar data tertagih (is_terdata=0) dengan filter wilayah samsat + tahun + nopol",
+                "operationId": "e76a50a2d0e4d28883640c2c0cac086e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "lokasi_samsat",
+                                    "kecamatan_samsat",
+                                    "kelurahan_samsat"
+                                ],
+                                "properties": {
+                                    "lokasi_samsat": {
+                                        "description": "Wajib. Dipetakan ke id_lokasi_samsat (sama seperti di response login user).",
+                                        "type": "string",
+                                        "example": "01"
+                                    },
+                                    "kecamatan_samsat": {
+                                        "description": "Wajib. Dipetakan ke id_kecamatan.",
+                                        "type": "string",
+                                        "example": "0105"
+                                    },
+                                    "kelurahan_samsat": {
+                                        "description": "Wajib. Dipetakan ke id_kelurahan.",
+                                        "type": "string",
+                                        "example": "0105007"
+                                    },
+                                    "year": {
+                                        "description": "Opsional. Default tahun berjalan.",
+                                        "type": "integer",
+                                        "example": 2026
+                                    },
+                                    "no_polisi": {
+                                        "description": "Opsional. Pencarian LIKE pada no_polisi.",
+                                        "type": "string",
+                                        "example": "H8121QY"
+                                    },
+                                    "page": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "per_page": {
+                                        "type": "integer",
+                                        "example": 15
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Berhasil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Data ditemukan"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        },
+                                        "pagination": {
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "example": 15
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "example": 120
+                                                },
+                                                "last_page": {
+                                                    "type": "integer",
+                                                    "example": 8
+                                                },
+                                                "from": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "to": {
+                                                    "type": "integer",
+                                                    "example": 15
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -262,6 +389,10 @@
         {
             "name": "Auth",
             "description": "Auth"
+        },
+        {
+            "name": "Data Tertagih",
+            "description": "Data Tertagih"
         }
     ]
 }

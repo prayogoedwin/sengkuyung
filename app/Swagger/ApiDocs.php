@@ -136,4 +136,56 @@ class ApiDocs
     public function updatePassword()
     {
     }
+
+    #[OA\Post(
+        path: 'api/data-tertagih/list',
+        tags: ['Data Tertagih'],
+        summary: 'Daftar data tertagih (is_terdata=0) dengan filter wilayah samsat + tahun + nopol',
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['lokasi_samsat', 'kecamatan_samsat', 'kelurahan_samsat'],
+                properties: [
+                    new OA\Property(property: 'lokasi_samsat', type: 'string', example: '01', description: 'Wajib. Dipetakan ke id_lokasi_samsat (sama seperti di response login user).'),
+                    new OA\Property(property: 'kecamatan_samsat', type: 'string', example: '0105', description: 'Wajib. Dipetakan ke id_kecamatan.'),
+                    new OA\Property(property: 'kelurahan_samsat', type: 'string', example: '0105007', description: 'Wajib. Dipetakan ke id_kelurahan.'),
+                    new OA\Property(property: 'year', type: 'integer', example: 2026, description: 'Opsional. Default tahun berjalan.'),
+                    new OA\Property(property: 'no_polisi', type: 'string', example: 'H8121QY', description: 'Opsional. Pencarian LIKE pada no_polisi.'),
+                    new OA\Property(property: 'page', type: 'integer', example: 1),
+                    new OA\Property(property: 'per_page', type: 'integer', example: 15),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Berhasil',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'Data ditemukan'),
+                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object')),
+                        new OA\Property(
+                            property: 'pagination',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'current_page', type: 'integer', example: 1),
+                                new OA\Property(property: 'per_page', type: 'integer', example: 15),
+                                new OA\Property(property: 'total', type: 'integer', example: 120),
+                                new OA\Property(property: 'last_page', type: 'integer', example: 8),
+                                new OA\Property(property: 'from', type: 'integer', example: 1),
+                                new OA\Property(property: 'to', type: 'integer', example: 15),
+                            ]
+                        ),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+            new OA\Response(response: 422, description: 'Validasi gagal'),
+        ]
+    )]
+    public function dataTertagihList()
+    {
+    }
 }

@@ -28,7 +28,7 @@ class SengPendataanKendaraan extends Model
         'provinsi',
         'merk', 'tipe', 'tahun', 'tnkb', 'warna', 'jenis_kbm', 'jatuh_tempo',
         'pkb_pokok', 'pkb_denda', 'pkb', 'tanggal_akhir_Pkb', 'pkb_pokok_opsen', 
-        'jr_pokok', 'jr_denda', 'jr', 'pnbp_stnk', 'pnbp_tnkb', 'pnbp',
+        'jr_pokok', 'jr_denda', 'jr', 'pnbp_stnk', 'pnbp_tnkb', 'pnbp', 'total',
         'is_setuju', 'ttd', 'lat', 'lng', 'status', 'status_name', 'status_verifikasi',
         'status_verifikasi_name', 'created_by', 'updated_by', 'deleted_by',
         // 'kode_samsat', 

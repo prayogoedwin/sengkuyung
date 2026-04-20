@@ -12,6 +12,7 @@ use App\Http\Controllers\WilayahController;
 use App\Http\Controllers\RekapController;
 use App\Http\Controllers\PelaporanController;
 use App\Http\Controllers\PerbandinganKodeWilayahController;
+use App\Http\Controllers\DataTertagihController;
 
 
 
@@ -67,6 +68,11 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::get('/perbandingan-kode-wilayah/kecamatan-by-samsat', [PerbandinganKodeWilayahController::class, 'getKecamatanBySamsat'])->name('perbandingan-kode-wilayah.kecamatan-by-samsat');
         Route::get('/perbandingan-kode-wilayah/kelurahan-by-kecamatan', [PerbandinganKodeWilayahController::class, 'getKelurahanByKecamatan'])->name('perbandingan-kode-wilayah.kelurahan-by-kecamatan');
         Route::get('/perbandingan-kode-wilayah/kelurahan-detail', [PerbandinganKodeWilayahController::class, 'getKelurahanDetail'])->name('perbandingan-kode-wilayah.kelurahan-detail');
+
+        Route::get('/data-tertagih', [DataTertagihController::class, 'index'])->name('data-tertagih.index');
+        Route::post('/data-tertagih/import', [DataTertagihController::class, 'import'])->name('data-tertagih.import');
+        Route::post('/data-tertagih/{id}/status', [DataTertagihController::class, 'updateStatus'])->name('data-tertagih.update-status');
+        Route::delete('/data-tertagih/{id}', [DataTertagihController::class, 'destroy'])->name('data-tertagih.destroy');
 
         
     });

@@ -67,6 +67,13 @@
                 </a>
             </li>
 
+            <li class="menu-item {{ request()->routeIs('data-tertagih.index') ? 'active' : '' }}">
+                <a href="{{ route('data-tertagih.index') }}" class="menu-link">
+                    <i class="menu-icon tf-icons bx bx-table"></i>
+                    <div data-i18n="Analytics">Data Tertagih</div>
+                </a>
+            </li>
+
             
         @else
 

@@ -96,57 +96,29 @@
                         </div>
 
                         <div class="row text-center" style="margin-top:-25px">
-                            <div class="col-md-2 col-sm-3 col-6">
+                            <div class="col-md-4 col-sm-6 col-12">
                                 <div class="card mb-2">
                                     <div class="card-body p-2">
                                         <h6 class="card-title">Potensi Kend</h6>
-                                        <h4>{{ number_format($data['total']) }}</h4>
+                                        <h4>{{ number_format($data['total_potensi']) }}</h4>
                                     </div>
                                 </div>
                             </div>
-                        
-                            <div class="col-md-2 col-sm-3 col-6">
+
+                            <div class="col-md-4 col-sm-6 col-12">
                                 <div class="card mb-2">
                                     <div class="card-body p-2">
-                                        <h6 class="card-title">PKB</h6>
+                                        <h6 class="card-title">Jumlah Sudah Terdata</h6>
+                                        <h4>{{ number_format($data['total_terdata']) }}</h4>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4 col-sm-6 col-12">
+                                <div class="card mb-2">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-title">Nominal PKB</h6>
                                         <h4>{{ number_format($data['pkb']) }}</h4>
-                                    </div>
-                                </div>
-                            </div>
-                        
-                            <div class="col-md-2 col-sm-3 col-6">
-                                <div class="card mb-2">
-                                    <div class="card-body p-2">
-                                        <h6 class="card-title">PKB Denda</h6>
-                                        <h4>{{ number_format($data['pkb_denda']) }}</h4>
-                                    </div>
-                                </div>
-                            </div>
-                        
-                            <div class="col-md-2 col-sm-3 col-6">
-                                <div class="card mb-2">
-                                    <div class="card-body p-2">
-                                        <h6 class="card-title">PNBP</h6>
-                                        <h4>{{ number_format($data['pnbp']) }}</h4>
-                                    </div>
-                                </div>
-                            </div>
-                        
-                        
-                            <div class="col-md-2 col-sm-3 col-6">
-                                <div class="card mb-2">
-                                    <div class="card-body p-2">
-                                        <h6 class="card-title">Jasa Raharja</h6>
-                                        <h4>{{ number_format($data['jr']) }}</h4>
-                                    </div>
-                                </div>
-                            </div>
-                        
-                            <div class="col-md-2 col-sm-3 col-6">
-                                <div class="card mb-2">
-                                    <div class="card-body p-2">
-                                        <h6 class="card-title"> Jasa Raharja Denda</h6>
-                                        <h4>{{ number_format($data['jr_denda']) }}</h4>
                                     </div>
                                 </div>
                             </div>
@@ -154,19 +126,106 @@
                       
 
                         <div class="row mt-2">
-                            <div class="col-md-6">
-                                <div id="map" style="height: 300px; width: 100%;"></div>
+                            <div class="col-md-12">
+                                <div id="map" style="height: 420px; width: 100%;"></div>
                             </div>
-                
-                            <div class="col-md-6">
-                                <div id="potensiKendaraanChart" style="width:100%; height:300px;"></div>
-                            </div>
-                
                         </div>
 
 
                         <div class="row mt-3" >
-                            <div id="chartKendaraanStatus"></div>
+                            <div class="col-md-12">
+                                <div id="chartPerbandinganNominal" style="width:100%; height:420px;"></div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Top 5 Pendataan Kota</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Kota</th>
+                                                        <th>Jumlah</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @forelse ($topKota as $item)
+                                                        <tr>
+                                                            <td>{{ $item->wilayah }}</td>
+                                                            <td>{{ number_format($item->total) }}</td>
+                                                        </tr>
+                                                    @empty
+                                                        <tr>
+                                                            <td colspan="2" class="text-center">Tidak ada data</td>
+                                                        </tr>
+                                                    @endforelse
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Top 5 Pendataan Kecamatan</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Kecamatan</th>
+                                                        <th>Jumlah</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @forelse ($topKecamatan as $item)
+                                                        <tr>
+                                                            <td>{{ $item->wilayah }}</td>
+                                                            <td>{{ number_format($item->total) }}</td>
+                                                        </tr>
+                                                    @empty
+                                                        <tr>
+                                                            <td colspan="2" class="text-center">Tidak ada data</td>
+                                                        </tr>
+                                                    @endforelse
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Top 5 Pendataan Kelurahan</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Kelurahan</th>
+                                                        <th>Jumlah</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @forelse ($topKelurahan as $item)
+                                                        <tr>
+                                                            <td>{{ $item->wilayah }}</td>
+                                                            <td>{{ number_format($item->total) }}</td>
+                                                        </tr>
+                                                    @empty
+                                                        <tr>
+                                                            <td colspan="2" class="text-center">Tidak ada data</td>
+                                                        </tr>
+                                                    @endforelse
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                     </div>
@@ -326,88 +385,47 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Ambil data dari PHP (Blade)
-        const potensiKend = @json($potensiKend);
+        const barChartData = @json($barChartData);
 
-        // Konversi data ke format Highcharts
-        const categories = potensiKend.map(item => item.wilayah); // Kota di sumbu X
-        const values = potensiKend.map(item => parseInt(item.total_vehicles) || 0); // Jumlah kendaraan di sumbu Y
-
-        // Buat diagram garis (line chart)
-        Highcharts.chart('potensiKendaraanChart', {
+        Highcharts.chart('chartPerbandinganNominal', {
             chart: {
-                type: 'line' // Ubah ke line chart
+                type: 'column'
             },
             title: {
-                text: 'Potensi Kendaraan Sengkuyung'
+                text: barChartData.title
             },
             xAxis: {
-                categories: categories, // Kota ada di sumbu X
-                title: {
-                    text: 'Kota'
-                },
-                labels: {
-                    rotation: -45, // Miringkan teks agar terbaca
-                    style: {
-                        fontSize: '10px'
-                    }
-                }
+                categories: barChartData.categories,
+                crosshair: true
             },
             yAxis: {
                 min: 0,
                 title: {
-                    text: 'Jumlah Kendaraan',
-                    align: 'high'
+                    text: 'Nilai / Jumlah'
+                }
+            },
+            tooltip: {
+                shared: true
+            },
+            plotOptions: {
+                column: {
+                    grouping: true,
+                    dataLabels: {
+                        enabled: false
+                    }
                 }
             },
             series: [{
-                name: 'Jumlah Kendaraan',
-                data: values,
-                marker: {
-                    enabled: true, // Tampilkan titik-titik pada garis
-                    radius: 4 // Ukuran titik
-                }
+                name: 'Potensi Kendaraan',
+                data: barChartData.potensi
+            }, {
+                name: 'Sudah Terdata',
+                data: barChartData.terdata
+            }, {
+                name: 'Nominal PKB',
+                data: barChartData.pkb
             }]
         });
-    });
-</script>
-
-<script>
-    Highcharts.chart('chartKendaraanStatus', {
-        chart: {
-            type: 'column'
-        },
-        title: {
-            text: 'Jumlah Kendaraan per wilayah berdasarkan Status'
-        },
-        xAxis: {
-            categories: {!! json_encode($kotaList) !!}
-        },
-        yAxis: {
-            min: 0,
-            title: {
-                text: 'Jumlah Kendaraan'
-            },
-            stackLabels: {
-                enabled: true
-            }
-        },
-        legend: {
-            align: 'center',
-            verticalAlign: 'top',
-            floating: false,
-            backgroundColor: Highcharts.defaultOptions.legend.backgroundColor || '#FFFFFF',
-            borderWidth: 1
-        },
-        plotOptions: {
-            column: {
-                stacking: 'normal',
-                dataLabels: {
-                    enabled: true
-                }
-            }
-        },
-        series: {!! json_encode($seriesData) !!}
     });
 </script>
 
@@ -433,15 +451,7 @@
         });
 
         // Data dari Laravel (dikirim melalui compact di controller)
-        var kotaData = @json($potensiKend);
-
-        // kotaData.forEach(city => {
-        //     if (city.lat && city.lng) {
-        //         L.marker([city.lat, city.lng], { icon: motorIcon }) // Pakai ikon motor
-        //             .addTo(map)
-        //             .bindPopup(`<b>${city.wilayah}</b><br>Total Kendaraan: ${city.total_vehicles}`);
-        //     }
-        // });
+        var kotaData = @json($mapPoints);
 
         kotaData.forEach(city => {
             // Hanya tampilkan jika lat, lng ada dan total kendaraan lebih dari 0

@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Models\SengWilayah;
+use App\Models\SengSaamsat;
+use App\Models\SengWilayahKec;
+use App\Models\SengWilayahKel;
 use App\Helpers\Helper;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
@@ -97,6 +100,8 @@ class AuthController extends Controller
             $responseData['nama_kota'] = $wilayahData[substr($kodeWilayah, 0, 4)]->nama ?? null;
             $responseData['nama_provinsi'] = $wilayahData[substr($kodeWilayah, 0, 2)]->nama ?? null;
         }
+
+        $this->appendSamsatWilayahNames($responseData, $user);
 
         return response()->json([
             'status' => true,
@@ -282,6 +287,8 @@ class AuthController extends Controller
                 $responseData['nama_provinsi'] = $wilayahData[substr($kodeWilayah, 0, 2)]->nama ?? null;
             }
 
+            $this->appendSamsatWilayahNames($responseData, $user);
+
             return response()->json([
                 'status' => true,
                 'message' => 'Login successful',
@@ -320,6 +327,81 @@ class AuthController extends Controller
                 'data' => $responseData
             ]);
         }
+
+    /**
+     * Nama wilayah samsat untuk response API saja (tidak disimpan ke tabel users).
+     *
+     * @param  array<string, mixed>  $responseData
+     */
+    private function appendSamsatWilayahNames(array &$responseData, User $user): void
+    {
+        $responseData['lokasi_samsat_name'] = null;
+        $responseData['kecamatan_samsat_name'] = null;
+        $responseData['kelurahan_samsat_name'] = null;
+
+        $lok = $user->lokasi_samsat;
+        if ($lok !== null && $lok !== '') {
+            $samsat = null;
+            foreach ($this->samsatCodeVariants((string) $lok) as $v) {
+                $samsat = SengSaamsat::where('id_wilayah_samsat', $v)->first();
+                if ($samsat) {
+                    break;
+                }
+            }
+            if (! $samsat) {
+                $samsat = SengSaamsat::where('id', $lok)->first();
+            }
+            if ($samsat) {
+                $responseData['lokasi_samsat_name'] = $samsat->lokasi ?: $samsat->lokasi_singkat;
+            }
+        }
+
+        $kec = $user->kecamatan_samsat;
+        if ($kec !== null && $kec !== '') {
+            $row = null;
+            foreach ($this->samsatCodeVariants((string) $kec) as $v) {
+                $row = SengWilayahKec::where('id_kecamatan', $v)->first();
+                if ($row) {
+                    break;
+                }
+            }
+            $responseData['kecamatan_samsat_name'] = $row?->kecamatan;
+        }
+
+        $kel = $user->kelurahan_samsat;
+        if ($kel !== null && $kel !== '') {
+            $row = null;
+            foreach ($this->samsatCodeVariants((string) $kel) as $v) {
+                $row = SengWilayahKel::where('id_kelurahan', $v)->first();
+                if ($row) {
+                    break;
+                }
+            }
+            $responseData['kelurahan_samsat_name'] = $row?->kelurahan;
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function samsatCodeVariants(string $value): array
+    {
+        $v = trim($value);
+        if ($v === '') {
+            return [];
+        }
+
+        $out = [$v];
+
+        if (ctype_digit($v)) {
+            $stripped = ltrim($v, '0');
+            $stripped = $stripped === '' ? '0' : $stripped;
+            $out[] = $stripped;
+            $out[] = (string) (int) $v;
+        }
+
+        return array_values(array_unique($out));
+    }
 
     /**
      * Logout User

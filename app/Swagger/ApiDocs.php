@@ -37,6 +37,16 @@ class ApiDocs
                         new OA\Property(property: 'status', type: 'boolean', example: true),
                         new OA\Property(property: 'message', type: 'string', example: 'Login successful'),
                         new OA\Property(property: 'token', type: 'string', example: '1|abcdeFGHIJKLmnOPqrSTUvwxYZ'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'object',
+                            description: 'Profil user. lokasi_samsat_name, kecamatan_samsat_name, kelurahan_samsat_name diisi dari lookup (bukan kolom users).',
+                            properties: [
+                                new OA\Property(property: 'lokasi_samsat_name', type: 'string', nullable: true, example: 'SAMSAT Gayamsari'),
+                                new OA\Property(property: 'kecamatan_samsat_name', type: 'string', nullable: true, example: 'Gayamsari'),
+                                new OA\Property(property: 'kelurahan_samsat_name', type: 'string', nullable: true, example: 'Gayamsari'),
+                            ]
+                        ),
                     ]
                 )
             ),
@@ -104,7 +114,27 @@ class ApiDocs
             )
         ),
         responses: [
-            new OA\Response(response: 200, description: 'OTP valid, login berhasil'),
+            new OA\Response(
+                response: 200,
+                description: 'OTP valid, login berhasil',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'Login successful'),
+                        new OA\Property(property: 'token', type: 'string', example: '1|abcdeFGHIJKLmnOPqrSTUvwxYZ'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'object',
+                            description: 'Sama seperti api/login; nama samsat/kec/kel hanya di response.',
+                            properties: [
+                                new OA\Property(property: 'lokasi_samsat_name', type: 'string', nullable: true),
+                                new OA\Property(property: 'kecamatan_samsat_name', type: 'string', nullable: true),
+                                new OA\Property(property: 'kelurahan_samsat_name', type: 'string', nullable: true),
+                            ]
+                        ),
+                    ]
+                )
+            ),
             new OA\Response(response: 401, description: 'OTP invalid/expired'),
         ]
     )]

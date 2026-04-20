@@ -56,6 +56,27 @@
                                         "token": {
                                             "type": "string",
                                             "example": "1|abcdeFGHIJKLmnOPqrSTUvwxYZ"
+                                        },
+                                        "data": {
+                                            "description": "Profil user. lokasi_samsat_name, kecamatan_samsat_name, kelurahan_samsat_name diisi dari lookup (bukan kolom users).",
+                                            "properties": {
+                                                "lokasi_samsat_name": {
+                                                    "type": "string",
+                                                    "example": "SAMSAT Gayamsari",
+                                                    "nullable": true
+                                                },
+                                                "kecamatan_samsat_name": {
+                                                    "type": "string",
+                                                    "example": "Gayamsari",
+                                                    "nullable": true
+                                                },
+                                                "kelurahan_samsat_name": {
+                                                    "type": "string",
+                                                    "example": "Gayamsari",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
                                         }
                                     },
                                     "type": "object"
@@ -188,7 +209,46 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "OTP valid, login berhasil"
+                        "description": "OTP valid, login berhasil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Login successful"
+                                        },
+                                        "token": {
+                                            "type": "string",
+                                            "example": "1|abcdeFGHIJKLmnOPqrSTUvwxYZ"
+                                        },
+                                        "data": {
+                                            "description": "Sama seperti api/login; nama samsat/kec/kel hanya di response.",
+                                            "properties": {
+                                                "lokasi_samsat_name": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "kecamatan_samsat_name": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "kelurahan_samsat_name": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "OTP invalid/expired"
@@ -266,17 +326,17 @@
                                 ],
                                 "properties": {
                                     "lokasi_samsat": {
-                                        "description": "Wajib. Dipetakan ke id_lokasi_samsat (sama seperti di response login user).",
+                                        "description": "Wajib. Dicocokkan ke id_lokasi_samsat (nilai asli + tanpa leading zero, mis. 01 dan 1).",
                                         "type": "string",
                                         "example": "01"
                                     },
                                     "kecamatan_samsat": {
-                                        "description": "Wajib. Dipetakan ke id_kecamatan.",
+                                        "description": "Wajib. Dicocokkan ke id_kecamatan (mis. 0105 dan 105).",
                                         "type": "string",
                                         "example": "0105"
                                     },
                                     "kelurahan_samsat": {
-                                        "description": "Wajib. Dipetakan ke id_kelurahan.",
+                                        "description": "Wajib. Dicocokkan ke id_kelurahan (mis. 0105007 dan 105007).",
                                         "type": "string",
                                         "example": "0105007"
                                     },

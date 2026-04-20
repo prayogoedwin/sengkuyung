@@ -130,7 +130,14 @@
         const urls = [];
 
         @foreach($urlsToDocs as $title => $url)
-            urls.push({name: "{{ $title }}", url: "{{ $url }}"});
+            @php
+                $normalizedDocUrl = $url;
+                if (is_string($normalizedDocUrl) && !preg_match('/^https?:\/\//i', $normalizedDocUrl)) {
+                    $normalizedDocUrl = ltrim($normalizedDocUrl, '/');
+                    $normalizedDocUrl = $swaggerAppBase . '/' . $normalizedDocUrl;
+                }
+            @endphp
+            urls.push({name: "{{ $title }}", url: "{{ $normalizedDocUrl }}"});
         @endforeach
 
         // Build a system

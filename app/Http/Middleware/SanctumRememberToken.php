@@ -2,31 +2,78 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Laravel\Sanctum\PersonalAccessToken;
 use Symfony\Component\HttpFoundation\Response;
-use App\Models\User;
 
 class SanctumRememberToken
 {
     public function handle(Request $request, Closure $next)
     {
-        $token = $request->bearerToken(); // Ambil token dari request
+        $token = $this->parseBearerToken($request);
 
-        if (!$token) {
+        if ($token === '') {
             return response()->json(['status' => false, 'message' => 'Unauthenticated.'], Response::HTTP_UNAUTHORIZED);
         }
 
-        // Cari user berdasarkan remember_token
+        /*
+         * 1) Token Sanctum (format "id|secret") — validasi lewat personal_access_tokens.
+         */
+        $accessToken = PersonalAccessToken::findToken($token);
+        if ($accessToken) {
+            $user = $accessToken->tokenable;
+            if (! $user instanceof User) {
+                $user = User::query()->find($accessToken->tokenable_id);
+            }
+            if ($user instanceof User) {
+                Auth::guard('sanctum')->setUser($user);
+                $request->setUserResolver(static fn () => $user);
+
+                return $next($request);
+            }
+        }
+
+        /*
+         * 2) Fallback: token disimpan utuh di users.remember_token (kompatibilitas lama).
+         */
         $user = User::where('remember_token', $token)->first();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['status' => false, 'message' => 'Invalid token.'], Response::HTTP_UNAUTHORIZED);
         }
 
-        // Set user yang ditemukan ke dalam request
-        auth()->setUser($user);
+        Auth::guard('sanctum')->setUser($user);
+        $request->setUserResolver(static fn () => $user);
 
         return $next($request);
+    }
+
+    private function parseBearerToken(Request $request): string
+    {
+        $t = $request->bearerToken();
+        if (is_string($t)) {
+            $t = trim($t);
+            $t = preg_replace('/^\xEF\xBB\xBF/', '', $t) ?? $t;
+        } else {
+            $t = '';
+        }
+
+        if ($t !== '') {
+            return $t;
+        }
+
+        $header = $request->header('Authorization', '');
+        if (! is_string($header)) {
+            return '';
+        }
+
+        if (preg_match('/Bearer\s+(.+)$/i', trim($header), $m)) {
+            return trim($m[1], " \t\n\r\0\x0B\"'");
+        }
+
+        return '';
     }
 }

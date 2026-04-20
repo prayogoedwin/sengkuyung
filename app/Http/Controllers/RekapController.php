@@ -63,8 +63,14 @@ class RekapController extends Controller
             }
            
         }
-        if ($request->district_id) {
-            $verifikasis->where('kec', $request->district_id);
+        if ($request->lokasi_samsat) {
+            $verifikasis->where('kota', $request->lokasi_samsat);
+        }
+        if ($request->kecamatan_samsat) {
+            $verifikasis->where('kec', $request->kecamatan_samsat);
+        }
+        if ($request->kelurahan_samsat) {
+            $verifikasis->where('desa', $request->kelurahan_samsat);
         }
 
         if ($request->status_id) {
@@ -147,6 +153,18 @@ class RekapController extends Controller
             $potensiKend->where('seng_pendataan_kendaraan.status_verifikasi', $request->status_verifikasi_id);
          }
 
+        if ($request->lokasi_samsat) {
+            $potensiKend->where('seng_pendataan_kendaraan.kota', $request->lokasi_samsat);
+        }
+
+        if ($request->kecamatan_samsat) {
+            $potensiKend->where('seng_pendataan_kendaraan.kec', $request->kecamatan_samsat);
+        }
+
+        if ($request->kelurahan_samsat) {
+            $potensiKend->where('seng_pendataan_kendaraan.desa', $request->kelurahan_samsat);
+        }
+
         if ($request->tanggal_start && $request->tanggal_end) {
             $potensiKend->whereBetween('seng_pendataan_kendaraan.created_at', [$request->tanggal_start, $request->tanggal_end]);
         }
@@ -198,6 +216,18 @@ class RekapController extends Controller
          if ($request->status_verifikasi_id) {
             $potensiKendStatus->where('seng_pendataan_kendaraan.status_verifikasi', $request->status_verifikasi_id);
          }
+
+        if ($request->lokasi_samsat) {
+            $potensiKendStatus->where('seng_pendataan_kendaraan.kota', $request->lokasi_samsat);
+        }
+
+        if ($request->kecamatan_samsat) {
+            $potensiKendStatus->where('seng_pendataan_kendaraan.kec', $request->kecamatan_samsat);
+        }
+
+        if ($request->kelurahan_samsat) {
+            $potensiKendStatus->where('seng_pendataan_kendaraan.desa', $request->kelurahan_samsat);
+        }
 
         if ($request->tanggal_start && $request->tanggal_end) {
             $potensiKendStatus->whereBetween('seng_pendataan_kendaraan.created_at', [$request->tanggal_start, $request->tanggal_end]);

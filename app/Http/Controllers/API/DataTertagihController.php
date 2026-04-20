@@ -38,10 +38,14 @@ class DataTertagihController extends Controller
         $year = (int) $request->input('year', (int) date('Y'));
         $perPage = (int) $request->input('per_page', 15);
 
+        $lokasiVariants = $this->samsatCodeVariants($request->input('lokasi_samsat'));
+        $kecVariants = $this->samsatCodeVariants($request->input('kecamatan_samsat'));
+        $kelVariants = $this->samsatCodeVariants($request->input('kelurahan_samsat'));
+
         $query = DataTertagih::query()
-            ->where('id_lokasi_samsat', $request->input('lokasi_samsat'))
-            ->where('id_kecamatan', $request->input('kecamatan_samsat'))
-            ->where('id_kelurahan', $request->input('kelurahan_samsat'))
+            ->whereIn('id_lokasi_samsat', $lokasiVariants)
+            ->whereIn('id_kecamatan', $kecVariants)
+            ->whereIn('id_kelurahan', $kelVariants)
             ->where('is_terdata', 0)
             ->where('year', $year);
 
@@ -64,5 +68,30 @@ class DataTertagihController extends Controller
                 'to' => $paginator->lastItem(),
             ],
         ]);
+    }
+
+    /**
+     * Kode dari profil user (mis. "01", "0105", "0105007") sering beda format dengan isi impor CSV
+     * (mis. "1", "105", "105007"). Bangun beberapa varian perbandingan agar WHERE tetap cocok.
+     *
+     * @return list<string>
+     */
+    private function samsatCodeVariants(?string $value): array
+    {
+        $v = trim((string) $value);
+        if ($v === '') {
+            return [];
+        }
+
+        $out = [$v];
+
+        if (ctype_digit($v)) {
+            $stripped = ltrim($v, '0');
+            $stripped = $stripped === '' ? '0' : $stripped;
+            $out[] = $stripped;
+            $out[] = (string) (int) $v;
+        }
+
+        return array_values(array_unique($out));
     }
 }

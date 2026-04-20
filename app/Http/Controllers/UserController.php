@@ -172,10 +172,26 @@ class UserController extends Controller
         }
 
         if($request->role_id == 3){
-            $wilayah = WilayahSamsat::find($request->uptd_id);
-            $kota = $wilayah->kabkota;
+            $validator = Validator::make($request->all(), [
+                'kabkota_id' => 'required|string',
+                'lokasi_samsat' => 'required|string',
+                'kecamatan_samsat' => 'required|string',
+                'kelurahan_samsat' => 'required|string',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()]);
+            }
+
+            $kota = $request->kabkota_id;
+            $uptdId = $request->lokasi_samsat;
+            $kecamatanKemendagri = null;
+            $kelurahanKemendagri = null;
         }else{
             $kota = $request->kabkota_id;
+            $uptdId = $request->uptd_id;
+            $kecamatanKemendagri = $request->district_id;
+            $kelurahanKemendagri = $request->kelurahan;
         }
 
         // Menyimpan data ke tabel users
@@ -184,11 +200,14 @@ class UserController extends Controller
             'email' => $request->email,
             'whatsapp' => $request->whatsapp,
             'password' => bcrypt($request->email), // Set password default atau sesuai logika Anda
-            'uptd_id' =>  $request->uptd_id,
+            'uptd_id' =>  $uptdId,
             'provinsi' =>  33,
             'kota' =>  $kota,
-            'kecamatan' =>  $request->district_id,
-            'kelurahan' =>  $request->kelurahan,
+            'kecamatan' =>  $kecamatanKemendagri,
+            'kelurahan' =>  $kelurahanKemendagri,
+            'lokasi_samsat' => $request->lokasi_samsat,
+            'kecamatan_samsat' => $request->kecamatan_samsat,
+            'kelurahan_samsat' => $request->kelurahan_samsat,
             'rw' =>  $request->rw,
             'rt' =>  $request->rt,
             'alamat_lengkap' =>  $request->alamat_lengkap

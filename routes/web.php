@@ -60,6 +60,9 @@ Route::middleware([LogActivity::class])->group(function () {
 
 
         Route::get('/get-districts', [WilayahController::class, 'getDistricts'])->name('getDistricts');
+        Route::get('/get-samsat-by-kabkota', [WilayahController::class, 'getSamsatByKabkota'])->name('getSamsatByKabkota');
+        Route::get('/get-samsat-kecamatan', [WilayahController::class, 'getSamsatKecamatan'])->name('getSamsatKecamatan');
+        Route::get('/get-samsat-kelurahan', [WilayahController::class, 'getSamsatKelurahan'])->name('getSamsatKelurahan');
         Route::get('/perbandingan-kode-wilayah', [PerbandinganKodeWilayahController::class, 'index'])->name('perbandingan-kode-wilayah.index');
         Route::post('/perbandingan-kode-wilayah/update-wilayah', [PerbandinganKodeWilayahController::class, 'updateKodeSamsatWilayah'])->name('perbandingan-kode-wilayah.update-wilayah');
         Route::post('/perbandingan-kode-wilayah/update-kelurahan', [PerbandinganKodeWilayahController::class, 'updateKodeDagriKelurahan'])->name('perbandingan-kode-wilayah.update-kelurahan');

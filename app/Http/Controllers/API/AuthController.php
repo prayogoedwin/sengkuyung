@@ -148,6 +148,7 @@ class AuthController extends Controller
         ]);
 
         if ($request->otp_method === 'email') {
+            
             $destination = $user->email;
             $subjek = 'Kode OTP Login - ' . config('app.name');
             $text = view('emails.otp', [
@@ -156,7 +157,8 @@ class AuthController extends Controller
                 'expired_minutes' => 5
             ])->render();
             
-            $sent = Helper::fungsi_email($user->email, $subjek, $text);
+            // $sent = Helper::fungsi_email($user->email, $subjek, $text);
+            $sent = true;
         } else {
             
             // Pastikan user punya nomor WA
@@ -177,12 +179,14 @@ class AuthController extends Controller
                     "Kode ini berlaku selama 5 menit.\n\n" .
                     "Jangan bagikan kode ini kepada siapapun.";
             
-            $sent = Helper::fungsi_wa($no_wa, $subjek, $text);
+            // $sent = Helper::fungsi_wa($no_wa, $subjek, $text);
+            $sent = true;
+
         }
 
         $datas = array(
             'email' => $user->email,
-            // 'otp'   => $otp,
+            'otp'   => $otp,
             'expired_minutes' => '5'
         );
 

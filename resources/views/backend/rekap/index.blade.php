@@ -395,45 +395,64 @@
             ? barChartData.pkb
             : [0];
 
-        Highcharts.chart('chartPerbandinganNominal', {
-            chart: {
-                type: 'column'
-            },
-            title: {
-                text: (barChartData && barChartData.title) ? barChartData.title : 'Perbandingan Data'
-            },
-            xAxis: {
-                categories: categories,
-                crosshair: true
-            },
-            yAxis: {
-                min: 0,
+        function renderNominalChart() {
+            if (typeof Highcharts === 'undefined') {
+                return;
+            }
+
+            Highcharts.chart('chartPerbandinganNominal', {
+                chart: {
+                    type: 'column'
+                },
                 title: {
-                    text: 'Nilai / Jumlah'
-                }
-            },
-            tooltip: {
-                shared: true
-            },
-            plotOptions: {
-                column: {
-                    grouping: true,
-                    dataLabels: {
-                        enabled: false
+                    text: (barChartData && barChartData.title) ? barChartData.title : 'Perbandingan Data'
+                },
+                xAxis: {
+                    categories: categories,
+                    crosshair: true
+                },
+                yAxis: {
+                    min: 0,
+                    title: {
+                        text: 'Nilai / Jumlah'
                     }
-                }
-            },
-            series: [{
-                name: 'Potensi Kendaraan',
-                data: potensiData
-            }, {
-                name: 'Sudah Terdata',
-                data: terdataData
-            }, {
-                name: 'Nominal PKB',
-                data: pkbData
-            }]
-        });
+                },
+                tooltip: {
+                    shared: true
+                },
+                plotOptions: {
+                    column: {
+                        grouping: true,
+                        dataLabels: {
+                            enabled: false
+                        }
+                    }
+                },
+                series: [{
+                    name: 'Potensi Kendaraan',
+                    data: potensiData
+                }, {
+                    name: 'Sudah Terdata',
+                    data: terdataData
+                }, {
+                    name: 'Nominal PKB',
+                    data: pkbData
+                }]
+            });
+        }
+
+        function loadHighchartsFallbackAndRender() {
+            const fallback = document.createElement('script');
+            fallback.src = 'https://cdn.jsdelivr.net/npm/highcharts@11/highcharts.js';
+            fallback.onload = renderNominalChart;
+            document.head.appendChild(fallback);
+        }
+
+        if (typeof Highcharts === 'undefined') {
+            loadHighchartsFallbackAndRender();
+        } else {
+            renderNominalChart();
+        }
     });
 </script>
 

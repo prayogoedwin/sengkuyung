@@ -149,19 +149,28 @@
                     if (!swaggerAppBase || !request.url || String(request.url).indexOf('http') !== 0) {
                         return request;
                     }
-                    const req = new URL(request.url);
+                    let urlString = String(request.url);
+                    /*
+                     * Swagger UI kadang menggabung origin + path relatif "api/..." tanpa slash,
+                     * sehingga jadi "...go.idapi/..." (harusnya "...go.id/api/...").
+                     */
+                    /* contoh salah: ...jatengprov.go.idapi/login -> ...go.id/api/login */
+                    urlString = urlString.replace(/(go\.id)api(\/)/i, '$1/api$2');
+                    urlString = urlString.replace(/(\.go\.id)api(\/|$)/i, '$1/api$2');
+
+                    const req = new URL(urlString);
                     const base = new URL(swaggerAppBase);
-                    const basePath = (base.pathname || '').replace(/\/$/, '');
+                    const basePath = (base.pathname || '').replace(/\/$/, '') || '';
                     if (
                         basePath !== '' &&
                         basePath !== '/' &&
                         req.origin === base.origin &&
                         req.pathname.indexOf(basePath) !== 0 &&
-                        (req.pathname.startsWith('/api/') || req.pathname.startsWith('/sanctum/'))
+                        (req.pathname.startsWith('/api/') || req.pathname === '/api' || req.pathname.startsWith('/sanctum/'))
                     ) {
                         req.pathname = basePath + req.pathname;
-                        request.url = req.toString();
                     }
+                    request.url = req.toString();
                 } catch (e) {
                 }
                 return request;

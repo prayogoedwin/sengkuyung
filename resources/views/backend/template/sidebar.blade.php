@@ -15,6 +15,14 @@
     <div class="menu-inner-shadow"></div>
 
     <ul class="menu-inner py-1">
+        @php
+            $roleName = strtolower(Auth::user()->roles[0]['name'] ?? '');
+            $isSuperAdmin = in_array($roleName, ['super-admin', 'superadmin']);
+            $isAdminProv = in_array($roleName, ['admin', 'adminprov']);
+            $isUptd = $roleName === 'uptd';
+            $canSeeDataTertagih = $isSuperAdmin || $isAdminProv || $isUptd;
+        @endphp
+
         <!-- Dashboard -->
         <li class="menu-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
             <a href="{{ route('dashboard') }}" class="menu-link">
@@ -23,7 +31,7 @@
             </a>
         </li>
 
-        @if (Auth::user()->roles[0]['name'] == 'super-admin' || Auth::user()->roles[0]['name'] == 'admin')
+        @if ($isSuperAdmin || $isAdminProv)
             <li class="menu-item {{ request()->routeIs('user.index') ? 'active' : '' }}">
                 <a href="{{ route('user.index') }}" class="menu-link">
                     {{-- <i class="menu-icon tf-icons bx bx-home-circle"></i> --}}
@@ -39,6 +47,15 @@
                 </a>
             </li>
             
+            @if ($canSeeDataTertagih)
+            <li class="menu-item {{ request()->routeIs('data-tertagih.index') ? 'active' : '' }}">
+                <a href="{{ route('data-tertagih.index') }}" class="menu-link">
+                    <i class="menu-icon tf-icons bx bx-table"></i>
+                    <div data-i18n="Analytics">Data Tertagih</div>
+                </a>
+            </li>
+            @endif
+
             <li class="menu-item {{ request()->routeIs('verifikasi.index') ? 'active' : '' }}">
                 <a href="{{ route('verifikasi.index') }}" class="menu-link">
                     <i class="menu-icon tf-icons bx bx-check-shield"></i>  {{-- Ikon Verifikasi --}}
@@ -67,21 +84,23 @@
                 </a>
             </li>
 
-            <li class="menu-item {{ request()->routeIs('data-tertagih.index') ? 'active' : '' }}">
-                <a href="{{ route('data-tertagih.index') }}" class="menu-link">
-                    <i class="menu-icon tf-icons bx bx-table"></i>
-                    <div data-i18n="Analytics">Data Tertagih</div>
-                </a>
-            </li>
-
             
         @else
 
-            @if (Auth::user()->roles[0]['name'] == 'uptd')
+            @if ($isUptd)
             <li class="menu-item {{ request()->routeIs('perbandingan-kode-wilayah.index') ? 'active' : '' }}">
                 <a href="{{ route('perbandingan-kode-wilayah.index') }}" class="menu-link">
                     <i class="menu-icon tf-icons bx bx-git-compare"></i>
                     <div data-i18n="Analytics">Perbandingan Kode Wilayah</div>
+                </a>
+            </li>
+            @endif
+
+            @if ($canSeeDataTertagih)
+            <li class="menu-item {{ request()->routeIs('data-tertagih.index') ? 'active' : '' }}">
+                <a href="{{ route('data-tertagih.index') }}" class="menu-link">
+                    <i class="menu-icon tf-icons bx bx-table"></i>
+                    <div data-i18n="Analytics">Data Tertagih</div>
                 </a>
             </li>
             @endif
@@ -93,7 +112,7 @@
                 </a>
             </li>
 
-            @if (Auth::user()->roles[0]['name'] == 'kabkota')
+            @if ($roleName == 'kabkota')
             <li class="menu-item {{ request()->routeIs('user.index') ? 'active' : '' }}">
                 <a href="{{ route('user.index') }}" class="menu-link">
                     {{-- <i class="menu-icon tf-icons bx bx-home-circle"></i> --}}

@@ -171,7 +171,10 @@ class UserController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()]);
         }
 
-        if($request->role_id == 3){
+        $selectedRole = Role::find($request->role_id);
+        $isPetugasRole = $selectedRole && strtolower($selectedRole->name) === 'petugas';
+
+        if($isPetugasRole){
             $validator = Validator::make($request->all(), [
                 'kabkota_id' => 'required|string',
                 'lokasi_samsat' => 'required|string',
@@ -214,8 +217,9 @@ class UserController extends Controller
         ]);
 
         // Menambahkan role ke user
-        $role = Role::find($request->role_id);
-        $user->assignRole($role);
+        if ($selectedRole) {
+            $user->assignRole($selectedRole);
+        }
 
 
         return response()->json(['success' => true, 'message' => 'Tambah data berhasil, password default sesuai email akun: '.$request->email]);

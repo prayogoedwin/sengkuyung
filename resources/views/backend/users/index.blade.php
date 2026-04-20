@@ -289,6 +289,11 @@
 
     <script>
         $(document).ready(function() {
+            function isPetugasRole() {
+                const selectedText = ($('#userRole option:selected').text() || '').toLowerCase();
+                return selectedText === 'petugas';
+            }
+
         // Function to hide all elements
 
             // function hideAllElements() {
@@ -325,13 +330,16 @@
             $('#userRole').on('change', function() {
                 hideAllElements(); // Hide all elements first
                 var selectedRole = $(this).val();
-                // alert(selectedRole)
+                var petugasSelected = isPetugasRole();
 
-                if (selectedRole == 3) {
+                if (petugasSelected) {
                     $('#kabkotaContainer').show().find('select, input').attr('required', 'required');
                     $('#samsatContainer').show().find('select, input').attr('required', 'required');
                     $('#kecamatanSamsatContainer').show().find('select, input').attr('required', 'required');
                     $('#kelurahanSamsatContainer').show().find('select, input').attr('required', 'required');
+                    $('#rwContainer').show().find('input').attr('required', 'required');
+                    $('#rtContainer').show().find('input').attr('required', 'required');
+                    $('#alamatContainer').show().find('input').attr('required', 'required');
                 } else if (selectedRole == 4) {
                     $('#kabkotaContainer').show().find('select, input').attr('required', 'required');
                 } else if (selectedRole == 5) {
@@ -569,10 +577,10 @@
         $(document).ready(function() {
             $('#userKabkota').on('change', function() {
                 var kabkotaId = $(this).val();
-                var selectedRole = $('#userRole').val();
+                var petugasSelected = (($('#userRole option:selected').text() || '').toLowerCase() === 'petugas');
         
                 if (kabkotaId) {
-                    if (selectedRole == 3) {
+                    if (petugasSelected) {
                         $.ajax({
                             url: '{{ route("getSamsatByKabkota") }}',
                             type: 'GET',

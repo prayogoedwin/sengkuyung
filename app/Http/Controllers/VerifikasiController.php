@@ -39,8 +39,14 @@ class VerifikasiController extends Controller
 
             // Jika bukan role 1 atau 2, dan tidak ada filter, maka kembalikan data kosong
             if (!in_array($userRoleId, [1, 2])) {
-                $noFilters = !$request->status_verifikasi_id && !$request->kabkota_id && !$request->district_id && 
-                            !$request->tanggal_start && !$request->tanggal_end;
+                $noFilters = !$request->status_verifikasi_id
+                    && !$request->kota
+                    && !$request->lokasi_samsat
+                    && !$request->kecamatan_samsat
+                    && !$request->kelurahan_samsat
+                    && !$request->nopol
+                    && !$request->tanggal_start
+                    && !$request->tanggal_end;
 
                 if ($noFilters) {
                     $verifikasis->whereRaw('1 = 0'); // data kosong
@@ -50,8 +56,8 @@ class VerifikasiController extends Controller
             // Apply filters based on user role
             if ($userRoleId == 1 || $userRoleId == 2) {
                 // No additional WHERE clause for roles 1 and 2
-                if ($request->kabkota_id) {
-                    $verifikasis->where('kota_dagri', $request->kabkota_id);
+                if ($request->kota) {
+                    $verifikasis->where('kota_dagri', $request->kota);
                 }
             } elseif ($userRoleId == 4 || $userRoleId == 3) {
                 // Add WHERE clause for role 4
@@ -69,8 +75,20 @@ class VerifikasiController extends Controller
                 $verifikasis->where('status_verifikasi', 1); //status menunggu verifikasi
             }
             
-            if ($request->district_id) {
-                $verifikasis->where('kec', $request->district_id);
+            if ($request->lokasi_samsat) {
+                $verifikasis->where('kota', $request->lokasi_samsat);
+            }
+
+            if ($request->kecamatan_samsat) {
+                $verifikasis->where('kec', $request->kecamatan_samsat);
+            }
+
+            if ($request->kelurahan_samsat) {
+                $verifikasis->where('desa', $request->kelurahan_samsat);
+            }
+
+            if ($request->nopol) {
+                $verifikasis->where('nopol', 'like', '%' . trim($request->nopol) . '%');
             }
             if ($request->tanggal_start && $request->tanggal_end) {
                 $verifikasis->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);

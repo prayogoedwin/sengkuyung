@@ -48,7 +48,7 @@
 
                                             <div class="col-md-3">
                                                 <label for="userKabkota">Kabupaten/Kota</label>
-                                                <select class="form-control" id="userKabkota" name="kabkota_id">
+                                                <select class="form-control" id="userKabkota" name="kota">
                                                     <option value="">Pilih Kabkota</option>
                                                     @foreach ($kabkotas as $kbkt)
                                                         @if ($userRoleId == 3 || $userRoleId == 4)
@@ -64,16 +64,26 @@
 
 
                                             <div class="col-md-3">
-                                                <label for="kecamatan">Kecamatan</label>
-                                                <select class="form-control" id="userDistrict" name="district_id" >
-                                                    <option value="">Pilih Kecamatan</option>
+                                                <label for="lokasiSamsat">Lokasi Samsat</label>
+                                                <select class="form-control" id="lokasiSamsat" name="lokasi_samsat">
+                                                    <option value="">Pilih Lokasi Samsat</option>
                                                 </select>
                                             </div>
                                             <div class="col-md-3">
-                                                {{-- <label for="kecamatan">Kecamatan</label>
-                                                <select id="kecamatan" class="form-control">
-                                                    <option value="">Pilih Kecamatan</option>
-                                                </select> --}}
+                                                <label for="kecamatanSamsat">Kecamatan Samsat</label>
+                                                <select class="form-control" id="kecamatanSamsat" name="kecamatan_samsat">
+                                                    <option value="">Pilih Kecamatan Samsat</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3 mt-2">
+                                                <label for="kelurahanSamsat">Kelurahan Samsat</label>
+                                                <select class="form-control" id="kelurahanSamsat" name="kelurahan_samsat">
+                                                    <option value="">Pilih Kelurahan Samsat</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label for="nopol">Nopol</label>
+                                                <input type="text" id="nopol" class="form-control" placeholder="Contoh: H5000ABG">
                                             </div>
                                             <div class="col-md-3">
                                                 <label for="tanggal_start">Tanggal Start</label>
@@ -137,8 +147,11 @@
                     url: '{{ route('verifikasi.index') }}',
                     data: function(d) {
                         d.status_verifikasi_id = $('#statusVerifikasi').val();
-                        d.kabkota_id = $('#userKabkota').val();
-                        d.district_id = $('#userDistrict').val();
+                        d.kota = $('#userKabkota').val();
+                        d.lokasi_samsat = $('#lokasiSamsat').val();
+                        d.kecamatan_samsat = $('#kecamatanSamsat').val();
+                        d.kelurahan_samsat = $('#kelurahanSamsat').val();
+                        d.nopol = $('#nopol').val();
                         d.tanggal_start = $('#tanggal_start').val();
                         d.tanggal_end = $('#tanggal_end').val();
                     }
@@ -182,7 +195,10 @@
             $('#resetFilter').click(function() {
                 $('#statusVerifikasi').val('');
                 $('#userKabkota').val('');
-                $('#userDistrict').val('');
+                $('#lokasiSamsat').html('<option value="">Pilih Lokasi Samsat</option>');
+                $('#kecamatanSamsat').html('<option value="">Pilih Kecamatan Samsat</option>');
+                $('#kelurahanSamsat').html('<option value="">Pilih Kelurahan Samsat</option>');
+                $('#nopol').val('');
                 $('#tanggal_start').val('');
                 $('#tanggal_end').val('');
                 table.ajax.reload(); // Reset dan reload datatable
@@ -198,28 +214,96 @@
     
             if (kabkotaId) {
                 $.ajax({
-                    url: '{{ route("getDistricts") }}',
+                    url: '{{ route("getSamsatByKabkota") }}',
                     type: 'GET',
                     data: { kabkota_id: kabkotaId },
                     success: function(response) {
                         if (response.success) {
-                            var districts = response.districts;
-                            var options = '<option value="">Select Kecamatan</option>';
-                            $.each(districts, function(index, district) {
-                                options += '<option value="' + district.id + '">' + district.nama + '</option>';
+                            var samsats = response.samsats;
+                            var options = '<option value="">Pilih Lokasi Samsat</option>';
+                            $.each(samsats, function(index, samsat) {
+                                var value = samsat.id_wilayah_samsat ?? samsat.id;
+                                var label = samsat.lokasi ?? '-';
+                                options += '<option value="' + value + '">' + label + '</option>';
                             });
-                            $('#userDistrict').html(options);
+                            $('#lokasiSamsat').html(options);
+                            $('#kecamatanSamsat').html('<option value="">Pilih Kecamatan Samsat</option>');
+                            $('#kelurahanSamsat').html('<option value="">Pilih Kelurahan Samsat</option>');
                         } else {
-                            $('#userDistrict').html('<option value="">No districts found</option>');
+                            $('#lokasiSamsat').html('<option value="">Lokasi Samsat tidak ditemukan</option>');
                         }
                     },
                     error: function(xhr, status, error) {
-                        console.error('Error fetching districts:', error);
-                        $('#userDistrict').html('<option value="">Error fetching districts</option>');
+                        console.error('Error fetching samsat:', error);
+                        $('#lokasiSamsat').html('<option value="">Gagal mengambil lokasi samsat</option>');
                     }
                 });
             } else {
-                $('#userDistrict').html('<option value="">Select District</option>');
+                $('#lokasiSamsat').html('<option value="">Pilih Lokasi Samsat</option>');
+                $('#kecamatanSamsat').html('<option value="">Pilih Kecamatan Samsat</option>');
+                $('#kelurahanSamsat').html('<option value="">Pilih Kelurahan Samsat</option>');
+            }
+        });
+
+        $('#lokasiSamsat').on('change', function() {
+            var lokasiSamsatId = $(this).val();
+
+            if (lokasiSamsatId) {
+                $.ajax({
+                    url: '{{ route("getSamsatKecamatan") }}',
+                    type: 'GET',
+                    data: { lokasi_samsat_id: lokasiSamsatId },
+                    success: function(response) {
+                        if (response.success) {
+                            var kecamatans = response.kecamatans;
+                            var options = '<option value="">Pilih Kecamatan Samsat</option>';
+                            $.each(kecamatans, function(index, kecamatan) {
+                                options += '<option value="' + kecamatan.id_kecamatan + '">' + kecamatan.kecamatan + '</option>';
+                            });
+                            $('#kecamatanSamsat').html(options);
+                            $('#kelurahanSamsat').html('<option value="">Pilih Kelurahan Samsat</option>');
+                        } else {
+                            $('#kecamatanSamsat').html('<option value="">Kecamatan Samsat tidak ditemukan</option>');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error fetching kecamatan samsat:', error);
+                        $('#kecamatanSamsat').html('<option value="">Gagal mengambil kecamatan samsat</option>');
+                    }
+                });
+            } else {
+                $('#kecamatanSamsat').html('<option value="">Pilih Kecamatan Samsat</option>');
+                $('#kelurahanSamsat').html('<option value="">Pilih Kelurahan Samsat</option>');
+            }
+        });
+
+        $('#kecamatanSamsat').on('change', function() {
+            var kecamatanSamsatId = $(this).val();
+
+            if (kecamatanSamsatId) {
+                $.ajax({
+                    url: '{{ route("getSamsatKelurahan") }}',
+                    type: 'GET',
+                    data: { kecamatan_samsat_id: kecamatanSamsatId },
+                    success: function(response) {
+                        if (response.success) {
+                            var kelurahans = response.kelurahans;
+                            var options = '<option value="">Pilih Kelurahan Samsat</option>';
+                            $.each(kelurahans, function(index, kelurahan) {
+                                options += '<option value="' + kelurahan.id_kelurahan + '">' + kelurahan.kelurahan + '</option>';
+                            });
+                            $('#kelurahanSamsat').html(options);
+                        } else {
+                            $('#kelurahanSamsat').html('<option value="">Kelurahan Samsat tidak ditemukan</option>');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error fetching kelurahan samsat:', error);
+                        $('#kelurahanSamsat').html('<option value="">Gagal mengambil kelurahan samsat</option>');
+                    }
+                });
+            } else {
+                $('#kelurahanSamsat').html('<option value="">Pilih Kelurahan Samsat</option>');
             }
         });
     });

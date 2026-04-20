@@ -132,7 +132,8 @@ class RekapController extends Controller
             $chartGroupColumnTertagih = 'id_kelurahan';
             $chartGroupColumnPendataan = 'desa';
             $chartTitle = 'Perbandingan Kelurahan';
-        } elseif ($lokasiSamsatId) {
+        } elseif ($kabkotaId) {
+            // Jika pilih kab/kota saja (atau kab/kota + lokasi), bandingkan antar kecamatan.
             $chartLevel = 'kecamatan';
             $chartGroupColumnTertagih = 'id_kecamatan';
             $chartGroupColumnPendataan = 'kec';

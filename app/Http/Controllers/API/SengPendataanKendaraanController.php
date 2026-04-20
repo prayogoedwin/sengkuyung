@@ -9,6 +9,7 @@ use App\Models\SengStatus;
 use App\Models\SengStatusVerifikasi;
 use App\Models\SengSaamsat;
 use App\Models\SengWilayahKec;
+use App\Models\DataTertagih;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
 use App\Helpers\Helper;
@@ -185,6 +186,17 @@ class SengPendataanKendaraanController extends Controller
 
         // Simpan data
         $data = SengPendataanKendaraan::create($requestData);
+
+        // Tandai data tertagih sudah terdata jika nopol yang sama ditemukan.
+        $normalizedNopol = strtoupper(preg_replace('/\s+/', '', (string) $request->nopol));
+        if ($normalizedNopol !== '') {
+            DataTertagih::whereRaw("REPLACE(UPPER(no_polisi), ' ', '') = ?", [$normalizedNopol])
+                ->update([
+                    'is_terdata' => 1,
+                    'updated_by' => $user->id,
+                    'updated_at' => now(),
+                ]);
+        }
 
         $encodedId = Helper::encodeId($data->id);
 

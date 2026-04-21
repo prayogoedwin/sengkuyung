@@ -37,10 +37,11 @@ class DataTertagihController extends Controller
                     $toggleTo = (int) $row->is_terdata === 1 ? 0 : 1;
                     $toggleText = $toggleTo === 1 ? 'Set Terdata' : 'Set Belum';
 
-                    return '
-                        <button class="btn btn-sm btn-warning" onclick="toggleTertagihStatus(' . $row->id . ', ' . $toggleTo . ')">' . $toggleText . '</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteTertagih(' . $row->id . ')">Delete</button>
-                    ';
+                    // return '
+                    //     <button class="btn btn-sm btn-warning" onclick="toggleTertagihStatus(' . $row->id . ', ' . $toggleTo . ')">' . $toggleText . '</button>
+                    //     <button class="btn btn-sm btn-danger" onclick="deleteTertagih(' . $row->id . ')">Delete</button>
+                    // ';
+                    return '';
                 })
                 ->rawColumns(['actions'])
                 ->make(true);

@@ -38,6 +38,15 @@ class SengPendataanKendaraanController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+                'data' => [],
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
         $perPage = $request->input('per_page', 10); // Default 10 item per halaman
         // $data = SengPendataanKendaraan::paginate($perPage);
         $data = SengPendataanKendaraan::where('created_by', $user->id)->orderBy('id', 'desc')->paginate($perPage);

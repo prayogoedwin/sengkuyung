@@ -106,7 +106,7 @@
                           aria-label="Search..."
                         />
                       </div> --}}
-                      <a href=""><i class="fa fa-arrow-left"></i><<<</a>&nbsp;&nbsp;&nbsp;DASHBOARD MONITORING PROGRAM KERJA SENGKUYUNG
+                      <a href="{{ route('dashboard') }}"><i class="fa fa-arrow-left"></i><<<</a>&nbsp;&nbsp;&nbsp;DASHBOARD MONITORING PROGRAM KERJA SENGKUYUNG
                     </div> 
             <!-- /Search -->
 

@@ -37,7 +37,7 @@ class SengPendataanKendaraanController extends Controller
     
     public function index(Request $request)
     {
-        $user = Auth::user();
+        $user = Auth::user() ?? $request->user();
 
         if (!$user) {
             return response()->json([

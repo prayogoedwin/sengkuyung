@@ -29,6 +29,7 @@ class SanctumRememberToken
                 $user = User::query()->find($accessToken->tokenable_id);
             }
             if ($user instanceof User) {
+                Auth::shouldUse('sanctum');
                 Auth::guard('sanctum')->setUser($user);
                 $request->setUserResolver(static fn () => $user);
 
@@ -45,6 +46,7 @@ class SanctumRememberToken
             return response()->json(['status' => false, 'message' => 'Invalid token.'], Response::HTTP_UNAUTHORIZED);
         }
 
+        Auth::shouldUse('sanctum');
         Auth::guard('sanctum')->setUser($user);
         $request->setUserResolver(static fn () => $user);
 

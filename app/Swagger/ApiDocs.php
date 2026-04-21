@@ -218,4 +218,204 @@ class ApiDocs
     public function dataTertagihList()
     {
     }
+
+    #[OA\Get(
+        path: 'api/pendataan',
+        tags: ['Pendataan Kendaraan'],
+        summary: 'List pendataan kendaraan milik user login',
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 10), description: 'Jumlah data per halaman'),
+            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 1), description: 'Nomor halaman'),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Berhasil mendapatkan daftar data',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'List data ditemukan'),
+                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object')),
+                        new OA\Property(
+                            property: 'pagination',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'current_page', type: 'integer', example: 1),
+                                new OA\Property(property: 'last_page', type: 'integer', example: 10),
+                                new OA\Property(property: 'per_page', type: 'integer', example: 10),
+                                new OA\Property(property: 'total', type: 'integer', example: 100),
+                            ]
+                        ),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+        ]
+    )]
+    public function pendataanIndex()
+    {
+    }
+
+    #[OA\Post(
+        path: 'api/pendataan',
+        tags: ['Pendataan Kendaraan'],
+        summary: 'Tambah data pendataan kendaraan',
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['nohp', 'nopol', 'nama', 'alamat', 'status', 'status_verifikasi', 'kota', 'kec'],
+                properties: [
+                    new OA\Property(property: 'nohp', type: 'string', example: '081234567890'),
+                    new OA\Property(property: 'nopol', type: 'string', example: 'H1234AB'),
+                    new OA\Property(property: 'nama', type: 'string', example: 'Budi Santoso'),
+                    new OA\Property(property: 'alamat', type: 'string', example: 'Jl. Merdeka No. 1'),
+                    new OA\Property(property: 'email', type: 'string', format: 'email', nullable: true, example: 'budi@mail.com'),
+                    new OA\Property(property: 'nik', type: 'string', nullable: true, example: '3374010101010001', description: 'Wajib jika status mengarah ke data dengan KTP'),
+                    new OA\Property(property: 'status', type: 'string', example: 'VXNlcjox', description: 'Encoded ID status'),
+                    new OA\Property(property: 'status_verifikasi', type: 'string', example: 'VXNlcjo1', description: 'Encoded ID status verifikasi'),
+                    new OA\Property(property: 'kota', type: 'string', example: '01'),
+                    new OA\Property(property: 'kec', type: 'string', example: '3374010'),
+                    new OA\Property(property: 'desa_name', type: 'string', nullable: true, example: 'Tembalang'),
+                    new OA\Property(property: 'kec_name', type: 'string', nullable: true, example: 'Tembalang'),
+                    new OA\Property(property: 'kota_name', type: 'string', nullable: true, example: 'Semarang'),
+                    new OA\Property(property: 'merk', type: 'string', nullable: true, example: 'Honda'),
+                    new OA\Property(property: 'tipe', type: 'string', nullable: true, example: 'Beat'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Data berhasil ditambahkan'),
+            new OA\Response(response: 400, description: 'Validasi gagal / data tidak valid'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+        ]
+    )]
+    public function pendataanStore()
+    {
+    }
+
+    #[OA\Get(
+        path: 'api/pendataan/{id}',
+        tags: ['Pendataan Kendaraan'],
+        summary: 'Detail data pendataan kendaraan',
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string'), description: 'Encoded ID pendataan'),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Data ditemukan'),
+            new OA\Response(response: 404, description: 'Data tidak ditemukan'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+        ]
+    )]
+    public function pendataanShow()
+    {
+    }
+
+    #[OA\Put(
+        path: 'api/pendataan/{id}',
+        tags: ['Pendataan Kendaraan'],
+        summary: 'Update data pendataan kendaraan',
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string'), description: 'Encoded ID pendataan'),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['nohp', 'nopol', 'nama', 'alamat'],
+                properties: [
+                    new OA\Property(property: 'nohp', type: 'string', example: '081234567890'),
+                    new OA\Property(property: 'nopol', type: 'string', example: 'H1234AB'),
+                    new OA\Property(property: 'nama', type: 'string', example: 'Budi Santoso'),
+                    new OA\Property(property: 'alamat', type: 'string', example: 'Jl. Merdeka No. 1'),
+                    new OA\Property(property: 'nik', type: 'string', nullable: true, example: '3374010101010001'),
+                    new OA\Property(property: 'email', type: 'string', format: 'email', nullable: true, example: 'budi@mail.com'),
+                    new OA\Property(property: 'status', type: 'integer', nullable: true, example: 2),
+                    new OA\Property(property: 'status_verifikasi', type: 'integer', nullable: true, example: 5),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Data berhasil diperbarui'),
+            new OA\Response(response: 400, description: 'Validasi gagal'),
+            new OA\Response(response: 404, description: 'Data tidak ditemukan'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+        ]
+    )]
+    public function pendataanUpdate()
+    {
+    }
+
+    #[OA\Delete(
+        path: 'api/pendataan/{id}',
+        tags: ['Pendataan Kendaraan'],
+        summary: 'Hapus data pendataan kendaraan',
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string'), description: 'Encoded ID pendataan'),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Data berhasil dihapus'),
+            new OA\Response(response: 404, description: 'Data tidak ditemukan'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+        ]
+    )]
+    public function pendataanDestroy()
+    {
+    }
+
+    #[OA\Post(
+        path: 'api/pendataan/{id}/upload',
+        tags: ['Pendataan Kendaraan'],
+        summary: 'Upload berkas pendataan (mendukung enkripsi untuk KTP)',
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string'), description: 'Encoded ID pendataan'),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    required: ['file_ke', 'file', 'keterangan'],
+                    properties: [
+                        new OA\Property(property: 'file_ke', type: 'string', enum: ['file0', 'file1', 'file2', 'file3', 'file4', 'file5', 'file6', 'file7', 'file8', 'file9'], example: 'file0'),
+                        new OA\Property(property: 'keterangan', type: 'string', example: 'KTP', description: 'Jika bernilai KTP, file disimpan terenkripsi'),
+                        new OA\Property(property: 'file', type: 'string', format: 'binary'),
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'File berhasil diunggah'),
+            new OA\Response(response: 400, description: 'Validasi upload gagal'),
+            new OA\Response(response: 404, description: 'Data tidak ditemukan'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+        ]
+    )]
+    public function pendataanUpload()
+    {
+    }
+
+    #[OA\Get(
+        path: 'api/secure-file/{id}/{fileIndex}',
+        tags: ['Pendataan Kendaraan'],
+        summary: 'Ambil file terenkripsi hasil upload',
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string'), description: 'Encoded ID pendataan'),
+            new OA\Parameter(name: 'fileIndex', in: 'path', required: true, schema: new OA\Schema(type: 'integer', minimum: 0, maximum: 9), description: 'Index file (0-9)'),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'File berhasil diambil'),
+            new OA\Response(response: 403, description: 'File bukan file terenkripsi'),
+            new OA\Response(response: 404, description: 'Data/file tidak ditemukan'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+        ]
+    )]
+    public function pendataanSecureFile()
+    {
+    }
 }

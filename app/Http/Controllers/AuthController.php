@@ -80,7 +80,8 @@ class AuthController extends Controller
                 'expired_minutes' => 5
             ])->render();
             
-            $sent = Helper::fungsi_email($user->email, $subjek, $text);
+            // $sent = Helper::fungsi_email($user->email, $subjek, $text);
+            $sent = true;
         } else {
             // Pastikan user punya nomor WA
             if (empty($user->whatsapp)) {
@@ -97,6 +98,7 @@ class AuthController extends Controller
                     "Jangan bagikan kode ini kepada siapapun.";
             
             $sent = Helper::fungsi_wa($no_wa, $subjek, $text);
+            $sent = true;
         }
 
         if (!$sent) {
@@ -242,7 +244,8 @@ class AuthController extends Controller
                 'expired_minutes' => 5
             ])->render();
             
-            $sent = Helper::fungsi_email($user->email, $subjek, $text);
+            //$sent = Helper::fungsi_email($user->email, $subjek, $text);
+            $sent = true;
         } else {
             $no_wa = Helper::format_nomor_wa($user->no_wa);
             $destination = $user->no_wa;
@@ -253,7 +256,8 @@ class AuthController extends Controller
                     "Kode ini berlaku selama 5 menit.\n\n" .
                     "Jangan bagikan kode ini kepada siapapun.";
             
-            $sent = Helper::fungsi_wa($no_wa, $subjek, $text);
+            //$sent = Helper::fungsi_wa($no_wa, $subjek, $text);
+            $sent = true;
         }
 
         if (!$sent) {

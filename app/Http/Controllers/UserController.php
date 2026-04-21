@@ -87,9 +87,9 @@ class UserController extends Controller
                 })
                 ->addColumn('options', function ($user) {
                     return '
-                        <button class="btn btn-primary btn-sm" onclick="showEditModal(' . $user->id . ')">Edit</button>
-                        <button class="btn btn-warning btn-sm" onclick="confirmResetPassword(' . $user->id . ')">Reset Password</button>
-                        <button class="btn btn-danger btn-sm" onclick="confirmDelete(' . $user->id . ')">Delete</button>
+                        <button class="btn btn-primary btn-sm" onclick="showEditModal(' . $user->id . ')">Edit</button>&nbsp;
+                        <button class="btn btn-warning btn-sm" onclick="confirmResetPassword(' . $user->id . ')">ResetPass</button>&nbsp;
+                        <button class="btn btn-danger btn-sm" onclick="confirmDelete(' . $user->id . ')">Delete</button>&nbsp;
                     ';
                 })
                 ->rawColumns(['options'])  // Pastikan menambahkan ini untuk kolom options

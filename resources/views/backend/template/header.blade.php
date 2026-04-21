@@ -149,8 +149,8 @@
                                         </div>
                                     </div>
                                     <div class="flex-grow-1">
-                                        <span class="fw-semibold d-block">John Doe</span>
-                                        <small class="text-muted">Admin</small>
+                                        <span class="fw-semibold d-block">{{ Auth::user()->name }}</span>
+                                        <small class="text-muted"> {{ Auth::user()->roles->isNotEmpty() ? Auth::user()->roles[0]->name : 'No role' }}</small>
                                     </div>
                                 </div>
                             </a>

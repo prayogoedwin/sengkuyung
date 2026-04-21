@@ -433,6 +433,503 @@
                     }
                 ]
             }
+        },
+        "api/pendataan": {
+            "get": {
+                "tags": [
+                    "Pendataan Kendaraan"
+                ],
+                "summary": "List pendataan kendaraan milik user login",
+                "operationId": "6dfb9b023c0dafc0c0a2e65d16faba6d",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Jumlah data per halaman",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Nomor halaman",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Berhasil mendapatkan daftar data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "List data ditemukan"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        },
+                                        "pagination": {
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "last_page": {
+                                                    "type": "integer",
+                                                    "example": 10
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "example": 10
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "example": 100
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Pendataan Kendaraan"
+                ],
+                "summary": "Tambah data pendataan kendaraan",
+                "operationId": "e4f81b2b0430c1bff4030cddc34cac70",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "nohp",
+                                    "nopol",
+                                    "nama",
+                                    "alamat",
+                                    "status",
+                                    "status_verifikasi",
+                                    "kota",
+                                    "kec"
+                                ],
+                                "properties": {
+                                    "nohp": {
+                                        "type": "string",
+                                        "example": "081234567890"
+                                    },
+                                    "nopol": {
+                                        "type": "string",
+                                        "example": "H1234AB"
+                                    },
+                                    "nama": {
+                                        "type": "string",
+                                        "example": "Budi Santoso"
+                                    },
+                                    "alamat": {
+                                        "type": "string",
+                                        "example": "Jl. Merdeka No. 1"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "budi@mail.com",
+                                        "nullable": true
+                                    },
+                                    "nik": {
+                                        "description": "Wajib jika status mengarah ke data dengan KTP",
+                                        "type": "string",
+                                        "example": "3374010101010001",
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "description": "Encoded ID status",
+                                        "type": "string",
+                                        "example": "VXNlcjox"
+                                    },
+                                    "status_verifikasi": {
+                                        "description": "Encoded ID status verifikasi",
+                                        "type": "string",
+                                        "example": "VXNlcjo1"
+                                    },
+                                    "kota": {
+                                        "type": "string",
+                                        "example": "01"
+                                    },
+                                    "kec": {
+                                        "type": "string",
+                                        "example": "3374010"
+                                    },
+                                    "desa_name": {
+                                        "type": "string",
+                                        "example": "Tembalang",
+                                        "nullable": true
+                                    },
+                                    "kec_name": {
+                                        "type": "string",
+                                        "example": "Tembalang",
+                                        "nullable": true
+                                    },
+                                    "kota_name": {
+                                        "type": "string",
+                                        "example": "Semarang",
+                                        "nullable": true
+                                    },
+                                    "merk": {
+                                        "type": "string",
+                                        "example": "Honda",
+                                        "nullable": true
+                                    },
+                                    "tipe": {
+                                        "type": "string",
+                                        "example": "Beat",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Data berhasil ditambahkan"
+                    },
+                    "400": {
+                        "description": "Validasi gagal / data tidak valid"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "api/pendataan/{id}": {
+            "get": {
+                "tags": [
+                    "Pendataan Kendaraan"
+                ],
+                "summary": "Detail data pendataan kendaraan",
+                "operationId": "4f9f779a4bc2beb6f46e385aa7826ded",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Encoded ID pendataan",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Data ditemukan"
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Pendataan Kendaraan"
+                ],
+                "summary": "Update data pendataan kendaraan",
+                "operationId": "ae61c4c10c3124034ae150c56cd8a483",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Encoded ID pendataan",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "nohp",
+                                    "nopol",
+                                    "nama",
+                                    "alamat"
+                                ],
+                                "properties": {
+                                    "nohp": {
+                                        "type": "string",
+                                        "example": "081234567890"
+                                    },
+                                    "nopol": {
+                                        "type": "string",
+                                        "example": "H1234AB"
+                                    },
+                                    "nama": {
+                                        "type": "string",
+                                        "example": "Budi Santoso"
+                                    },
+                                    "alamat": {
+                                        "type": "string",
+                                        "example": "Jl. Merdeka No. 1"
+                                    },
+                                    "nik": {
+                                        "type": "string",
+                                        "example": "3374010101010001",
+                                        "nullable": true
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "budi@mail.com",
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "type": "integer",
+                                        "example": 2,
+                                        "nullable": true
+                                    },
+                                    "status_verifikasi": {
+                                        "type": "integer",
+                                        "example": 5,
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Data berhasil diperbarui"
+                    },
+                    "400": {
+                        "description": "Validasi gagal"
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Pendataan Kendaraan"
+                ],
+                "summary": "Hapus data pendataan kendaraan",
+                "operationId": "59e003019eeda7dcf3bb7119a911271d",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Encoded ID pendataan",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Data berhasil dihapus"
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "api/pendataan/{id}/upload": {
+            "post": {
+                "tags": [
+                    "Pendataan Kendaraan"
+                ],
+                "summary": "Upload berkas pendataan (mendukung enkripsi untuk KTP)",
+                "operationId": "fa2d9de16ae0f7a1795ec5e0b62dd914",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Encoded ID pendataan",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "file_ke",
+                                    "file",
+                                    "keterangan"
+                                ],
+                                "properties": {
+                                    "file_ke": {
+                                        "type": "string",
+                                        "example": "file0",
+                                        "enum": [
+                                            "file0",
+                                            "file1",
+                                            "file2",
+                                            "file3",
+                                            "file4",
+                                            "file5",
+                                            "file6",
+                                            "file7",
+                                            "file8",
+                                            "file9"
+                                        ]
+                                    },
+                                    "keterangan": {
+                                        "description": "Jika bernilai KTP, file disimpan terenkripsi",
+                                        "type": "string",
+                                        "example": "KTP"
+                                    },
+                                    "file": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "File berhasil diunggah"
+                    },
+                    "400": {
+                        "description": "Validasi upload gagal"
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "api/secure-file/{id}/{fileIndex}": {
+            "get": {
+                "tags": [
+                    "Pendataan Kendaraan"
+                ],
+                "summary": "Ambil file terenkripsi hasil upload",
+                "operationId": "6b9a3e026d58ce6a8d048f2700cc2c1e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Encoded ID pendataan",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "fileIndex",
+                        "in": "path",
+                        "description": "Index file (0-9)",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 9,
+                            "minimum": 0
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "File berhasil diambil"
+                    },
+                    "403": {
+                        "description": "File bukan file terenkripsi"
+                    },
+                    "404": {
+                        "description": "Data/file tidak ditemukan"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -453,6 +950,10 @@
         {
             "name": "Data Tertagih",
             "description": "Data Tertagih"
+        },
+        {
+            "name": "Pendataan Kendaraan",
+            "description": "Pendataan Kendaraan"
         }
     ]
 }

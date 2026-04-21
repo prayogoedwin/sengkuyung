@@ -532,6 +532,47 @@
 
     
     <script>
+        function confirmResetPassword(adminId) {
+            var resetUrl = "{{ route('user.reset-password', ':id') }}".replace(':id', adminId);
+
+            Swal.fire({
+                title: "Reset Password",
+                text: "Password user akan direset menjadi email user. Lanjutkan?",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#f0ad4e",
+                cancelButtonColor: "#3085d6",
+                confirmButtonText: "Ya, Reset!",
+                cancelButtonText: "Batal"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: resetUrl,
+                        type: 'PUT',
+                        data: {
+                            _token: $('meta[name="csrf-token"]').attr('content')
+                        },
+                        success: function(response) {
+                            Swal.fire({
+                                title: "Berhasil!",
+                                text: response.message,
+                                icon: "success"
+                            });
+                        },
+                        error: function(xhr) {
+                            Swal.fire({
+                                title: "Gagal!",
+                                text: xhr.responseJSON ? xhr.responseJSON.message : "Terjadi kesalahan.",
+                                icon: "error"
+                            });
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+
+    <script>
         function confirmDelete(adminId) {
             var deleteUrl = "{{ route('user.softdelete', ':id') }}".replace(':id', adminId);
 

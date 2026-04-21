@@ -87,10 +87,10 @@
         <form id="loginForm" action="{{ route('login.action') }}" method="POST">
             @csrf
             <div class="mb-3">
-                <label for="username" class="form-label">Username / Email</label>
-                <input type="text" class="form-control" id="username" name="username" required
-                    value="{{ old('username') }}">
-                @error('username')
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" name="email" required
+                    value="{{ old('email') }}">
+                @error('email')
                     <span class="text-danger">{{ $message }}</span>
                 @enderror
             </div>
@@ -188,12 +188,12 @@
 
             // Form submit validation
             $('#submitButton').click(function(e) {
-                const username = $('#username').val().trim();
+                const email = $('#email').val().trim();
                 const password = $('#password').val().trim();
                 const captcha = $('#captcha').val().trim();
                 const otpMethod = $('input[name="otp_method"]:checked').val();
 
-                if (!username || !password || !captcha) {
+                if (!email || !password || !captcha) {
                     Swal.fire({
                         title: 'Validasi Error',
                         text: 'Pastikan semua kolom terisi!',

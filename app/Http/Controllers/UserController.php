@@ -13,6 +13,7 @@ use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 // class UserController extends Controller implements HasMiddleware
 class UserController extends Controller 
@@ -87,6 +88,7 @@ class UserController extends Controller
                 ->addColumn('options', function ($user) {
                     return '
                         <button class="btn btn-primary btn-sm" onclick="showEditModal(' . $user->id . ')">Edit</button>
+                        <button class="btn btn-warning btn-sm" onclick="confirmResetPassword(' . $user->id . ')">Reset Password</button>
                         <button class="btn btn-danger btn-sm" onclick="confirmDelete(' . $user->id . ')">Delete</button>
                     ';
                 })
@@ -303,6 +305,27 @@ class UserController extends Controller
             return response()->json(['success' => true, 'message' => 'Hapus data berhasil']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        }
+    }
+
+    public function resetPasswordToEmail($id)
+    {
+        try {
+            $user = User::findOrFail($id);
+
+            $user->update([
+                'password' => Hash::make($user->email),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Password berhasil direset ke email user: ' . $user->email,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ], 500);
         }
     }
 }

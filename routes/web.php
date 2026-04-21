@@ -32,6 +32,7 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::post('/user/add', [UserController::class, 'store'])->name('user.add');
         Route::get('/user/get/{id}', [UserController::class, 'getAdmin'])->name('user.detail');
         Route::post('/user/update/{id}', [UserController::class, 'update'])->name('user.update');
+        Route::put('/user/reset-password/{id}', [UserController::class, 'resetPasswordToEmail'])->name('user.reset-password');
 
         Route::delete('/user/delete/{id}', [UserController::class, 'softdelete'])->name('user.softdelete');
 

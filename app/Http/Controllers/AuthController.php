@@ -35,7 +35,7 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'username' => 'required|string',
+            'email' => 'required|email',
             'password' => 'required|string',
             'captcha' => 'required|captcha',
             'otp_method' => 'required|in:email,wa',
@@ -44,13 +44,13 @@ class AuthController extends Controller
             'otp_method.in' => 'Metode OTP tidak valid',
         ]);
 
-        // Cari user berdasarkan username (bisa email atau username)
-        $user = User::where('email', $request->username)
+        // Login hanya menggunakan email
+        $user = User::where('email', $request->email)
                     ->first();
 
         // Validasi kredensial
         if (!$user || !\Hash::check($request->password, $user->password)) {
-            return back()->withErrors(['login_error' => 'Username atau password salah']);
+            return back()->withErrors(['login_error' => 'Email atau password salah']);
         }
 
         // Generate OTP

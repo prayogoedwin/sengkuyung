@@ -48,6 +48,25 @@
                                         </div>
                                     </div>
                                 </form>
+                                <hr>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a href="{{ route('data-tertagih.template', ['format' => 'xlsx', 'type' => 'format']) }}"
+                                        class="btn btn-outline-success btn-sm">
+                                        Download Format Excel (Tanpa Isi)
+                                    </a>
+                                    <a href="{{ route('data-tertagih.template', ['format' => 'csv', 'type' => 'format']) }}"
+                                        class="btn btn-outline-secondary btn-sm">
+                                        Download Format CSV (Tanpa Isi)
+                                    </a>
+                                    <a href="{{ route('data-tertagih.template', ['format' => 'xlsx', 'type' => 'contoh']) }}"
+                                        class="btn btn-success btn-sm">
+                                        Download Contoh Excel (10 Baris)
+                                    </a>
+                                    <a href="{{ route('data-tertagih.template', ['format' => 'csv', 'type' => 'contoh']) }}"
+                                        class="btn btn-primary btn-sm">
+                                        Download Contoh CSV (10 Baris)
+                                    </a>
+                                </div>
                             </div>
                         </div>
 

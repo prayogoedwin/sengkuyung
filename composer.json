@@ -13,6 +13,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.9",
         "mews/captcha": "^3.4",
+        "phpoffice/phpspreadsheet": "^5.7",
         "spatie/laravel-permission": "^6.16",
         "yajra/laravel-datatables-oracle": "^11.1"
     },

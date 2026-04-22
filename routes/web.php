@@ -13,13 +13,7 @@ use App\Http\Controllers\RekapController;
 use App\Http\Controllers\PelaporanController;
 use App\Http\Controllers\PerbandinganKodeWilayahController;
 use App\Http\Controllers\DataTertagihController;
-
-
-
 Route::middleware([LogActivity::class])->group(function () {
-    Route::get('/your-route', [YourController::class, 'yourMethod']);
-    Route::post('/another-route', [AnotherController::class, 'anotherMethod']);
-
     Route::prefix('dapur')->middleware('auth')->group(function () {
         Route::get('/dashboard', [BackController::class, 'index'])->name('dashboard');
         Route::get('/rekap', [RekapController::class, 'index'])->name('rekap.index');
@@ -43,8 +37,6 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::get('/download', [DownloadController::class, 'index'])->name('download.index');
         Route::get('/download-csv', [DownloadController::class, 'downloadCsv'])->name('download.csv');
         Route::get('/download-pdf', [DownloadController::class, 'downloadPdf'])->name('download.pdf');
-        
-
 
         Route::get('/pelaporan', [PelaporanController::class, 'index'])->name('pelaporan.index');
         Route::get('/pelaporan-csv', [PelaporanController::class, 'pelaporanCsv'])->name('pelaporan.csv');
@@ -56,9 +48,6 @@ Route::middleware([LogActivity::class])->group(function () {
         // Route::get('/verifikasi', [BackController::class, 'verifikasi'])->name('verifikasi.index');
         // Route::get('/verifikasi-detail', [BackController::class, 'verifikasi_detail'])->name('verifikasi-detail.index');
         Route::get('/pelaporans', [BackController::class, 'pelaporan'])->name('pelaporan.indexs');
-
-     
-
 
         Route::get('/get-districts', [WilayahController::class, 'getDistricts'])->name('getDistricts');
         Route::get('/get-samsat-by-kabkota', [WilayahController::class, 'getSamsatByKabkota'])->name('getSamsatByKabkota');
@@ -75,10 +64,12 @@ Route::middleware([LogActivity::class])->group(function () {
 
         Route::get('/data-tertagih', [DataTertagihController::class, 'index'])->name('data-tertagih.index');
         Route::post('/data-tertagih/import', [DataTertagihController::class, 'import'])->name('data-tertagih.import');
+        Route::get('/data-tertagih/template/{format}/{type}', [DataTertagihController::class, 'downloadTemplate'])
+            ->whereIn('format', ['csv', 'xlsx'])
+            ->whereIn('type', ['format', 'contoh'])
+            ->name('data-tertagih.template');
         Route::post('/data-tertagih/{id}/status', [DataTertagihController::class, 'updateStatus'])->name('data-tertagih.update-status');
         Route::delete('/data-tertagih/{id}', [DataTertagihController::class, 'destroy'])->name('data-tertagih.destroy');
-
-        
     });
 });
 
@@ -93,11 +84,6 @@ Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/otp', [AuthController::class, 'showOtpForm'])->name('login.otp.form');
 Route::post('/otp/verify', [AuthController::class, 'verifyOtp'])->name('login.otp.verify');
 Route::post('/otp/resend', [AuthController::class, 'resendOtp'])->name('login.otp.resend');
-
-
-
-
-
 // Route::get('/', function () {
 //     return view('welcome');
 // });

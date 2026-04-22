@@ -6,10 +6,35 @@ use App\Models\DataTertagih;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx as XlsxWriter;
 use Yajra\DataTables\Facades\DataTables;
 
 class DataTertagihController extends Controller
 {
+    private const TEMPLATE_HEADERS = [
+        'no_polisi',
+        'id_lokasi_samsat',
+        'lokasi_layanan',
+        'id_kecamatan',
+        'nm_kecamatan',
+        'id_kelurahan',
+        'nm_kelurahan',
+    ];
+
+    private const TEMPLATE_EXAMPLE_ROWS = [
+        ['H-1048-AA', '1', 'SEMARANG I', '103', 'GENUK', '103005', 'BANJARDOWO'],
+        ['H-8042-UA', '1', 'SEMARANG I', '101', 'SEMARANG TENGAH', '101012', 'KARANG KIDUL'],
+        ['H-7054-BA', '1', 'SEMARANG I', '104', 'SEMARANG TIMUR', '104008', 'REJOSARI'],
+        ['H-2513-WP', '1', 'SEMARANG I', '104', 'SEMARANG TIMUR', '104006', 'BUGANGAN'],
+        ['H-1071-SF', '1', 'SEMARANG I', '102', 'SEMARANG UTARA', '102008', 'TANJUNGMAS'],
+        ['H-3322-PH', '1', 'SEMARANG I', '102', 'SEMARANG UTARA', '102004', 'PURWOSARI'],
+        ['H-8455-BL', '1', 'SEMARANG I', '106', 'BANYUMANIK', '106004', 'TLGOSARI'],
+        ['H-9012-KQ', '1', 'SEMARANG I', '105', 'GAJAHMUNGKUR', '105002', 'PETOMPON'],
+        ['H-3345-VX', '1', 'SEMARANG I', '107', 'CANDISARI', '107006', 'KARANGANYAR GUNUNG'],
+        ['H-6678-RN', '1', 'SEMARANG I', '108', 'MIJEN', '108003', 'JATIBARANG'],
+    ];
+
     public function index(Request $request)
     {
         if ($request->ajax()) {
@@ -125,6 +150,24 @@ class DataTertagihController extends Controller
             ->with('success', 'Import CSV selesai. Data masuk: ' . $inserted);
     }
 
+    public function downloadTemplate(string $format, string $type)
+    {
+        $isExample = $type === 'contoh';
+        $filename = $isExample
+            ? 'data-tertagih-contoh-10-row.' . $format
+            : 'data-tertagih-format-kosong.' . $format;
+
+        if ($format === 'csv') {
+            return $this->downloadCsvTemplate($filename, $isExample);
+        }
+
+        if ($format === 'xlsx') {
+            return $this->downloadExcelTemplate($filename, $isExample);
+        }
+
+        abort(404);
+    }
+
     public function updateStatus(Request $request, int $id)
     {
         $request->validate([
@@ -151,6 +194,44 @@ class DataTertagihController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Data berhasil dihapus.',
+        ]);
+    }
+
+    private function downloadCsvTemplate(string $filename, bool $isExample)
+    {
+        $rows = $isExample ? self::TEMPLATE_EXAMPLE_ROWS : [];
+
+        return response()->streamDownload(function () use ($rows) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, self::TEMPLATE_HEADERS);
+
+            foreach ($rows as $row) {
+                fputcsv($handle, $row);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
+    }
+
+    private function downloadExcelTemplate(string $filename, bool $isExample)
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->fromArray(self::TEMPLATE_HEADERS, null, 'A1');
+
+        if ($isExample) {
+            $sheet->fromArray(self::TEMPLATE_EXAMPLE_ROWS, null, 'A2');
+        }
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new XlsxWriter($spreadsheet);
+            $writer->save('php://output');
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet);
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
     }
 }

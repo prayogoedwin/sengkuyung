@@ -46,10 +46,10 @@
           
             <tr>
              
-                <td>{{ $verifikasi->total ?? 'N/A' }}</td>
-                <td>{{ $verifikasi->menunggu_verifikasi ?? 'N/A' }}</td>
-                <td>'{{ $verifikasi->verifikasi ?? 'N/A' }}'</td>
-                <td>{{ $verifikasi->ditolak ?? 'N/A' }}</td>
+                <td>{{ $total ?? 'N/A' }}</td>
+                <td>{{ $menunggu_verifikasi ?? 'N/A' }}</td>
+                <td>{{ $verifikasi ?? 'N/A' }}</td>
+                <td>{{ $ditolak ?? 'N/A' }}</td>
             </tr>
   
         </tbody>

@@ -101,9 +101,7 @@
 
 <script>
     $(document).ready(function() {
-        $('#userKabkota').on('change', function() {
-            var kabkotaId = $(this).val();
-    
+        function loadDistrictsByKabkota(kabkotaId) {
             if (kabkotaId) {
                 $.ajax({
                     url: '{{ route("getDistricts") }}',
@@ -112,24 +110,35 @@
                     success: function(response) {
                         if (response.success) {
                             var districts = response.districts;
-                            var options = '<option value="">Select Kecamatan</option>';
+                            var options = '<option value="">Pilih Kecamatan</option>';
                             $.each(districts, function(index, district) {
                                 options += '<option value="' + district.id + '">' + district.nama + '</option>';
                             });
                             $('#userDistrict').html(options);
                         } else {
-                            $('#userDistrict').html('<option value="">No districts found</option>');
+                            $('#userDistrict').html('<option value="">Tidak ada kecamatan</option>');
                         }
                     },
                     error: function(xhr, status, error) {
                         console.error('Error fetching districts:', error);
-                        $('#userDistrict').html('<option value="">Error fetching districts</option>');
+                        $('#userDistrict').html('<option value="">Gagal memuat kecamatan</option>');
                     }
                 });
             } else {
-                $('#userDistrict').html('<option value="">Select District</option>');
+                $('#userDistrict').html('<option value="">Pilih Kecamatan</option>');
             }
+        }
+
+        $('#userKabkota').on('change', function() {
+            loadDistrictsByKabkota($(this).val());
         });
+
+        // Untuk role kabkota, kabkota sudah terpilih otomatis dan field di-lock.
+        // Jadi kecamatan perlu dimuat saat halaman pertama kali dibuka.
+        var initialKabkotaId = $('#userKabkota').val();
+        if (initialKabkotaId) {
+            loadDistrictsByKabkota(initialKabkotaId);
+        }
     });
 </script>
 

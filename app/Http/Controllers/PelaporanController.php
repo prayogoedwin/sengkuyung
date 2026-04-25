@@ -15,6 +15,8 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Dompdf\Dompdf;
 use Dompdf\Options;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx as XlsxWriter;
 
 use Illuminate\Http\Request;
 
@@ -39,6 +41,18 @@ class PelaporanController extends Controller
             return $this->rekapCsv($request);  // Kirim request ke fungsi
         }
     
+        return response()->json(['message' => 'Tipe tidak valid'], 400);
+    }
+
+    public function pelaporanExcel(Request $request)
+    {
+        $tipe = $request->tipe;
+        if ($tipe == 1) {
+            return $this->jurnalExcel($request);
+        } elseif ($tipe == 2) {
+            return $this->rekapExcel($request);
+        }
+
         return response()->json(['message' => 'Tipe tidak valid'], 400);
     }
 
@@ -264,6 +278,168 @@ class PelaporanController extends Controller
 
         // Kirim response sebagai file download dan hapus file setelah dikirim
         return response()->download($filePath)->deleteFileAfterSend(true);
+    }
+
+    public function jurnalExcel(Request $request)
+    {
+        $userRole = auth()->user()->role;
+        $user = User::findOrFail(auth()->id());
+        $verifikasis = SengPendataanKendaraan::query();
+
+        if ($userRole == 4) {
+            $verifikasis->where('kota', $user->kota);
+        } elseif ($userRole == 7) {
+            $verifikasis->where('created_by', auth()->id());
+        }
+
+        if ($request->status_verifikasi_id) {
+            $verifikasis->where('status_verifikasi', $request->status_verifikasi_id);
+        }
+
+        if ($request->kabkota_id) {
+            $verifikasis->where('kota', $request->kabkota_id);
+        }
+
+        if ($request->district_id) {
+            $verifikasis->where('kec', $request->district_id);
+        }
+
+        if ($request->tanggal_start && $request->tanggal_end) {
+            $verifikasis->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
+        }
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->fromArray([
+            'No',
+            'Tanggal Pendataan',
+            'Nopol',
+            'Nama',
+            'No HP',
+            'Kota',
+            'Kecamatan',
+            'Kelurahan',
+            'Alamat',
+            'Status Kendaraan',
+            'Tanggal Akhir PKB',
+            'Nama Petugas',
+        ], null, 'A1');
+
+        $rowNumber = 2;
+        $no = 1;
+        foreach ($verifikasis->get() as $verifikasi) {
+            $sheet->fromArray([[
+                $no++,
+                $verifikasi->created_at ? Carbon::parse($verifikasi->created_at)->format('Y-m-d') : 'N/A',
+                $verifikasi->nopol ?? 'N/A',
+                $verifikasi->nama ?? 'N/A',
+                (string) ($verifikasi->nohp ?? 'N/A'),
+                $verifikasi->kota_name ?? 'N/A',
+                $verifikasi->kec_name ?? 'N/A',
+                $verifikasi->desa_name ?? 'N/A',
+                $verifikasi->alamat ?? 'N/A',
+                $verifikasi->status_name ?? 'N/A',
+                $verifikasi->tanggal_akhir_Pkb ? Carbon::parse($verifikasi->tanggal_akhir_Pkb)->format('Y-m-d') : 'N/A',
+                $verifikasi->createdByUser ? $verifikasi->createdByUser->name : 'N/A',
+            ]], null, 'A' . $rowNumber);
+            $rowNumber++;
+        }
+
+        $filename = "jurnal_pelaporan_" . date('YmdHis') . ".xlsx";
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new XlsxWriter($spreadsheet);
+            $writer->save('php://output');
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet);
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    public function rekapExcel(Request $request)
+    {
+        if ($request->kabkota_id) {
+            $query = DB::table('seng_wilayah AS w')
+                ->leftJoin('seng_pendataan_kendaraan AS k', 'w.id', '=', 'k.kec');
+        } else {
+            $query = DB::table('seng_wilayah AS w')
+                ->leftJoin('seng_pendataan_kendaraan AS k', 'w.id', '=', 'k.kota');
+        }
+
+        if ($request->status_verifikasi_id) {
+            $query->where('k.status_verifikasi', $request->status_verifikasi_id);
+        }
+
+        if ($request->kabkota_id) {
+            $query->where('w.id_up', $request->kabkota_id);
+        } else {
+            $query->where('w.id_up', 33);
+        }
+
+        if ($request->district_id) {
+            $query->where('k.kec', $request->district_id);
+        }
+
+        if ($request->tanggal_start && $request->tanggal_end) {
+            $query->whereBetween('k.created_at', [$request->tanggal_start, $request->tanggal_end]);
+        }
+
+        $rekapData = $query
+            ->select(
+                'w.nama AS kab_kota',
+                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'DIMILIKI' THEN 1 ELSE 0 END), 0) AS DIMILIKI"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'GANTI KEPEMILIKAN' THEN 1 ELSE 0 END), 0) AS GANTI_KEPEMILIKAN"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'RUSAK BERAT' THEN 1 ELSE 0 END), 0) AS RUSAK_BERAT"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'HILANG' THEN 1 ELSE 0 END), 0) AS HILANG"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'MENINGGAL DUNIA TANPA AHLI WARIS' THEN 1 ELSE 0 END), 0) AS MENINGGAL_DUNIA"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'MENUTUP USAHA / PAILIT' THEN 1 ELSE 0 END), 0) AS MENUTUP_USAHA"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'DICABUT REGISTRASINYA' THEN 1 ELSE 0 END), 0) AS DICABUT_REGISTRASI"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'TERKENA BENCANA ALAM' THEN 1 ELSE 0 END), 0) AS BENCANA_ALAM"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'TIDAK MEMPUNYAI KEKAYAAN LAGI' THEN 1 ELSE 0 END), 0) AS TIDAK_PUNYA_KEKAYAAN"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'TIDAK DIKETAHUI ALAMAT' THEN 1 ELSE 0 END), 0) AS TIDAK_DIKEATAHUI_ALAMAT")
+            )
+            ->groupBy('w.nama')
+            ->orderBy('w.id', 'ASC')
+            ->get();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->fromArray([
+            'NO', 'WILAYAH', 'DIMILIKI', 'GANTI KEPEMILIKAN', 'RUSAK BERAT', 'HILANG',
+            'MENINGGAL DUNIA TANPA AHLI WARIS', 'MENUTUP USAHA / PAILIT',
+            'DICABUT REGISTRASINYA', 'TERKENA BENCANA ALAM',
+            'TIDAK MEMPUNYAI KEKAYAAN LAGI', 'TIDAK DIKETAHUI ALAMAT',
+        ], null, 'A1');
+
+        $rowNumber = 2;
+        $no = 1;
+        foreach ($rekapData as $row) {
+            $sheet->fromArray([[
+                $no++,
+                $row->kab_kota,
+                $row->DIMILIKI,
+                $row->GANTI_KEPEMILIKAN,
+                $row->RUSAK_BERAT,
+                $row->HILANG,
+                $row->MENINGGAL_DUNIA,
+                $row->MENUTUP_USAHA,
+                $row->DICABUT_REGISTRASI,
+                $row->BENCANA_ALAM,
+                $row->TIDAK_PUNYA_KEKAYAAN,
+                $row->TIDAK_DIKEATAHUI_ALAMAT,
+            ]], null, 'A' . $rowNumber);
+            $rowNumber++;
+        }
+
+        $filename = "rekap_pelaporan_" . date('YmdHis') . ".xlsx";
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new XlsxWriter($spreadsheet);
+            $writer->save('php://output');
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet);
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 
 

@@ -269,16 +269,16 @@ class PelaporanController extends Controller
         $rekapData = $query
             ->select(
                 'w.nama AS kab_kota',
-                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'DIMILIKI' THEN 1 ELSE 0 END), 0) AS DIMILIKI"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'GANTI KEPEMILIKAN' THEN 1 ELSE 0 END), 0) AS GANTI_KEPEMILIKAN"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'RUSAK BERAT' THEN 1 ELSE 0 END), 0) AS RUSAK_BERAT"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'HILANG' THEN 1 ELSE 0 END), 0) AS HILANG"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'MENINGGAL DUNIA TANPA AHLI WARIS' THEN 1 ELSE 0 END), 0) AS MENINGGAL_DUNIA"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'MENUTUP USAHA / PAILIT' THEN 1 ELSE 0 END), 0) AS MENUTUP_USAHA"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'DICABUT REGISTRASINYA' THEN 1 ELSE 0 END), 0) AS DICABUT_REGISTRASI"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'TERKENA BENCANA ALAM' THEN 1 ELSE 0 END), 0) AS BENCANA_ALAM"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'TIDAK MEMPUNYAI KEKAYAAN LAGI' THEN 1 ELSE 0 END), 0) AS TIDAK_PUNYA_KEKAYAAN"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'TIDAK DIKETAHUI ALAMAT' THEN 1 ELSE 0 END), 0) AS TIDAK_DIKEATAHUI_ALAMAT")
+                DB::raw("COALESCE(SUM(CASE WHEN k.status = 1 THEN 1 ELSE 0 END), 0) AS DIMILIKI"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status = 2 THEN 1 ELSE 0 END), 0) AS GANTI_KEPEMILIKAN"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status = 3 THEN 1 ELSE 0 END), 0) AS RUSAK_BERAT"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status = 4 THEN 1 ELSE 0 END), 0) AS HILANG"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status = 5 THEN 1 ELSE 0 END), 0) AS MENINGGAL_DUNIA"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status = 6 THEN 1 ELSE 0 END), 0) AS MENUTUP_USAHA"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status = 7 THEN 1 ELSE 0 END), 0) AS DICABUT_REGISTRASI"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status = 8 THEN 1 ELSE 0 END), 0) AS BENCANA_ALAM"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status = 9 THEN 1 ELSE 0 END), 0) AS TIDAK_PUNYA_KEKAYAAN"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status = 10 THEN 1 ELSE 0 END), 0) AS TIDAK_DIKEATAHUI_ALAMAT")
             )
             ->groupBy('w.nama')
             ->orderBy('w.id', 'ASC')
@@ -416,16 +416,16 @@ class PelaporanController extends Controller
         $rekapData = $query
             ->select(
                 'w.nama AS kab_kota',
-                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'DIMILIKI' THEN 1 ELSE 0 END), 0) AS DIMILIKI"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'GANTI KEPEMILIKAN' THEN 1 ELSE 0 END), 0) AS GANTI_KEPEMILIKAN"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'RUSAK BERAT' THEN 1 ELSE 0 END), 0) AS RUSAK_BERAT"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'HILANG' THEN 1 ELSE 0 END), 0) AS HILANG"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'MENINGGAL DUNIA TANPA AHLI WARIS' THEN 1 ELSE 0 END), 0) AS MENINGGAL_DUNIA"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'MENUTUP USAHA / PAILIT' THEN 1 ELSE 0 END), 0) AS MENUTUP_USAHA"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'DICABUT REGISTRASINYA' THEN 1 ELSE 0 END), 0) AS DICABUT_REGISTRASI"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'TERKENA BENCANA ALAM' THEN 1 ELSE 0 END), 0) AS BENCANA_ALAM"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'TIDAK MEMPUNYAI KEKAYAAN LAGI' THEN 1 ELSE 0 END), 0) AS TIDAK_PUNYA_KEKAYAAN"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status_name = 'TIDAK DIKETAHUI ALAMAT' THEN 1 ELSE 0 END), 0) AS TIDAK_DIKEATAHUI_ALAMAT")
+                DB::raw("COALESCE(SUM(CASE WHEN k.status = 1 THEN 1 ELSE 0 END), 0) AS DIMILIKI"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status = 2 THEN 1 ELSE 0 END), 0) AS GANTI_KEPEMILIKAN"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status = 3 THEN 1 ELSE 0 END), 0) AS RUSAK_BERAT"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status = 4 THEN 1 ELSE 0 END), 0) AS HILANG"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status = 5 THEN 1 ELSE 0 END), 0) AS MENINGGAL_DUNIA"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status = 6 THEN 1 ELSE 0 END), 0) AS MENUTUP_USAHA"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status = 7 THEN 1 ELSE 0 END), 0) AS DICABUT_REGISTRASI"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status = 8 THEN 1 ELSE 0 END), 0) AS BENCANA_ALAM"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status = 9 THEN 1 ELSE 0 END), 0) AS TIDAK_PUNYA_KEKAYAAN"),
+                DB::raw("COALESCE(SUM(CASE WHEN k.status = 10 THEN 1 ELSE 0 END), 0) AS TIDAK_DIKEATAHUI_ALAMAT")
             )
             ->groupBy('w.nama')
             ->orderBy('w.id', 'ASC')
@@ -646,16 +646,16 @@ class PelaporanController extends Controller
         $rekapData = $query
             ->select(
                 'w.nama AS kab_kota',
-                DB::raw("SUM(CASE WHEN k.status_name = 'DIMILIKI' THEN 1 ELSE 0 END) AS DIMILIKI"),
-                DB::raw("SUM(CASE WHEN k.status_name = 'GANTI KEPEMILIKAN' THEN 1 ELSE 0 END) AS GANTI_KEPEMILIKAN"),
-                DB::raw("SUM(CASE WHEN k.status_name = 'RUSAK BERAT' THEN 1 ELSE 0 END) AS RUSAK_BERAT"),
-                DB::raw("SUM(CASE WHEN k.status_name = 'HILANG' THEN 1 ELSE 0 END) AS HILANG"),
-                DB::raw("SUM(CASE WHEN k.status_name = 'MENINGGAL DUNIA TANPA AHLI WARIS' THEN 1 ELSE 0 END) AS MENINGGAL_DUNIA"),
-                DB::raw("SUM(CASE WHEN k.status_name = 'MENUTUP USAHA / PAILIT' THEN 1 ELSE 0 END) AS MENUTUP_USAHA"),
-                DB::raw("SUM(CASE WHEN k.status_name = 'DICABUT REGISTRASINYA' THEN 1 ELSE 0 END) AS DICABUT_REGISTRASI"),
-                DB::raw("SUM(CASE WHEN k.status_name = 'TERKENA BENCANA ALAM' THEN 1 ELSE 0 END) AS BENCANA_ALAM"),
-                DB::raw("SUM(CASE WHEN k.status_name = 'TIDAK MEMPUNYAI KEKAYAAN LAGI' THEN 1 ELSE 0 END) AS TIDAK_PUNYA_KEKAYAAN"),
-                DB::raw("SUM(CASE WHEN k.status_name = 'TIDAK DIKETAHUI ALAMAT' THEN 1 ELSE 0 END) AS TIDAK_DIKEATAHUI_ALAMAT")
+                DB::raw("SUM(CASE WHEN k.status = 1 THEN 1 ELSE 0 END) AS DIMILIKI"),
+                DB::raw("SUM(CASE WHEN k.status = 2 THEN 1 ELSE 0 END) AS GANTI_KEPEMILIKAN"),
+                DB::raw("SUM(CASE WHEN k.status = 3 THEN 1 ELSE 0 END) AS RUSAK_BERAT"),
+                DB::raw("SUM(CASE WHEN k.status = 4 THEN 1 ELSE 0 END) AS HILANG"),
+                DB::raw("SUM(CASE WHEN k.status = 5 THEN 1 ELSE 0 END) AS MENINGGAL_DUNIA"),
+                DB::raw("SUM(CASE WHEN k.status = 6 THEN 1 ELSE 0 END) AS MENUTUP_USAHA"),
+                DB::raw("SUM(CASE WHEN k.status = 7 THEN 1 ELSE 0 END) AS DICABUT_REGISTRASI"),
+                DB::raw("SUM(CASE WHEN k.status = 8 THEN 1 ELSE 0 END) AS BENCANA_ALAM"),
+                DB::raw("SUM(CASE WHEN k.status = 9 THEN 1 ELSE 0 END) AS TIDAK_PUNYA_KEKAYAAN"),
+                DB::raw("SUM(CASE WHEN k.status = 10 THEN 1 ELSE 0 END) AS TIDAK_DIKEATAHUI_ALAMAT")
             )
             ->groupBy('w.nama')
             ->orderBy('w.id', 'ASC')

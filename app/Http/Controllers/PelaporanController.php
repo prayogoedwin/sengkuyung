@@ -136,7 +136,7 @@ class PelaporanController extends Controller
 
 
             // Header CSV
-            fputcsv($file, ['No', 'Tanggal Pendataan', 'Nopol', 'Nama', 'No HP', 'Kota', 'Kecamatan', 'Kelurahan', 'Alamat', 'Status Kendaraan', 'Tanggal Akhir PKB', 'Nama Petugas']);
+            fputcsv($file, ['No', 'Tanggal Pendataan', 'Nopol', 'Nama', 'Kota', 'Kecamatan', 'Kelurahan', 'Alamat', 'Nama Petugas']);
 
             $no = 1;
             foreach ($verifikasis->get() as $verifikasi) {
@@ -145,13 +145,10 @@ class PelaporanController extends Controller
                     $verifikasi->created_at ? Carbon::parse($verifikasi->created_at)->format('Y-m-d') : 'N/A',
                     $verifikasi->nopol ?? 'N/A',
                     $verifikasi->nama ?? 'N/A',
-                    "'".$verifikasi->nohp."'" ?? 'N/A',
                     $verifikasi->kota_name ?? 'N/A',
                     $verifikasi->kec_name ?? 'N/A',
                     $verifikasi->desa_name ?? 'N/A',
                     $verifikasi->alamat ?? 'N/A',
-                    $verifikasi->status_name ?? 'N/A',
-                    $verifikasi->created_at ? Carbon::parse($verifikasi->tanggal_akhir_Pkb)->format('Y-m-d') : 'N/A',
                     $verifikasi->createdByUser ? $verifikasi->createdByUser->name : 'N/A', // Nama User dari created_by
 
                    
@@ -327,13 +324,10 @@ class PelaporanController extends Controller
             'Tanggal Pendataan',
             'Nopol',
             'Nama',
-            'No HP',
             'Kota',
             'Kecamatan',
             'Kelurahan',
             'Alamat',
-            'Status Kendaraan',
-            'Tanggal Akhir PKB',
             'Nama Petugas',
         ], null, 'A1');
 
@@ -345,13 +339,10 @@ class PelaporanController extends Controller
                 $verifikasi->created_at ? Carbon::parse($verifikasi->created_at)->format('Y-m-d') : 'N/A',
                 $verifikasi->nopol ?? 'N/A',
                 $verifikasi->nama ?? 'N/A',
-                (string) ($verifikasi->nohp ?? 'N/A'),
                 $verifikasi->kota_name ?? 'N/A',
                 $verifikasi->kec_name ?? 'N/A',
                 $verifikasi->desa_name ?? 'N/A',
                 $verifikasi->alamat ?? 'N/A',
-                $verifikasi->status_name ?? 'N/A',
-                $verifikasi->tanggal_akhir_Pkb ? Carbon::parse($verifikasi->tanggal_akhir_Pkb)->format('Y-m-d') : 'N/A',
                 $verifikasi->createdByUser ? $verifikasi->createdByUser->name : 'N/A',
             ]], null, 'A' . $rowNumber);
             $rowNumber++;
@@ -541,13 +532,10 @@ class PelaporanController extends Controller
                         <th>Tanggal Pendataan</th>
                         <th>Nopol</th>
                         <th>Nama</th>
-                        <th>No HP</th>
                         <th>Kota</th>
                         <th>Kecamatan</th>
                         <th>Kelurahan</th>
                         <th>Alamat</th>
-                        <th>Status Kendaraan</th>
-                        <th>Tanggal Akhir PKB</th>
                         <th>Nama Petugas</th>
                     </tr>
                 </thead>
@@ -560,13 +548,10 @@ class PelaporanController extends Controller
                 <td>" . ($verifikasi->created_at ? Carbon::parse($verifikasi->created_at)->format('Y-m-d') : 'N/A') . "</td>
                 <td>" . ($verifikasi->nopol ?? 'N/A') . "</td>
                 <td>" . ($verifikasi->nama ?? 'N/A') . "</td>
-                <td>'" . ($verifikasi->nohp ?? 'N/A') . "'</td>
                 <td>" . ($verifikasi->kota_name ?? 'N/A') . "</td>
                 <td>" . ($verifikasi->kec_name ?? 'N/A') . "</td>
                 <td>" . ($verifikasi->desa_name ?? 'N/A') . "</td>
                 <td>" . ($verifikasi->alamat ?? 'N/A') . "</td>
-                <td>" . ($verifikasi->status_name ?? 'N/A') . "</td>
-                <td>" . ($verifikasi->tanggal_akhir_Pkb ? Carbon::parse($verifikasi->tanggal_akhir_Pkb)->format('Y-m-d') : 'N/A') . "</td>
                 <td>" . ($verifikasi->createdByUser ? $verifikasi->createdByUser->name : 'N/A') . "</td>
             </tr>";
             $no++;

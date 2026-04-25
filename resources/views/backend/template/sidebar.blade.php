@@ -56,12 +56,23 @@
             </li>
             @endif
 
-            <li class="menu-item {{ request()->routeIs('verifikasi.index') ? 'active' : '' }}">
-                <a href="{{ route('verifikasi.index') }}" class="menu-link">
-                    <i class="menu-icon tf-icons bx bx-check-shield"></i>  {{-- Ikon Verifikasi --}}
-                    <div data-i18n="Analytics">Verifikasi</div>
-                </a>
-            </li>
+            @if ($roleName != 'kabkota')
+                <li class="menu-item {{ request()->routeIs('verifikasi.index') ? 'active' : '' }}">
+                    <a href="{{ route('verifikasi.index') }}" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-check-shield"></i>  {{-- Ikon Verifikasi --}}
+                        <div data-i18n="Analytics">Verifikasi</div>
+                    </a>
+                </li>
+            @endif
+
+            @if ($roleName == 'kabkota')
+                <li class="menu-item {{ request()->routeIs('pelaporan.index') ? 'active' : '' }}">
+                    <a href="{{ route('pelaporan.index') }}" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-file"></i>  {{-- Ikon Pelaporan --}}
+                        <div data-i18n="Analytics">Pelaporan</div>
+                    </a>
+                </li>
+            @endif
             
             <li class="menu-item {{ request()->routeIs('pelaporan.index') ? 'active' : '' }}">
                 <a href="{{ route('pelaporan.index') }}" class="menu-link">

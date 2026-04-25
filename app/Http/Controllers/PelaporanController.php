@@ -66,7 +66,10 @@ class PelaporanController extends Controller
         if ($userRole == 1 || $userRole == 2) {
             // No additional WHERE clause for roles 1 and 2
         } elseif ($userRole == 4) {
-            $verifikasis->where('kota', $user->kota);
+            $verifikasis->where(function ($query) use ($user) {
+                $query->where('kota', $user->kota)
+                    ->orWhere('kota_dagri', $user->kota);
+            });
         } elseif ($userRole == 7) {
             $verifikasis->where('created_by', auth()->id());
         }
@@ -80,7 +83,10 @@ class PelaporanController extends Controller
         $kotajudul = '';
         $kotajudul_id = '';
         if ($request->kabkota_id) {
-            $verifikasis->where('kota', $request->kabkota_id);
+            $verifikasis->where(function ($query) use ($request) {
+                $query->where('kota', $request->kabkota_id)
+                    ->orWhere('kota_dagri', $request->kabkota_id);
+            });
             // $wilayah = SengWilayah::find($request->kabkota_id);
             $wilayah = SengWilayah::where('id', $request->kabkota_id)->first();
             $kotajudul = $wilayah ? $wilayah->nama : '';
@@ -287,7 +293,10 @@ class PelaporanController extends Controller
         $verifikasis = SengPendataanKendaraan::query();
 
         if ($userRole == 4) {
-            $verifikasis->where('kota', $user->kota);
+            $verifikasis->where(function ($query) use ($user) {
+                $query->where('kota', $user->kota)
+                    ->orWhere('kota_dagri', $user->kota);
+            });
         } elseif ($userRole == 7) {
             $verifikasis->where('created_by', auth()->id());
         }
@@ -297,7 +306,10 @@ class PelaporanController extends Controller
         }
 
         if ($request->kabkota_id) {
-            $verifikasis->where('kota', $request->kabkota_id);
+            $verifikasis->where(function ($query) use ($request) {
+                $query->where('kota', $request->kabkota_id)
+                    ->orWhere('kota_dagri', $request->kabkota_id);
+            });
         }
 
         if ($request->district_id) {
@@ -464,7 +476,10 @@ class PelaporanController extends Controller
         if ($userRole == 1 || $userRole == 2) {
             // admin pusat / admin prov
         } elseif ($userRole == 4) {
-            $verifikasis->where('kota', $user->kota);
+            $verifikasis->where(function ($query) use ($user) {
+                $query->where('kota', $user->kota)
+                    ->orWhere('kota_dagri', $user->kota);
+            });
         } elseif ($userRole == 7) {
             $verifikasis->where('created_by', auth()->id());
         }
@@ -475,7 +490,10 @@ class PelaporanController extends Controller
 
         $kotajudul = '';
         if ($request->kabkota_id) {
-            $verifikasis->where('kota', $request->kabkota_id);
+            $verifikasis->where(function ($query) use ($request) {
+                $query->where('kota', $request->kabkota_id)
+                    ->orWhere('kota_dagri', $request->kabkota_id);
+            });
             $wilayah = SengWilayah::where('id', $request->kabkota_id)->first();
             $kotajudul = $wilayah ? ' ' . $wilayah->nama : '';
         }

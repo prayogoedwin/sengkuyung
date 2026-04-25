@@ -26,14 +26,35 @@ class PelaporanController extends Controller
     {
         $user = User::findOrFail(auth()->id());
         $status_verifikasis = SengStatusVerifikasi::select('*')->get();
-        $kabkotas = SengWilayah::select('*')
-        ->where('id_up', 33)
-        ->get();
-        return view('backend.pelaporan.index',  compact('kabkotas', 'status_verifikasis'));
+        $isKabkota = $user->hasRole('kabkota');
+        $selectedKabkotaId = null;
+
+        if ($isKabkota && !empty($user->kota)) {
+            $selectedKabkotaId = (string) $user->kota;
+            $kabkotas = SengWilayah::query()
+                ->where('id_up', 33)
+                ->where('id', $user->kota)
+                ->get();
+        } else {
+            $kabkotas = SengWilayah::query()
+                ->where('id_up', 33)
+                ->get();
+        }
+
+        return view('backend.pelaporan.index', compact(
+            'kabkotas',
+            'status_verifikasis',
+            'isKabkota',
+            'selectedKabkotaId'
+        ));
     }
 
     public function pelaporanCsv(Request $request){
-     
+        $user = auth()->user();
+        if ($user && $user->hasRole('kabkota') && !empty($user->kota)) {
+            $request->merge(['kabkota_id' => $user->kota]);
+        }
+
         $tipe = $request->tipe;
         if ($tipe == 1) {
             return $this->jurnalCsv($request);  // Kirim request ke fungsi
@@ -46,6 +67,11 @@ class PelaporanController extends Controller
 
     public function pelaporanExcel(Request $request)
     {
+        $user = auth()->user();
+        if ($user && $user->hasRole('kabkota') && !empty($user->kota)) {
+            $request->merge(['kabkota_id' => $user->kota]);
+        }
+
         $tipe = $request->tipe;
         if ($tipe == 1) {
             return $this->jurnalExcel($request);
@@ -447,7 +473,11 @@ class PelaporanController extends Controller
 
 
     public function pelaporanPdf(Request $request){
-     
+        $user = auth()->user();
+        if ($user && $user->hasRole('kabkota') && !empty($user->kota)) {
+            $request->merge(['kabkota_id' => $user->kota]);
+        }
+
         $tipe = $request->tipe;
         if ($tipe == 1) {
             return $this->jurnalPdf($request);  // Kirim request ke fungsi

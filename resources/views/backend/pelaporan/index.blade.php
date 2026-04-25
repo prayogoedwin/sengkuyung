@@ -36,10 +36,10 @@
                                             </div>
                                             <div class="col-md-12">
                                                 <label for="userKabkota">Kabupaten/Kota</label>
-                                                <select class="form-control" id="userKabkota" name="kabkota_id" >
+                                                <select class="form-control" id="userKabkota" name="kabkota_id" {{ !empty($isKabkota) && $isKabkota ? 'disabled' : '' }}>
                                                     <option value="">Pilih Kabkota</option>
                                                     @foreach ($kabkotas as $kbkt)
-                                                        <option value="{{ $kbkt->id }}">{{ $kbkt->nama }}</option>
+                                                        <option value="{{ $kbkt->id }}" {{ (string) ($selectedKabkotaId ?? '') === (string) $kbkt->id ? 'selected' : '' }}>{{ $kbkt->nama }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
@@ -135,6 +135,9 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
+        const lockedKabkotaId = @json($selectedKabkotaId ?? '');
+        const isKabkotaLocked = @json((bool) ($isKabkota ?? false));
+
         const buildQuery = () => {
             const statusVerifikasi = document.getElementById("statusVerifikasi").value;
             const kabkota = document.getElementById("userKabkota").value;
@@ -171,6 +174,9 @@
         document.getElementById("resetFilter").addEventListener("click", function (e) {
             e.preventDefault();
             document.querySelector("form").reset();
+            if (isKabkotaLocked && lockedKabkotaId) {
+                document.getElementById("userKabkota").value = lockedKabkotaId;
+            }
         });
     });
 </script>

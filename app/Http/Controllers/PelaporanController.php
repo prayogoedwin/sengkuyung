@@ -191,50 +191,18 @@ class PelaporanController extends Controller
 
     public function rekapCsv(Request $request)
     {
-
-        // Ambil user login
-        $user = auth()->user();
-        $userRole = $user->role;
-
-        // Mulai query dengan join
-        if ($request->kabkota_id) {
-            $query = DB::table('seng_wilayah AS w')
-                ->leftJoin('seng_pendataan_kendaraan AS k', function ($join) {
-                    $join->on('w.id', '=', 'k.kec')
-                        ->orOn('w.id', '=', 'k.kec_dagri');
-                });
-        } else {
-            $query = DB::table('seng_wilayah AS w')
-                ->leftJoin('seng_pendataan_kendaraan AS k', function ($join) {
-                    $join->on('w.id', '=', 'k.kota')
-                        ->orOn('w.id', '=', 'k.kota_dagri');
-                });
-        }
-
-
-        // Filter tambahan
-        if ($request->status_verifikasi_id) {
-            $query->where('k.status_verifikasi', $request->status_verifikasi_id);
-        }
-
         $kotajudul = '';
         $kotajudul_id = '';
         if ($request->kabkota_id) {
-            $query->where('w.id_up', $request->kabkota_id);
-
             $wilayah = SengWilayah::where('id', $request->kabkota_id)->first();
             $kotajudul = $wilayah ? $wilayah->nama : '';
             $kotajudul = ' '.$kotajudul;
             $kotajudul_id = '_'.$request->kabkota_id;
-
-        }else{
-            $query->where('w.id_up', 33);
         }
 
         $kecjudul = '';
         $kecjudul_id = '';
         if ($request->district_id) {
-            $query->where('k.kec', $request->district_id);
             $wilayah = SengWilayah::where('id', $request->district_id)->first();
             $kecjudul = $wilayah ? $wilayah->nama : '';
             $kecjudul = ' Kec. '.$kecjudul;
@@ -243,7 +211,8 @@ class PelaporanController extends Controller
 
         $periode = '';
         if ($request->tanggal_start && $request->tanggal_end) {
-            $query->whereBetween('k.created_at', [$request->tanggal_start, $request->tanggal_end]);
+            $tanggalStart = Carbon::parse($request->tanggal_start)->translatedFormat('d F Y');
+            $tanggalEnd = Carbon::parse($request->tanggal_end)->translatedFormat('d F Y');
             $periode = " Periode: $tanggalStart s.d. $tanggalEnd";
         }
         
@@ -267,31 +236,14 @@ class PelaporanController extends Controller
 
         
         
-        // Select + Grouping
-        $rekapData = $query
-            ->select(
-                'w.nama AS kab_kota',
-                DB::raw("COALESCE(SUM(CASE WHEN k.status = 1 THEN 1 ELSE 0 END), 0) AS DIMILIKI"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status = 2 THEN 1 ELSE 0 END), 0) AS GANTI_KEPEMILIKAN"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status = 3 THEN 1 ELSE 0 END), 0) AS RUSAK_BERAT"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status = 4 THEN 1 ELSE 0 END), 0) AS HILANG"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status = 5 THEN 1 ELSE 0 END), 0) AS MENINGGAL_DUNIA"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status = 6 THEN 1 ELSE 0 END), 0) AS MENUTUP_USAHA"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status = 7 THEN 1 ELSE 0 END), 0) AS DICABUT_REGISTRASI"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status = 8 THEN 1 ELSE 0 END), 0) AS BENCANA_ALAM"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status = 9 THEN 1 ELSE 0 END), 0) AS TIDAK_PUNYA_KEKAYAAN"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status = 10 THEN 1 ELSE 0 END), 0) AS TIDAK_DIKEATAHUI_ALAMAT")
-            )
-            ->groupBy('w.nama')
-            ->orderBy('w.id', 'ASC')
-            ->get();
+        $rekapData = $this->getRekapData($request);
 
         // Tulis data ke CSV
         $no = 1;
         foreach ($rekapData as $row) {
             fputcsv($file, [
                 $no++, 
-                $row->kab_kota,
+                $row->wilayah,
                 $row->DIMILIKI,
                 $row->GANTI_KEPEMILIKAN,
                 $row->RUSAK_BERAT,
@@ -389,55 +341,7 @@ class PelaporanController extends Controller
 
     public function rekapExcel(Request $request)
     {
-        if ($request->kabkota_id) {
-            $query = DB::table('seng_wilayah AS w')
-                ->leftJoin('seng_pendataan_kendaraan AS k', function ($join) {
-                    $join->on('w.id', '=', 'k.kec')
-                        ->orOn('w.id', '=', 'k.kec_dagri');
-                });
-        } else {
-            $query = DB::table('seng_wilayah AS w')
-                ->leftJoin('seng_pendataan_kendaraan AS k', function ($join) {
-                    $join->on('w.id', '=', 'k.kota')
-                        ->orOn('w.id', '=', 'k.kota_dagri');
-                });
-        }
-
-        if ($request->status_verifikasi_id) {
-            $query->where('k.status_verifikasi', $request->status_verifikasi_id);
-        }
-
-        if ($request->kabkota_id) {
-            $query->where('w.id_up', $request->kabkota_id);
-        } else {
-            $query->where('w.id_up', 33);
-        }
-
-        if ($request->district_id) {
-            $query->where('k.kec', $request->district_id);
-        }
-
-        if ($request->tanggal_start && $request->tanggal_end) {
-            $query->whereBetween('k.created_at', [$request->tanggal_start, $request->tanggal_end]);
-        }
-
-        $rekapData = $query
-            ->select(
-                'w.nama AS kab_kota',
-                DB::raw("COALESCE(SUM(CASE WHEN k.status = 1 THEN 1 ELSE 0 END), 0) AS DIMILIKI"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status = 2 THEN 1 ELSE 0 END), 0) AS GANTI_KEPEMILIKAN"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status = 3 THEN 1 ELSE 0 END), 0) AS RUSAK_BERAT"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status = 4 THEN 1 ELSE 0 END), 0) AS HILANG"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status = 5 THEN 1 ELSE 0 END), 0) AS MENINGGAL_DUNIA"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status = 6 THEN 1 ELSE 0 END), 0) AS MENUTUP_USAHA"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status = 7 THEN 1 ELSE 0 END), 0) AS DICABUT_REGISTRASI"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status = 8 THEN 1 ELSE 0 END), 0) AS BENCANA_ALAM"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status = 9 THEN 1 ELSE 0 END), 0) AS TIDAK_PUNYA_KEKAYAAN"),
-                DB::raw("COALESCE(SUM(CASE WHEN k.status = 10 THEN 1 ELSE 0 END), 0) AS TIDAK_DIKEATAHUI_ALAMAT")
-            )
-            ->groupBy('w.nama')
-            ->orderBy('w.id', 'ASC')
-            ->get();
+        $rekapData = $this->getRekapData($request);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -453,7 +357,7 @@ class PelaporanController extends Controller
         foreach ($rekapData as $row) {
             $sheet->fromArray([[
                 $no++,
-                $row->kab_kota,
+                $row->wilayah,
                 $row->DIMILIKI,
                 $row->GANTI_KEPEMILIKAN,
                 $row->RUSAK_BERAT,
@@ -611,69 +515,27 @@ class PelaporanController extends Controller
 
     public function rekapPdf(Request $request)
     {
-        $user = auth()->user();
-
-        // Query logic tetap sama seperti rekapCsv
-        if ($request->kabkota_id) {
-            $query = DB::table('seng_wilayah AS w')
-                ->leftJoin('seng_pendataan_kendaraan AS k', function ($join) {
-                    $join->on('w.id', '=', 'k.kec')
-                        ->orOn('w.id', '=', 'k.kec_dagri');
-                });
-        } else {
-            $query = DB::table('seng_wilayah AS w')
-                ->leftJoin('seng_pendataan_kendaraan AS k', function ($join) {
-                    $join->on('w.id', '=', 'k.kota')
-                        ->orOn('w.id', '=', 'k.kota_dagri');
-                });
-        }
-
-        if ($request->status_verifikasi_id) {
-            $query->where('k.status_verifikasi', $request->status_verifikasi_id);
-        }
-
         $kotajudul = '';
         $kecjudul = '';
         $periode = '';
 
         if ($request->kabkota_id) {
-            $query->where('w.id_up', $request->kabkota_id);
             $wilayah = SengWilayah::find($request->kabkota_id);
             $kotajudul = $wilayah ? ' ' . $wilayah->nama : '';
-        } else {
-            $query->where('w.id_up', 33);
         }
 
         if ($request->district_id) {
-            $query->where('k.kec', $request->district_id);
             $wilayah = SengWilayah::find($request->district_id);
             $kecjudul = $wilayah ? ' Kec. ' . $wilayah->nama : '';
         }
 
         if ($request->tanggal_start && $request->tanggal_end) {
-            $query->whereBetween('k.created_at', [$request->tanggal_start, $request->tanggal_end]);
             $periode = " Periode: {$request->tanggal_start} s.d. {$request->tanggal_end}";
         }
 
         $judul = mb_strtoupper('REKAP PELAPORAN ' . $kotajudul . $kecjudul . $periode, 'UTF-8');
 
-        $rekapData = $query
-            ->select(
-                'w.nama AS kab_kota',
-                DB::raw("SUM(CASE WHEN k.status = 1 THEN 1 ELSE 0 END) AS DIMILIKI"),
-                DB::raw("SUM(CASE WHEN k.status = 2 THEN 1 ELSE 0 END) AS GANTI_KEPEMILIKAN"),
-                DB::raw("SUM(CASE WHEN k.status = 3 THEN 1 ELSE 0 END) AS RUSAK_BERAT"),
-                DB::raw("SUM(CASE WHEN k.status = 4 THEN 1 ELSE 0 END) AS HILANG"),
-                DB::raw("SUM(CASE WHEN k.status = 5 THEN 1 ELSE 0 END) AS MENINGGAL_DUNIA"),
-                DB::raw("SUM(CASE WHEN k.status = 6 THEN 1 ELSE 0 END) AS MENUTUP_USAHA"),
-                DB::raw("SUM(CASE WHEN k.status = 7 THEN 1 ELSE 0 END) AS DICABUT_REGISTRASI"),
-                DB::raw("SUM(CASE WHEN k.status = 8 THEN 1 ELSE 0 END) AS BENCANA_ALAM"),
-                DB::raw("SUM(CASE WHEN k.status = 9 THEN 1 ELSE 0 END) AS TIDAK_PUNYA_KEKAYAAN"),
-                DB::raw("SUM(CASE WHEN k.status = 10 THEN 1 ELSE 0 END) AS TIDAK_DIKEATAHUI_ALAMAT")
-            )
-            ->groupBy('w.nama')
-            ->orderBy('w.id', 'ASC')
-            ->get();
+        $rekapData = $this->getRekapData($request);
 
         // Mulai HTML untuk PDF
         $html = '
@@ -707,7 +569,7 @@ class PelaporanController extends Controller
             $html .= '
                 <tr>
                     <td>' . $no++ . '</td>
-                    <td>' . $row->kab_kota . '</td>
+                    <td>' . $row->wilayah . '</td>
                     <td>' . $row->DIMILIKI . '</td>
                     <td>' . $row->GANTI_KEPEMILIKAN . '</td>
                     <td>' . $row->RUSAK_BERAT . '</td>
@@ -736,6 +598,53 @@ class PelaporanController extends Controller
         return response($dompdf->output(), 200)
             ->header('Content-Type', 'application/pdf')
             ->header('Content-Disposition', "attachment; filename=\"$fileName\"");
+    }
+
+    private function getRekapData(Request $request)
+    {
+        $query = SengPendataanKendaraan::query();
+
+        if ($request->status_verifikasi_id) {
+            $query->where('status_verifikasi', $request->status_verifikasi_id);
+        }
+
+        if ($request->kabkota_id) {
+            $query->where(function ($q) use ($request) {
+                $q->where('kota', $request->kabkota_id)
+                    ->orWhere('kota_dagri', $request->kabkota_id);
+            });
+        }
+
+        if ($request->district_id) {
+            $query->where(function ($q) use ($request) {
+                $q->where('kec', $request->district_id)
+                    ->orWhere('kec_dagri', $request->district_id);
+            });
+        }
+
+        if ($request->tanggal_start && $request->tanggal_end) {
+            $query->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
+        }
+
+        $wilayahExpr = $request->kabkota_id
+            ? "COALESCE(NULLIF(kec_name, ''), NULLIF(kec_dagri, ''), NULLIF(kec, ''), '-')"
+            : "COALESCE(NULLIF(kota_name, ''), NULLIF(kota_dagri, ''), NULLIF(kota, ''), '-')";
+
+        return $query
+            ->selectRaw("$wilayahExpr AS wilayah")
+            ->selectRaw("SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS DIMILIKI")
+            ->selectRaw("SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS GANTI_KEPEMILIKAN")
+            ->selectRaw("SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) AS RUSAK_BERAT")
+            ->selectRaw("SUM(CASE WHEN status = 4 THEN 1 ELSE 0 END) AS HILANG")
+            ->selectRaw("SUM(CASE WHEN status = 5 THEN 1 ELSE 0 END) AS MENINGGAL_DUNIA")
+            ->selectRaw("SUM(CASE WHEN status = 6 THEN 1 ELSE 0 END) AS MENUTUP_USAHA")
+            ->selectRaw("SUM(CASE WHEN status = 7 THEN 1 ELSE 0 END) AS DICABUT_REGISTRASI")
+            ->selectRaw("SUM(CASE WHEN status = 8 THEN 1 ELSE 0 END) AS BENCANA_ALAM")
+            ->selectRaw("SUM(CASE WHEN status = 9 THEN 1 ELSE 0 END) AS TIDAK_PUNYA_KEKAYAAN")
+            ->selectRaw("SUM(CASE WHEN status = 10 THEN 1 ELSE 0 END) AS TIDAK_DIKEATAHUI_ALAMAT")
+            ->groupByRaw($wilayahExpr)
+            ->orderBy('wilayah')
+            ->get();
     }
 
 }

@@ -198,15 +198,17 @@ class PelaporanController extends Controller
 
         // Mulai query dengan join
         if ($request->kabkota_id) {
-
             $query = DB::table('seng_wilayah AS w')
-            ->leftJoin('seng_pendataan_kendaraan AS k', 'w.id', '=', 'k.kec');
-        
-        }else{
-
+                ->leftJoin('seng_pendataan_kendaraan AS k', function ($join) {
+                    $join->on('w.id', '=', 'k.kec')
+                        ->orOn('w.id', '=', 'k.kec_dagri');
+                });
+        } else {
             $query = DB::table('seng_wilayah AS w')
-            ->leftJoin('seng_pendataan_kendaraan AS k', 'w.id', '=', 'k.kota');
-
+                ->leftJoin('seng_pendataan_kendaraan AS k', function ($join) {
+                    $join->on('w.id', '=', 'k.kota')
+                        ->orOn('w.id', '=', 'k.kota_dagri');
+                });
         }
 
 
@@ -389,10 +391,16 @@ class PelaporanController extends Controller
     {
         if ($request->kabkota_id) {
             $query = DB::table('seng_wilayah AS w')
-                ->leftJoin('seng_pendataan_kendaraan AS k', 'w.id', '=', 'k.kec');
+                ->leftJoin('seng_pendataan_kendaraan AS k', function ($join) {
+                    $join->on('w.id', '=', 'k.kec')
+                        ->orOn('w.id', '=', 'k.kec_dagri');
+                });
         } else {
             $query = DB::table('seng_wilayah AS w')
-                ->leftJoin('seng_pendataan_kendaraan AS k', 'w.id', '=', 'k.kota');
+                ->leftJoin('seng_pendataan_kendaraan AS k', function ($join) {
+                    $join->on('w.id', '=', 'k.kota')
+                        ->orOn('w.id', '=', 'k.kota_dagri');
+                });
         }
 
         if ($request->status_verifikasi_id) {
@@ -608,10 +616,16 @@ class PelaporanController extends Controller
         // Query logic tetap sama seperti rekapCsv
         if ($request->kabkota_id) {
             $query = DB::table('seng_wilayah AS w')
-                ->leftJoin('seng_pendataan_kendaraan AS k', 'w.id', '=', 'k.kec');
+                ->leftJoin('seng_pendataan_kendaraan AS k', function ($join) {
+                    $join->on('w.id', '=', 'k.kec')
+                        ->orOn('w.id', '=', 'k.kec_dagri');
+                });
         } else {
             $query = DB::table('seng_wilayah AS w')
-                ->leftJoin('seng_pendataan_kendaraan AS k', 'w.id', '=', 'k.kota');
+                ->leftJoin('seng_pendataan_kendaraan AS k', function ($join) {
+                    $join->on('w.id', '=', 'k.kota')
+                        ->orOn('w.id', '=', 'k.kota_dagri');
+                });
         }
 
         if ($request->status_verifikasi_id) {

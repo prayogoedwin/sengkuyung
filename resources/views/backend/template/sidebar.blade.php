@@ -16,10 +16,12 @@
 
     <ul class="menu-inner py-1">
         @php
-            $roleName = strtolower(Auth::user()->roles[0]['name'] ?? '');
-            $isSuperAdmin = in_array($roleName, ['super-admin', 'superadmin']);
-            $isAdminProv = in_array($roleName, ['admin', 'adminprov']);
-            $isUptd = $roleName === 'uptd';
+            $user = Auth::user();
+            $roleName = strtolower((string) optional($user->roles->first())->name);
+            $isSuperAdmin = $user->hasRole('super-admin') || $user->hasRole('superadmin');
+            $isAdminProv = $user->hasRole('admin') || $user->hasRole('adminprov');
+            $isUptd = $user->hasRole('uptd');
+            $isKabkota = $user->hasRole('kabkota');
             $canSeeDataTertagih = $isSuperAdmin || $isAdminProv || $isUptd;
         @endphp
 
@@ -56,7 +58,7 @@
             </li>
             @endif
 
-            @if ($roleName != 'kabkota')
+            @if (!$isKabkota)
                 <li class="menu-item {{ request()->routeIs('verifikasi.index') ? 'active' : '' }}">
                     <a href="{{ route('verifikasi.index') }}" class="menu-link">
                         <i class="menu-icon tf-icons bx bx-check-shield"></i>  {{-- Ikon Verifikasi --}}
@@ -65,7 +67,7 @@
                 </li>
             @endif
 
-            @if ($roleName == 'kabkota')
+            @if ($isKabkota)
                 <li class="menu-item {{ request()->routeIs('pelaporan.index') ? 'active' : '' }}">
                     <a href="{{ route('pelaporan.index') }}" class="menu-link">
                         <i class="menu-icon tf-icons bx bx-file"></i>  {{-- Ikon Pelaporan --}}
@@ -123,7 +125,7 @@
                 </a>
             </li>
 
-            @if ($roleName == 'kabkota')
+            @if ($isKabkota)
             <li class="menu-item {{ request()->routeIs('user.index') ? 'active' : '' }}">
                 <a href="{{ route('user.index') }}" class="menu-link">
                     {{-- <i class="menu-icon tf-icons bx bx-home-circle"></i> --}}

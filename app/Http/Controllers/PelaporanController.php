@@ -602,36 +602,41 @@ class PelaporanController extends Controller
 
     private function getRekapData(Request $request)
     {
-        $query = SengPendataanKendaraan::query();
+        $baseQuery = SengPendataanKendaraan::query();
 
         if ($request->status_verifikasi_id) {
-            $query->where('status_verifikasi', $request->status_verifikasi_id);
+            $baseQuery->where('status_verifikasi', $request->status_verifikasi_id);
         }
 
         if ($request->kabkota_id) {
-            $query->where(function ($q) use ($request) {
+            $baseQuery->where(function ($q) use ($request) {
                 $q->where('kota', $request->kabkota_id)
                     ->orWhere('kota_dagri', $request->kabkota_id);
             });
         }
 
         if ($request->district_id) {
-            $query->where(function ($q) use ($request) {
+            $baseQuery->where(function ($q) use ($request) {
                 $q->where('kec', $request->district_id)
                     ->orWhere('kec_dagri', $request->district_id);
             });
         }
 
         if ($request->tanggal_start && $request->tanggal_end) {
-            $query->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
+            $baseQuery->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
         }
 
         $wilayahExpr = $request->kabkota_id
             ? "COALESCE(NULLIF(kec_name, ''), NULLIF(kec_dagri, ''), NULLIF(kec, ''), '-')"
             : "COALESCE(NULLIF(kota_name, ''), NULLIF(kota_dagri, ''), NULLIF(kota, ''), '-')";
 
-        return $query
+        $sub = $baseQuery
             ->selectRaw("$wilayahExpr AS wilayah")
+            ->selectRaw('status');
+
+        return DB::query()
+            ->fromSub($sub, 'rekap_source')
+            ->select('wilayah')
             ->selectRaw("SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS DIMILIKI")
             ->selectRaw("SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS GANTI_KEPEMILIKAN")
             ->selectRaw("SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) AS RUSAK_BERAT")
@@ -642,7 +647,7 @@ class PelaporanController extends Controller
             ->selectRaw("SUM(CASE WHEN status = 8 THEN 1 ELSE 0 END) AS BENCANA_ALAM")
             ->selectRaw("SUM(CASE WHEN status = 9 THEN 1 ELSE 0 END) AS TIDAK_PUNYA_KEKAYAAN")
             ->selectRaw("SUM(CASE WHEN status = 10 THEN 1 ELSE 0 END) AS TIDAK_DIKEATAHUI_ALAMAT")
-            ->groupByRaw($wilayahExpr)
+            ->groupBy('wilayah')
             ->orderBy('wilayah')
             ->get();
     }

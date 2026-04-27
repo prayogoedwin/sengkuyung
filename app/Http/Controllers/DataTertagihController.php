@@ -20,19 +20,20 @@ class DataTertagihController extends Controller
         'nm_kecamatan',
         'id_kelurahan',
         'nm_kelurahan',
+        'alamat',
     ];
 
     private const TEMPLATE_EXAMPLE_ROWS = [
-        ['H-1048-AA', '1', 'SEMARANG I', '103', 'GENUK', '103005', 'BANJARDOWO'],
-        ['H-8042-UA', '1', 'SEMARANG I', '101', 'SEMARANG TENGAH', '101012', 'KARANG KIDUL'],
-        ['H-7054-BA', '1', 'SEMARANG I', '104', 'SEMARANG TIMUR', '104008', 'REJOSARI'],
-        ['H-2513-WP', '1', 'SEMARANG I', '104', 'SEMARANG TIMUR', '104006', 'BUGANGAN'],
-        ['H-1071-SF', '1', 'SEMARANG I', '102', 'SEMARANG UTARA', '102008', 'TANJUNGMAS'],
-        ['H-3322-PH', '1', 'SEMARANG I', '102', 'SEMARANG UTARA', '102004', 'PURWOSARI'],
-        ['H-8455-BL', '1', 'SEMARANG I', '106', 'BANYUMANIK', '106004', 'TLGOSARI'],
-        ['H-9012-KQ', '1', 'SEMARANG I', '105', 'GAJAHMUNGKUR', '105002', 'PETOMPON'],
-        ['H-3345-VX', '1', 'SEMARANG I', '107', 'CANDISARI', '107006', 'KARANGANYAR GUNUNG'],
-        ['H-6678-RN', '1', 'SEMARANG I', '108', 'MIJEN', '108003', 'JATIBARANG'],
+        ['H-1048-AA', '1', 'SEMARANG I', '103', 'GENUK', '103005', 'BANJARDOWO', 'JL. BANJARDOWO RAYA NO. 12'],
+        ['H-8042-UA', '1', 'SEMARANG I', '101', 'SEMARANG TENGAH', '101012', 'KARANG KIDUL', 'JL. MENTRI SUPENO GG. 3'],
+        ['H-7054-BA', '1', 'SEMARANG I', '104', 'SEMARANG TIMUR', '104008', 'REJOSARI', 'JL. REJOSARI TENGAH NO. 8'],
+        ['H-2513-WP', '1', 'SEMARANG I', '104', 'SEMARANG TIMUR', '104006', 'BUGANGAN', 'JL. BUGANGAN BARU RT 02 RW 01'],
+        ['H-1071-SF', '1', 'SEMARANG I', '102', 'SEMARANG UTARA', '102008', 'TANJUNGMAS', 'JL. TAWANG STASIUN SELATAN'],
+        ['H-3322-PH', '1', 'SEMARANG I', '102', 'SEMARANG UTARA', '102004', 'PURWOSARI', 'JL. PURWOSARI RAYA NO. 4'],
+        ['H-8455-BL', '1', 'SEMARANG I', '106', 'BANYUMANIK', '106004', 'TLGOSARI', 'JL. TELAGASARI UTAMA BLOK C2'],
+        ['H-9012-KQ', '1', 'SEMARANG I', '105', 'GAJAHMUNGKUR', '105002', 'PETOMPON', 'JL. PETOMPON DALAM NO. 15'],
+        ['H-3345-VX', '1', 'SEMARANG I', '107', 'CANDISARI', '107006', 'KARANGANYAR GUNUNG', 'JL. KARANGANYAR GUNUNG TIMUR'],
+        ['H-6678-RN', '1', 'SEMARANG I', '108', 'MIJEN', '108003', 'JATIBARANG', 'JL. JATIBARANG RAYA KM. 3'],
     ];
 
     public function index(Request $request)
@@ -116,7 +117,7 @@ class DataTertagihController extends Controller
                 $row = str_getcsv((string) $row[0], ';');
             }
 
-            if (count($row) < 7) {
+            if (count($row) < 8) {
                 continue;
             }
 
@@ -132,6 +133,7 @@ class DataTertagihController extends Controller
                 'nm_kecamatan' => trim((string) ($row[4] ?? '')),
                 'id_kelurahan' => trim((string) ($row[5] ?? '')),
                 'nm_kelurahan' => trim((string) ($row[6] ?? '')),
+                'alamat' => trim((string) ($row[7] ?? '')),
                 'is_terdata' => 0,
                 'year' => $year,
                 'created_at' => $now,

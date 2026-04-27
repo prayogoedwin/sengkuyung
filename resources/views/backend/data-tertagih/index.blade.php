@@ -121,6 +121,7 @@
                                                 <th>Tahun</th>
                                                 <th>Status</th>
                                                 <th>Opsi</th>
+                                                <th>Alamat</th>
                                             </tr>
                                         </thead>
                                     </table>
@@ -196,6 +197,9 @@
                         data: 'actions',
                         orderable: false,
                         searchable: false
+                    },
+                    {
+                        data: 'alamat'
                     }
                 ]
             });

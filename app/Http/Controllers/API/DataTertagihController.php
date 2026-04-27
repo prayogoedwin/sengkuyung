@@ -55,10 +55,28 @@ class DataTertagihController extends Controller
 
         $paginator = $query->orderBy('id', 'desc')->paginate($perPage);
 
+        $items = collect($paginator->items())->map(function (DataTertagih $item) {
+            return [
+                'id' => $item->id,
+                'no_polisi' => $item->no_polisi,
+                'id_lokasi_samsat' => $item->id_lokasi_samsat,
+                'lokasi_layanan' => $item->lokasi_layanan,
+                'id_kecamatan' => $item->id_kecamatan,
+                'nm_kecamatan' => $item->nm_kecamatan,
+                'id_kelurahan' => $item->id_kelurahan,
+                'nm_kelurahan' => $item->nm_kelurahan,
+                'alamat' => $item->alamat,
+                'is_terdata' => (int) $item->is_terdata,
+                'year' => (int) $item->year,
+                'created_at' => $item->created_at,
+                'updated_at' => $item->updated_at,
+            ];
+        })->values();
+
         return response()->json([
             'status' => true,
             'message' => 'Data ditemukan',
-            'data' => $paginator->items(),
+            'data' => $items,
             'pagination' => [
                 'current_page' => $paginator->currentPage(),
                 'per_page' => $paginator->perPage(),

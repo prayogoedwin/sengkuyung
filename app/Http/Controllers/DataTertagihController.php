@@ -56,6 +56,9 @@ class DataTertagihController extends Controller
 
             return DataTables::of($query)
                 ->addIndexColumn()
+                ->addColumn('alamat', function ($row) {
+                    return (string) ($row->alamat ?? '');
+                })
                 ->addColumn('status_terdata', function ($row) {
                     return (int) $row->is_terdata === 1 ? 'Terdata' : 'Belum Terdata';
                 })
@@ -117,7 +120,7 @@ class DataTertagihController extends Controller
                 $row = str_getcsv((string) $row[0], ';');
             }
 
-            if (count($row) < 8) {
+            if (count($row) < 7) {
                 continue;
             }
 

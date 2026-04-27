@@ -120,8 +120,8 @@
                                                 <th>Nama Kelurahan</th>
                                                 <th>Tahun</th>
                                                 <th>Status</th>
-                                                <th>Opsi</th>
                                                 <th>Alamat</th>
+                                                <th>Opsi</th>
                                             </tr>
                                         </thead>
                                     </table>
@@ -194,13 +194,14 @@
                         searchable: false
                     },
                     {
+                        data: 'alamat'
+                    }
+                    {
                         data: 'actions',
                         orderable: false,
                         searchable: false
                     },
-                    {
-                        data: 'alamat'
-                    }
+                    
                 ]
             });
 

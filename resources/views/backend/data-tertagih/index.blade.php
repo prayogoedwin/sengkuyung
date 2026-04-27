@@ -195,7 +195,7 @@
                     },
                     {
                         data: 'alamat'
-                    }
+                    }, 
                     {
                         data: 'actions',
                         orderable: false,

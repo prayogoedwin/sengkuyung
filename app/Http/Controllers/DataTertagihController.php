@@ -128,8 +128,10 @@ class DataTertagihController extends Controller
                 continue;
             }
 
+            $formattedNoPolisi = $this->normalizeNoPolisi((string) ($row[0] ?? ''));
+
             DataTertagih::create([
-                'no_polisi' => trim((string) ($row[0] ?? '')),
+                'no_polisi' => $formattedNoPolisi,
                 'id_lokasi_samsat' => trim((string) ($row[1] ?? '')),
                 'lokasi_layanan' => trim((string) ($row[2] ?? '')),
                 'id_kecamatan' => trim((string) ($row[3] ?? '')),
@@ -238,5 +240,22 @@ class DataTertagihController extends Controller
         }, $filename, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
+    }
+
+    private function normalizeNoPolisi(string $rawValue): string
+    {
+        $cleaned = strtoupper(preg_replace('/[^A-Z0-9]/i', '', trim($rawValue)) ?? '');
+
+        if ($cleaned === '') {
+            return '';
+        }
+
+        // Format plate that matches 1-2 letters, 1-4 digits, and 2-3 suffix letters.
+        if (preg_match('/^([A-Z]{1,2})(\d{1,4})([A-Z]{2,3})$/', $cleaned, $matches) === 1) {
+            return $matches[1] . '-' . $matches[2] . '-' . $matches[3];
+        }
+
+        // Keep original cleaned value if pattern does not match expected combination.
+        return $cleaned;
     }
 }

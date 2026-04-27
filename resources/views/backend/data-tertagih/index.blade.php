@@ -151,7 +151,7 @@
                 processing: true,
                 serverSide: true,
                 ajax: {
-                    url: '{{ route('data-tertagih.index', [], false) }}',
+                    url: window.location.pathname,
                     data: function(d) {
                         d.year = $('#filterYear').val();
                         d.is_terdata = $('#filterStatus').val();

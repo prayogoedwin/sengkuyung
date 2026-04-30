@@ -114,6 +114,7 @@ class DataTertagihController extends Controller
         fgetcsv($handle, 0, ',');
 
         $inserted = 0;
+        $skippedDuplicate = 0;
         while (($row = fgetcsv($handle, 0, ',')) !== false) {
             // Fallback for CSV that uses semicolon delimiter.
             if (count($row) === 1 && isset($row[0]) && str_contains((string) $row[0], ';')) {
@@ -129,6 +130,16 @@ class DataTertagihController extends Controller
             }
 
             $formattedNoPolisi = $this->normalizeNoPolisi((string) ($row[0] ?? ''));
+
+            $alreadyExists = DataTertagih::query()
+                ->where('year', $year)
+                ->where('no_polisi', $formattedNoPolisi)
+                ->exists();
+
+            if ($alreadyExists) {
+                $skippedDuplicate++;
+                continue;
+            }
 
             DataTertagih::create([
                 'no_polisi' => $formattedNoPolisi,
@@ -154,7 +165,7 @@ class DataTertagihController extends Controller
 
         return redirect()
             ->route('data-tertagih.index')
-            ->with('success', 'Import CSV selesai. Data masuk: ' . $inserted);
+            ->with('success', 'Import CSV selesai. Data masuk: ' . $inserted . '. Duplikat (nopol+tahun sama) dilewati: ' . $skippedDuplicate);
     }
 
     public function downloadTemplate(string $format, string $type)

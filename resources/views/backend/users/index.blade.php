@@ -304,6 +304,11 @@
                 return selectedText === 'kelurahan';
             }
 
+            function isUptdRole() {
+                const selectedText = ($('#userRole option:selected').text() || '').toLowerCase();
+                return selectedText === 'uptd' || selectedText === 'uppd';
+            }
+
         // Function to hide all elements
 
             // function hideAllElements() {
@@ -343,8 +348,11 @@
                 var petugasSelected = isPetugasRole();
                 var kecamatanSelected = isKecamatanRole();
                 var kelurahanSelected = isKelurahanRole();
+                var uptdSelected = isUptdRole();
 
-                if (petugasSelected) {
+                if (uptdSelected) {
+                    $('#uptdContainer').show().find('select, input').attr('required', 'required');
+                } else if (petugasSelected) {
                     $('#kabkotaContainer').show().find('select, input').attr('required', 'required');
                     $('#samsatContainer').show().find('select, input').attr('required', 'required');
                     $('#kecamatanSamsatContainer').show().find('select, input').attr('required', 'required');

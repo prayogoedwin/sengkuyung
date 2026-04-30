@@ -209,6 +209,8 @@
 
 <script>
     $(document).ready(function() {
+        const forcedLokasiSamsat = "{{ Auth::user()->lokasi_samsat ?? '' }}";
+
         $('#userKabkota').on('change', function() {
             var kabkotaId = $(this).val();
     
@@ -224,9 +226,18 @@
                             $.each(samsats, function(index, samsat) {
                                 var value = samsat.id_wilayah_samsat ?? samsat.id;
                                 var label = samsat.lokasi ?? '-';
-                                options += '<option value="' + value + '">' + label + '</option>';
+                                if (!forcedLokasiSamsat || String(value) === String(forcedLokasiSamsat)) {
+                                    options += '<option value="' + value + '">' + label + '</option>';
+                                }
                             });
                             $('#lokasiSamsat').html(options);
+
+                            if (forcedLokasiSamsat) {
+                                $('#lokasiSamsat').val(String(forcedLokasiSamsat)).prop('disabled', true).trigger('change');
+                            } else {
+                                $('#lokasiSamsat').prop('disabled', false);
+                            }
+
                             $('#kecamatanSamsat').html('<option value="">Pilih Kecamatan Samsat</option>');
                             $('#kelurahanSamsat').html('<option value="">Pilih Kelurahan Samsat</option>');
                         } else {
@@ -306,6 +317,13 @@
                 $('#kelurahanSamsat').html('<option value="">Pilih Kelurahan Samsat</option>');
             }
         });
+
+        if ($('#userKabkota').val()) {
+            $('#userKabkota').trigger('change');
+        } else if (forcedLokasiSamsat) {
+            $('#lokasiSamsat').html('<option value="' + forcedLokasiSamsat + '">' + forcedLokasiSamsat + '</option>');
+            $('#lokasiSamsat').val(String(forcedLokasiSamsat)).prop('disabled', true).trigger('change');
+        }
     });
 </script>
 

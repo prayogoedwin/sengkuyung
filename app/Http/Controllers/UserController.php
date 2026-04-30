@@ -192,11 +192,25 @@ class UserController extends Controller
 
         $selectedRole = Role::find((int) $request->role_id);
         $selectedRoleName = strtolower($selectedRole->name ?? '');
+        $isUptdRole = in_array($selectedRoleName, ['uptd', 'uppd'], true);
         $isPetugasRole = $selectedRoleName === 'petugas';
         $isSamsatBasedRole = in_array($selectedRoleName, ['kecamatan', 'kelurahan', 'petugas'], true);
         $isKelurahanOrPetugasRole = in_array($selectedRoleName, ['kelurahan', 'petugas'], true);
 
-        if($isSamsatBasedRole){
+        if ($isUptdRole) {
+            $validator = Validator::make($request->all(), [
+                'uptd_id' => 'required|string',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()]);
+            }
+
+            $kota = $request->kabkota_id;
+            $uptdId = $request->uptd_id;
+            $kecamatanKemendagri = $request->district_id;
+            $kelurahanKemendagri = $request->kelurahan;
+        } elseif($isSamsatBasedRole){
             $rules = [
                 'kabkota_id' => 'required|string',
                 'lokasi_samsat' => 'required|string',

@@ -29,6 +29,7 @@ class VerifikasiController extends Controller
             $userId = Auth::user()->id ?? null;
             $userRoleId = Auth::user()->roles[0]->id ?? null;
             $userKotaId = Auth::user()->kota ?? null;
+            $userLokasiSamsat = Auth::user()->lokasi_samsat ?? null;
 
             // $userRole = auth()->user()->role; 
             // Cari admin berdasarkan ID
@@ -75,7 +76,9 @@ class VerifikasiController extends Controller
                 $verifikasis->where('status_verifikasi', 1); //status menunggu verifikasi
             }
             
-            if ($request->lokasi_samsat) {
+            if (!empty($userLokasiSamsat)) {
+                $verifikasis->where('kota', $userLokasiSamsat);
+            } elseif ($request->lokasi_samsat) {
                 $verifikasis->where('kota', $request->lokasi_samsat);
             }
 

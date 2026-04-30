@@ -22,6 +22,9 @@
             $isAdminProv = $user->hasRole('admin') || $user->hasRole('adminprov');
             $isUptd = $user->hasRole('uptd');
             $isKabkota = $user->hasRole('kabkota');
+            $isKecamatan = $user->hasRole('kecamatan');
+            $isKelurahan = $user->hasRole('kelurahan');
+            $isWilayahLower = $isKecamatan || $isKelurahan;
             $canSeeDataTertagih = $isSuperAdmin || $isAdminProv || $isUptd;
         @endphp
 
@@ -100,43 +103,45 @@
             
         @else
 
-            @if ($isUptd)
-            <li class="menu-item {{ request()->routeIs('perbandingan-kode-wilayah.index') ? 'active' : '' }}">
-                <a href="{{ route('perbandingan-kode-wilayah.index') }}" class="menu-link">
-                    <i class="menu-icon tf-icons bx bx-git-compare"></i>
-                    <div data-i18n="Analytics">Perbandingan Kode Wilayah</div>
-                </a>
-            </li>
-            @endif
-
-            @if ($canSeeDataTertagih)
-            <li class="menu-item {{ request()->routeIs('data-tertagih.index') ? 'active' : '' }}">
-                <a href="{{ route('data-tertagih.index') }}" class="menu-link">
-                    <i class="menu-icon tf-icons bx bx-table"></i>
-                    <div data-i18n="Analytics">Data Tertagih</div>
-                </a>
-            </li>
-            @endif
-
-            @if (!$isKabkota)
-                <li class="menu-item {{ request()->routeIs('verifikasi.index') ? 'active' : '' }}">
-                    <a href="{{ route('verifikasi.index') }}" class="menu-link">
-                        <i class="menu-icon tf-icons bx bx-check-shield"></i>  {{-- Ikon Verifikasi --}}
-                        <div data-i18n="Analytics">Verifikasi</div>
+            @if (!$isWilayahLower)
+                @if ($isUptd)
+                <li class="menu-item {{ request()->routeIs('perbandingan-kode-wilayah.index') ? 'active' : '' }}">
+                    <a href="{{ route('perbandingan-kode-wilayah.index') }}" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-git-compare"></i>
+                        <div data-i18n="Analytics">Perbandingan Kode Wilayah</div>
                     </a>
                 </li>
-            @endif
+                @endif
 
-            @if ($isKabkota)
-                <li class="menu-item {{ request()->routeIs('pelaporan.index') ? 'active' : '' }}">
-                    <a href="{{ route('pelaporan.index') }}" class="menu-link">
-                        <i class="menu-icon tf-icons bx bx-file"></i>  {{-- Ikon Pelaporan --}}
-                        <div data-i18n="Analytics">Pelaporan</div>
+                @if ($canSeeDataTertagih)
+                <li class="menu-item {{ request()->routeIs('data-tertagih.index') ? 'active' : '' }}">
+                    <a href="{{ route('data-tertagih.index') }}" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-table"></i>
+                        <div data-i18n="Analytics">Data Tertagih</div>
                     </a>
                 </li>
+                @endif
+
+                @if (!$isKabkota)
+                    <li class="menu-item {{ request()->routeIs('verifikasi.index') ? 'active' : '' }}">
+                        <a href="{{ route('verifikasi.index') }}" class="menu-link">
+                            <i class="menu-icon tf-icons bx bx-check-shield"></i>  {{-- Ikon Verifikasi --}}
+                            <div data-i18n="Analytics">Verifikasi</div>
+                        </a>
+                    </li>
+                @endif
+
+                @if ($isKabkota)
+                    <li class="menu-item {{ request()->routeIs('pelaporan.index') ? 'active' : '' }}">
+                        <a href="{{ route('pelaporan.index') }}" class="menu-link">
+                            <i class="menu-icon tf-icons bx bx-file"></i>  {{-- Ikon Pelaporan --}}
+                            <div data-i18n="Analytics">Pelaporan</div>
+                        </a>
+                    </li>
+                @endif
             @endif
 
-            @if ($isKabkota)
+            @if ($isKabkota || $isKecamatan || $isKelurahan)
             <li class="menu-item {{ request()->routeIs('user.index') ? 'active' : '' }}">
                 <a href="{{ route('user.index') }}" class="menu-link">
                     {{-- <i class="menu-icon tf-icons bx bx-home-circle"></i> --}}

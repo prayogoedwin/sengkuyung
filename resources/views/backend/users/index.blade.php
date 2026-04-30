@@ -294,6 +294,16 @@
                 return selectedText === 'petugas';
             }
 
+            function isKecamatanRole() {
+                const selectedText = ($('#userRole option:selected').text() || '').toLowerCase();
+                return selectedText === 'kecamatan';
+            }
+
+            function isKelurahanRole() {
+                const selectedText = ($('#userRole option:selected').text() || '').toLowerCase();
+                return selectedText === 'kelurahan';
+            }
+
         // Function to hide all elements
 
             // function hideAllElements() {
@@ -331,6 +341,8 @@
                 hideAllElements(); // Hide all elements first
                 var selectedRole = $(this).val();
                 var petugasSelected = isPetugasRole();
+                var kecamatanSelected = isKecamatanRole();
+                var kelurahanSelected = isKelurahanRole();
 
                 if (petugasSelected) {
                     $('#kabkotaContainer').show().find('select, input').attr('required', 'required');
@@ -342,13 +354,15 @@
                     $('#alamatContainer').show().find('input').attr('required', 'required');
                 } else if (selectedRole == 4) {
                     $('#kabkotaContainer').show().find('select, input').attr('required', 'required');
-                } else if (selectedRole == 5) {
+                } else if (kecamatanSelected) {
                     $('#kabkotaContainer').show().find('select, input').attr('required', 'required');
-                    $('#districtContainer').show().find('select, input').attr('required', 'required');
-                } else if (selectedRole == 6) {
+                    $('#samsatContainer').show().find('select, input').attr('required', 'required');
+                    $('#kecamatanSamsatContainer').show().find('select, input').attr('required', 'required');
+                } else if (kelurahanSelected) {
                     $('#kabkotaContainer').show().find('select, input').attr('required', 'required');
-                    $('#districtContainer').show().find('select, input').attr('required', 'required');
-                    $('#kelurahanContainer').show().find('input').attr('required', 'required');
+                    $('#samsatContainer').show().find('select, input').attr('required', 'required');
+                    $('#kecamatanSamsatContainer').show().find('select, input').attr('required', 'required');
+                    $('#kelurahanSamsatContainer').show().find('select, input').attr('required', 'required');
                 } else if (selectedRole == 7) {
                     $('#kabkotaContainer').show().find('select, input').attr('required', 'required');
                     $('#districtContainer').show().find('select, input').attr('required', 'required');
@@ -618,10 +632,11 @@
         $(document).ready(function() {
             $('#userKabkota').on('change', function() {
                 var kabkotaId = $(this).val();
-                var petugasSelected = (($('#userRole option:selected').text() || '').toLowerCase() === 'petugas');
+                var selectedRoleName = ($('#userRole option:selected').text() || '').toLowerCase();
+                var samsatBasedRole = ['kecamatan', 'kelurahan', 'petugas'].includes(selectedRoleName);
         
                 if (kabkotaId) {
-                    if (petugasSelected) {
+                    if (samsatBasedRole) {
                         $.ajax({
                             url: '{{ route("getSamsatByKabkota") }}',
                             type: 'GET',

@@ -191,24 +191,38 @@ class UserController extends Controller
         }
 
         $selectedRole = Role::find((int) $request->role_id);
-        $isPetugasRole = $selectedRole && strtolower($selectedRole->name) === 'petugas';
+        $selectedRoleName = strtolower($selectedRole->name ?? '');
+        $isPetugasRole = $selectedRoleName === 'petugas';
+        $isSamsatBasedRole = in_array($selectedRoleName, ['kecamatan', 'kelurahan', 'petugas'], true);
+        $isKelurahanOrPetugasRole = in_array($selectedRoleName, ['kelurahan', 'petugas'], true);
 
-        if($isPetugasRole){
-            $validator = Validator::make($request->all(), [
+        if($isSamsatBasedRole){
+            $rules = [
                 'kabkota_id' => 'required|string',
                 'lokasi_samsat' => 'required|string',
                 'kecamatan_samsat' => 'required|string',
-                'kelurahan_samsat' => 'required|string',
-            ]);
+            ];
+
+            if ($isKelurahanOrPetugasRole) {
+                $rules['kelurahan_samsat'] = 'required|string';
+            }
+
+            if ($isPetugasRole) {
+                $rules['rw'] = 'required|string';
+                $rules['rt'] = 'required|string';
+                $rules['alamat_lengkap'] = 'required|string';
+            }
+
+            $validator = Validator::make($request->all(), $rules);
 
             if ($validator->fails()) {
                 return response()->json(['success' => false, 'errors' => $validator->errors()]);
             }
 
             $kota = $request->kabkota_id;
-            $uptdId = $request->lokasi_samsat;
-            $kecamatanKemendagri = null;
-            $kelurahanKemendagri = null;
+            $uptdId = null;
+            $kecamatanKemendagri = $request->kecamatan_samsat;
+            $kelurahanKemendagri = $isKelurahanOrPetugasRole ? $request->kelurahan_samsat : null;
         }else{
             $kota = $request->kabkota_id;
             $uptdId = $request->uptd_id;

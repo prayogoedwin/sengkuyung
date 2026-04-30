@@ -226,6 +226,7 @@ class SengPendataanKendaraanController extends Controller
                 'no_polisi' => $request->nopol,
                 'merk' => $request->merk,
                 'tipe' => $request->tipe,
+                'nama_pembuat_pernyataan' => $request->nama_pembuat_pernyataan,
                 'tanggal' => now()->format('d F Y') // Format tanggal: 20 Februari 2025
             ];
             $html = view('backend/html/surat_pernyataan', $data)->render();

@@ -236,7 +236,7 @@ class VerifikasiController extends Controller
         ->get();
 
         $html = null;
-        if($data->status == 2){
+        if($data->status == 2 || $data->status == 10){
             $data_html = [
                 'nama' => $data->nama,
                 'nama_pembuat_pernyataan' => $data->nama_pembuat_pernyataan,

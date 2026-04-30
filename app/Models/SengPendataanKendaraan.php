@@ -32,6 +32,7 @@ class SengPendataanKendaraan extends Model
         'is_setuju', 'ttd', 'lat', 'lng', 'status', 'status_name', 'status_verifikasi',
         'status_verifikasi_name', 
         'nama_pembuat_pernyataan',
+        'is_selesai',
         'created_by', 'updated_by', 'deleted_by',
         // 'kode_samsat', 
         // 'kode_kecamatan_samsat', 'kode_kelurahan_samsat',

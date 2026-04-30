@@ -49,7 +49,10 @@ class SengPendataanKendaraanController extends Controller
 
         $perPage = $request->input('per_page', 10); // Default 10 item per halaman
         // $data = SengPendataanKendaraan::paginate($perPage);
-        $data = SengPendataanKendaraan::where('created_by', $user->id)->orderBy('id', 'desc')->paginate($perPage);
+        $data = SengPendataanKendaraan::where('created_by', $user->id)
+            ->orderByRaw('CASE WHEN is_selesai = 0 THEN 0 ELSE 1 END')
+            ->orderBy('id', 'desc')
+            ->paginate($perPage);
 
          // Ubah ke array sebelum mengubah ID
         $items = collect($data->items())->map(function ($item) {

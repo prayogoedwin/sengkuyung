@@ -18,6 +18,21 @@ use Illuminate\Support\Facades\Hash;
 // class UserController extends Controller implements HasMiddleware
 class UserController extends Controller 
 {
+    private function getCurrentUserRoleId(): ?int
+    {
+        return Auth::user()->roles[0]->id ?? null;
+    }
+
+    private function getAllowedRoleIdsByCreator(?int $creatorRoleId): array
+    {
+        return match ($creatorRoleId) {
+            4 => [5, 6, 7], // kabkota -> kecamatan, kelurahan, petugas
+            5 => [6, 7],    // kecamatan -> kelurahan, petugas
+            6 => [7],       // kelurahan -> petugas
+            default => [2, 3, 4, 5, 6, 7],
+        };
+    }
+
     // public static function middleware(): array
     // {
     //     return [
@@ -28,7 +43,7 @@ class UserController extends Controller
     {
 
         $userId = Auth::user()->id ?? null;
-        $userRoleId = Auth::user()->roles[0]->id ?? null;
+        $userRoleId = $this->getCurrentUserRoleId();
         $userKotaId = Auth::user()->kota ?? null;
 
         if ($request->ajax()) {
@@ -96,28 +111,19 @@ class UserController extends Controller
                 ->make(true);
         }
 
-        if ($userRoleId == 4) {
-
-            // Ambil data roles untuk dikirim ke view
-            $roles = Role::select('id', 'name')
-            ->whereIn('id', [7])
+        $allowedRoleIds = $this->getAllowedRoleIdsByCreator($userRoleId);
+        $roles = Role::select('id', 'name')
+            ->whereIn('id', $allowedRoleIds)
             ->get();
 
+        if (in_array($userRoleId, [4, 5, 6], true)) {
             $kabkotas = SengWilayah::select('*')
-            ->where('id', $userKotaId)
-            ->get();
-
-        }else{
-
-            // Ambil data roles untuk dikirim ke view
-            $roles = Role::select('id', 'name')
-            ->whereIn('id', [2, 3, 4,7])
-            ->get();
-
+                ->where('id', $userKotaId)
+                ->get();
+        } else {
             $kabkotas = SengWilayah::select('*')
-            ->where('id_up', 33)
-            ->get();
-
+                ->where('id_up', 33)
+                ->get();
         }
 
         $samsats = WilayahSamsat::select('*')->get();
@@ -161,6 +167,10 @@ class UserController extends Controller
     // Method untuk menyimpan data user baru
     public function store(Request $request)
     {
+        $creator = Auth::user();
+        $creatorRoleId = $this->getCurrentUserRoleId();
+        $allowedRoleIds = $this->getAllowedRoleIdsByCreator($creatorRoleId);
+
         // Validasi input
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
@@ -173,7 +183,14 @@ class UserController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()]);
         }
 
-        $selectedRole = Role::find($request->role_id);
+        if (!in_array((int) $request->role_id, $allowedRoleIds, true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki akses untuk membuat role ini.',
+            ], 403);
+        }
+
+        $selectedRole = Role::find((int) $request->role_id);
         $isPetugasRole = $selectedRole && strtolower($selectedRole->name) === 'petugas';
 
         if($isPetugasRole){
@@ -197,6 +214,18 @@ class UserController extends Controller
             $uptdId = $request->uptd_id;
             $kecamatanKemendagri = $request->district_id;
             $kelurahanKemendagri = $request->kelurahan;
+        }
+
+        if (in_array($creatorRoleId, [4, 5, 6], true)) {
+            $kota = $creator->kota;
+        }
+
+        if (in_array($creatorRoleId, [5, 6], true) && !$isPetugasRole) {
+            $kecamatanKemendagri = $creator->kecamatan;
+        }
+
+        if ($creatorRoleId === 6 && !$isPetugasRole) {
+            $kelurahanKemendagri = $creator->kelurahan;
         }
 
         // Menyimpan data ke tabel users

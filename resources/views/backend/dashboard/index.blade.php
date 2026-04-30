@@ -46,7 +46,7 @@
                             <div class="row" style="margin-bottom:14px">
 
                                 <form method="GET" action="{{ route('dashboard') }}">
-                                    <div class="row">
+                                    <div class="row g-2 align-items-end">
                                         {{-- <div class="col-md-2">
                                             <label for="kabupaten1">Kabupaten</label>
                                             <select class="form-control" id="userKabkota" name="kabkota_id">
@@ -65,7 +65,7 @@
                                         $userLokasiSamsat = Auth::user()->lokasi_samsat ?? null;
                                         @endphp
 
-                                        <div class="col-md-2">
+                                        <div class="col-12 col-md-3 col-lg-2">
                                             <label for="userKabkota">Kabupaten/Kota</label>
                                             <select class="form-control" id="userKabkota" name="kabkota_id">
                                                 <option value="">Pilih Kabkota</option>
@@ -81,28 +81,28 @@
                                             </select>
                                         </div>
 
-                                        <div class="col-md-2">
+                                        <div class="col-12 col-md-3 col-lg-2">
                                             <label for="lokasiSamsat">Lokasi Samsat</label>
                                             <select class="form-control" id="lokasiSamsat" name="lokasi_samsat">
                                                 <option value="">Pilih Lokasi Samsat</option>
                                             </select>
                                         </div>
                         
-                                        <div class="col-md-2">
+                                        <div class="col-12 col-md-3 col-lg-2">
                                             <label for="kecamatanSamsat">Kecamatan Samsat</label>
                                             <select class="form-control" id="kecamatanSamsat" name="kecamatan_samsat">
                                                 <option value="">Pilih Kecamatan Samsat</option>
                                             </select>
                                         </div>
 
-                                        <div class="col-md-2">
+                                        <div class="col-12 col-md-3 col-lg-2">
                                             <label for="kelurahanSamsat">Kelurahan Samsat</label>
                                             <select class="form-control" id="kelurahanSamsat" name="kelurahan_samsat">
                                                 <option value="">Pilih Kelurahan Samsat</option>
                                             </select>
                                         </div>
                         
-                                        <div class="col-md-1">
+                                        <div class="col-12 col-md-3 col-lg-1">
                                             <label for="status">Status</label>
                                             <select id="statusVerifikasi" name="status_verifikasi_id" class="form-control">
                                                 <option value="">Pilih Status</option>
@@ -114,17 +114,21 @@
                                             </select>
                                         </div>
                         
-                                        <div class="col-md-1">
+                                        <div class="col-12 col-md-3 col-lg-1">
                                             <label for="tanggal">Tanggal Start</label>
                                             <input type="date" class="form-control" name="tanggal_start" value="{{ request('tanggal_start') }}">
                                         </div>
-                                        <div class="col-md-1">
+                                        <div class="col-12 col-md-3 col-lg-1">
                                             <label for="tanggal">Tanggal End</label>
                                             <input type="date" class="form-control" name="tanggal_end" value="{{ request('tanggal_end') }}">
                                         </div>
-                                        <div class="col-md-1 mt-4">
-                                            <button type="submit" class="btn btn-primary btn-sm">Filter</button>
-                                            <a href="{{ route('dashboard') }}" class="btn btn-secondary btn-sm"><i class="menu-icon tf-icons bx bx-refresh" style="padding-left:7px"></i></a>
+                                        <div class="col-12 col-md-3 col-lg-1">
+                                            <div class="d-flex gap-2 mt-2 mt-lg-0">
+                                                <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                                                <a href="{{ route('dashboard') }}" class="btn btn-secondary btn-sm">
+                                                    <i class="menu-icon tf-icons bx bx-refresh"></i>
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
                                 </form>

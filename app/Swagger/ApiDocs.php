@@ -220,6 +220,44 @@ class ApiDocs
     }
 
     #[OA\Get(
+        path: 'api/data-tertagih/{id}',
+        tags: ['Data Tertagih'],
+        summary: 'Detail data tertagih by id + cek apakah nopol sudah didata user lain',
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID data_tertagih'),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Berhasil',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'Data ditemukan'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'id', type: 'integer', example: 12),
+                                new OA\Property(property: 'no_polisi', type: 'string', example: 'H-8121-QY'),
+                                new OA\Property(property: 'can_select', type: 'boolean', example: false),
+                                new OA\Property(property: 'warning_message', type: 'string', nullable: true, example: 'Nopol ini tidak bisa dipilih, karena sudah didata oleh user lain.'),
+                                new OA\Property(property: 'pendataan', type: 'object', nullable: true),
+                            ]
+                        ),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+            new OA\Response(response: 404, description: 'Data tidak ditemukan'),
+        ]
+    )]
+    public function dataTertagihShow()
+    {
+    }
+
+    #[OA\Get(
         path: 'api/pendataan',
         tags: ['Pendataan Kendaraan'],
         summary: 'List pendataan kendaraan milik user login',

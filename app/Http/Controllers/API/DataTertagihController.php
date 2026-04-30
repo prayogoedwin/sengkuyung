@@ -4,7 +4,9 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\DataTertagih;
+use App\Models\SengPendataanKendaraan;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 class DataTertagihController extends Controller
@@ -84,6 +86,58 @@ class DataTertagihController extends Controller
                 'last_page' => $paginator->lastPage(),
                 'from' => $paginator->firstItem(),
                 'to' => $paginator->lastItem(),
+            ],
+        ]);
+    }
+
+    public function show(int $id)
+    {
+        $item = DataTertagih::find($id);
+
+        if (!$item) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Data tidak ditemukan',
+            ], 404);
+        }
+
+        $currentUserId = Auth::id();
+        $normalizedNopol = strtoupper(preg_replace('/[^A-Z0-9]/i', '', (string) $item->no_polisi) ?? '');
+
+        $pendataan = null;
+        if ($normalizedNopol !== '') {
+            $pendataan = SengPendataanKendaraan::query()
+                ->whereRaw("REPLACE(UPPER(nopol), ' ', '') = ?", [$normalizedNopol])
+                ->orderByDesc('id')
+                ->first(['id', 'nopol', 'nama', 'created_by', 'created_at']);
+        }
+
+        $alreadyClaimedByOtherUser = $pendataan && (int) $pendataan->created_by !== (int) $currentUserId;
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Data ditemukan',
+            'data' => [
+                'id' => $item->id,
+                'no_polisi' => $item->no_polisi,
+                'id_lokasi_samsat' => $item->id_lokasi_samsat,
+                'lokasi_layanan' => $item->lokasi_layanan,
+                'id_kecamatan' => $item->id_kecamatan,
+                'nm_kecamatan' => $item->nm_kecamatan,
+                'id_kelurahan' => $item->id_kelurahan,
+                'nm_kelurahan' => $item->nm_kelurahan,
+                'alamat' => $item->alamat,
+                'is_terdata' => (int) $item->is_terdata,
+                'year' => (int) $item->year,
+                'can_select' => !$alreadyClaimedByOtherUser,
+                'warning_message' => $alreadyClaimedByOtherUser ? 'Nopol ini tidak bisa dipilih, karena sudah didata oleh user lain.' : null,
+                'pendataan' => $pendataan ? [
+                    'id' => $pendataan->id,
+                    'nopol' => $pendataan->nopol,
+                    'nama' => $pendataan->nama,
+                    'created_by' => $pendataan->created_by,
+                    'created_at' => $pendataan->created_at,
+                ] : null,
             ],
         ]);
     }

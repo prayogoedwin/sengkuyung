@@ -434,6 +434,85 @@
                 ]
             }
         },
+        "api/data-tertagih/{id}": {
+            "get": {
+                "tags": [
+                    "Data Tertagih"
+                ],
+                "summary": "Detail data tertagih by id + cek apakah nopol sudah didata user lain",
+                "operationId": "70c97b4bb4642b779b0fa9469efa925c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID data_tertagih",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Berhasil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Data ditemukan"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 12
+                                                },
+                                                "no_polisi": {
+                                                    "type": "string",
+                                                    "example": "H-8121-QY"
+                                                },
+                                                "can_select": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "warning_message": {
+                                                    "type": "string",
+                                                    "example": "Nopol ini tidak bisa dipilih, karena sudah didata oleh user lain.",
+                                                    "nullable": true
+                                                },
+                                                "pendataan": {
+                                                    "type": "object",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "api/pendataan": {
             "get": {
                 "tags": [

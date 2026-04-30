@@ -53,6 +53,7 @@ Route::middleware(['auth-api'])->group(function () {
         Route::get('rekap', [RekapController::class, 'index']);
         Route::post('update_password', [AuthController::class, 'resetPassword']);
         Route::post('data-tertagih/list', [DataTertagihController::class, 'index']);
+        Route::get('data-tertagih/{id}', [DataTertagihController::class, 'show']);
         
     });
  

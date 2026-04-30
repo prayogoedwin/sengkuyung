@@ -97,7 +97,7 @@
                                                 </table>
 
                                                 <h5 class="fw-bold mt-4">LAMPIRAN</h5>
-                                                @if($data->status != 2)
+                                                @if($data->status != 2 && $data->status != 10)
                                                     <table class="table table-bordered">
                                                         <tr>
                                                             <th width="30%">{{ $data->file0_ket }}</th>

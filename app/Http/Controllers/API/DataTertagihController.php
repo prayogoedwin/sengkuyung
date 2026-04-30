@@ -48,7 +48,7 @@ class DataTertagihController extends Controller
             ->whereIn('id_lokasi_samsat', $lokasiVariants)
             ->whereIn('id_kecamatan', $kecVariants)
             ->whereIn('id_kelurahan', $kelVariants)
-            // ->where('is_terdata', 0)
+            ->where('is_terdata', 0)
             ->where('year', $year);
 
         if ($request->filled('no_polisi')) {

@@ -68,8 +68,11 @@ class BackController extends Controller
         //     $verifikasis->where('kota', $request->kabkota_id);
         // }
 
-        if ($request->district_id) {
-            $verifikasis->where('kec', $request->district_id);
+        if ($request->kecamatan_samsat) {
+            $verifikasis->where('kec', $request->kecamatan_samsat);
+        }
+        if ($request->kelurahan_samsat) {
+            $verifikasis->where('desa', $request->kelurahan_samsat);
         }
         if ($request->status_verifikasi_id) {
             $verifikasis->where('status_verifikasi', $request->status_verifikasi_id);

@@ -196,20 +196,28 @@ class UserController extends Controller
         $isPetugasRole = $selectedRoleName === 'petugas';
         $isSamsatBasedRole = in_array($selectedRoleName, ['kecamatan', 'kelurahan', 'petugas'], true);
         $isKelurahanOrPetugasRole = in_array($selectedRoleName, ['kelurahan', 'petugas'], true);
+        $lokasiSamsat = $request->lokasi_samsat;
 
         if ($isUptdRole) {
             $validator = Validator::make($request->all(), [
-                'uptd_id' => 'required|string',
+                'uptd_id' => 'required|exists:wilayah_samsat,id',
             ]);
 
             if ($validator->fails()) {
                 return response()->json(['success' => false, 'errors' => $validator->errors()]);
             }
 
+            $samsat = WilayahSamsat::find($request->uptd_id);
+
             $kota = $request->kabkota_id;
             $uptdId = $request->uptd_id;
+            $lokasiSamsat = $request->uptd_id;
             $kecamatanKemendagri = $request->district_id;
             $kelurahanKemendagri = $request->kelurahan;
+
+            if ($samsat) {
+                $kota = $samsat->kabkota;
+            }
         } elseif($isSamsatBasedRole){
             $rules = [
                 'kabkota_id' => 'required|string',
@@ -267,7 +275,7 @@ class UserController extends Controller
             'kota' =>  $kota,
             'kecamatan' =>  $kecamatanKemendagri,
             'kelurahan' =>  $kelurahanKemendagri,
-            'lokasi_samsat' => $request->lokasi_samsat,
+            'lokasi_samsat' => $lokasiSamsat,
             'kecamatan_samsat' => $request->kecamatan_samsat,
             'kelurahan_samsat' => $request->kelurahan_samsat,
             'rw' =>  $request->rw,

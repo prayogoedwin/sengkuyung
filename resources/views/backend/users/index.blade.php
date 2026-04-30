@@ -108,7 +108,7 @@
                                         <select class="form-control" id="userUptd" name="uptd_id">
                                             <option value="">Pilih Samsat</option>
                                             @foreach ($samsats as $smst)
-                                                <option value="{{ $smst->id }}">{{ $smst->nama }}</option>
+                                                <option value="{{ $smst->id }}" data-kabkota="{{ $smst->kabkota }}">{{ $smst->nama }}</option>
                                             @endforeach
                                         </select>
                                     </div>
@@ -378,6 +378,15 @@
                     $('#rwContainer').show().find('input').attr('required', 'required');
                     $('#rtContainer').show().find('input').attr('required', 'required');
                     $('#alamatContainer').show().find('input').attr('required', 'required');
+                }
+            });
+
+            $('#userUptd').on('change', function() {
+                var selectedKabkota = $(this).find('option:selected').data('kabkota') || '';
+                if (selectedKabkota) {
+                    $('#userKabkota').val(String(selectedKabkota));
+                } else {
+                    $('#userKabkota').val('');
                 }
             });
         });

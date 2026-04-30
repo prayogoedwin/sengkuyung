@@ -60,11 +60,11 @@ class DataTertagihController extends Controller
                     return (string) ($row->alamat ?? '');
                 })
                 ->addColumn('status_terdata', function ($row) {
-                    return (int) $row->is_terdata === 1 ? 'Terdata' : 'Belum Terdata';
+                    return (int) $row->is_terdata === 1 ? 'Terdata'.$row->id : 'Belum Terdata'.$row->id;
                 })
                 ->addColumn('actions', function ($row) {
                     $toggleTo = (int) $row->is_terdata === 1 ? 0 : 1;
-                    $toggleText = $toggleTo === 1 ? 'Set Terdata'.$row->id : 'Set Belum'.$row->id;
+                    $toggleText = $toggleTo === 1 ? 'Set Terdata' : 'Set Belum';
 
                     // return '
                     //     <button class="btn btn-sm btn-warning" onclick="toggleTertagihStatus(' . $row->id . ', ' . $toggleTo . ')">' . $toggleText . '</button>

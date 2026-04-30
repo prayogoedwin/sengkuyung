@@ -218,7 +218,7 @@ class SengPendataanKendaraanController extends Controller
         Helper::logActivity($request, $encodedId, 'POST', $responseData);
 
         $html = null;
-        if($dStatus == 2){
+        if($dStatus == 2 || $dStatus == 10){
             $data = [
                 'nama' => $request->nama, // Ganti dengan variabel atau data dari DB
                 'alamat' => $request->alamat.''.$request->desa_name.''.$request->kec_name,

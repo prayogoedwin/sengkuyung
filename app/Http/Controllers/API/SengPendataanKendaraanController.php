@@ -450,6 +450,8 @@ class SengPendataanKendaraanController extends Controller
         // Update database - tambah field untuk track file type
         $data->update([
             'updated_by' => $user->id,
+            'created_by' => $user->id,
+            'is_selesai' => 1,
             $file_ke => $nama_file,
             "{$file_ke}_url" => "storage/$path",
             "{$file_ke}_ket" => $request->keterangan,

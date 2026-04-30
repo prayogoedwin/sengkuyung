@@ -361,6 +361,7 @@ class VerifikasiController extends Controller
         // Prepare data for the view
         $suratData = [
             'nama' => $data->nama,
+            'nama_pembuat_pernyataan' => $data->nama_pembuat_pernyataan,
             'alamat' => $data->alamat,
             'desa' => $data->desa_name ?? '',
             'kecamatan' => $data->kec_name ?? '',

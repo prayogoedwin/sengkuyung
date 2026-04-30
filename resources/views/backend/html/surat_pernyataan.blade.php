@@ -15,7 +15,7 @@
 
     <div class="content">
         <p>Yang bertanda tangan di bawah ini:</p>
-        <p>Nama&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: {{ $nama }}</p>
+        <p>Nama&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: {{ $nama_pembuat_pernyataan }}</p>
         <p>Alamat&nbsp;&nbsp;&nbsp;&nbsp;: {{ $alamat }}</p>
         <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{ $kota }}</p>
 
@@ -34,7 +34,7 @@
     <div class="signature">
         <p>Yang Membuat Pernyataan</p>
         <div class="signature-line"></div>
-        <p>{{ $nama }}</p>
+        <p>{{ $nama_pembuat_pernyataan }}</p>
     </div>
 </body>
 </html>

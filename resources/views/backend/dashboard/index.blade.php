@@ -62,6 +62,7 @@
                                         @php
                                         $userRoleId = Auth::user()->roles[0]->id ?? null;
                                         $userKotaId = Auth::user()->kota ?? null;
+                                        $userLokasiSamsat = Auth::user()->lokasi_samsat ?? null;
                                         @endphp
 
                                         <div class="col-md-2">
@@ -69,14 +70,21 @@
                                             <select class="form-control" id="userKabkota" name="kabkota_id">
                                                 <option value="">Pilih Kabkota</option>
                                                 @foreach ($kabkotas as $kbkt)
-                                                    @if ($userRoleId == 3 || $userRoleId == 4)
+                                                    @if ($userLokasiSamsat || $userRoleId == 3 || $userRoleId == 4)
                                                         @if ($kbkt->id == $userKotaId)
                                                             <option value="{{ $kbkt->id }}" selected>{{ $kbkt->nama }}</option>
                                                         @endif
                                                     @else
-                                                        <option value="{{ $kbkt->id }}">{{ $kbkt->nama }}</option>
+                                                        <option value="{{ $kbkt->id }}" {{ request('kabkota_id') == $kbkt->id ? 'selected' : '' }}>{{ $kbkt->nama }}</option>
                                                     @endif
                                                 @endforeach
+                                            </select>
+                                        </div>
+
+                                        <div class="col-md-2">
+                                            <label for="lokasiSamsat">Lokasi Samsat</label>
+                                            <select class="form-control" id="lokasiSamsat" name="lokasi_samsat">
+                                                <option value="">Pilih Lokasi Samsat</option>
                                             </select>
                                         </div>
                         
@@ -224,17 +232,60 @@
 
 <script>
     $(document).ready(function() {
+        var forcedLokasiSamsat = '{{ $userLokasiSamsat ?? '' }}';
         var selectedKabkota = $('#userKabkota').val();
+        var selectedLokasiSamsat = '{{ request('lokasi_samsat') }}';
         var selectedDistrict = '{{ request('district_id') }}';
 
         if (selectedKabkota) {
+            loadSamsats(selectedKabkota, selectedLokasiSamsat);
             loadDistricts(selectedKabkota, selectedDistrict);
         }
 
         $('#userKabkota').on('change', function() {
             var kabkotaId = $(this).val();
+            loadSamsats(kabkotaId, null);
             loadDistricts(kabkotaId, null);
         });
+
+        function loadSamsats(kabkotaId, selectedSamsat) {
+            if (!kabkotaId) {
+                $('#lokasiSamsat').html('<option value="">Pilih Lokasi Samsat</option>');
+                return;
+            }
+
+            $.ajax({
+                url: '{{ route("getSamsatByKabkota") }}',
+                type: 'GET',
+                data: { kabkota_id: kabkotaId },
+                success: function(response) {
+                    if (!response.success) {
+                        $('#lokasiSamsat').html('<option value="">Lokasi Samsat tidak ditemukan</option>');
+                        return;
+                    }
+
+                    var options = '<option value="">Pilih Lokasi Samsat</option>';
+                    $.each(response.samsats, function(index, samsat) {
+                        var value = samsat.id_wilayah_samsat ?? samsat.id;
+                        if (!forcedLokasiSamsat || String(value) === String(forcedLokasiSamsat)) {
+                            var isSelected = ((selectedSamsat && String(selectedSamsat) === String(value)) || String(forcedLokasiSamsat) === String(value)) ? 'selected' : '';
+                            options += '<option value="' + value + '" ' + isSelected + '>' + samsat.lokasi + '</option>';
+                        }
+                    });
+
+                    $('#lokasiSamsat').html(options);
+
+                    if (forcedLokasiSamsat) {
+                        $('#lokasiSamsat').val(String(forcedLokasiSamsat)).prop('disabled', true);
+                    } else {
+                        $('#lokasiSamsat').prop('disabled', false);
+                    }
+                },
+                error: function() {
+                    $('#lokasiSamsat').html('<option value="">Gagal mengambil lokasi samsat</option>');
+                }
+            });
+        }
 
         function loadDistricts(kabkotaId, selectedDistrict) {
             if (kabkotaId) {
@@ -257,6 +308,10 @@
             } else {
                 $('#userDistrict').html('<option value="">Pilih Kecamatan</option>');
             }
+        }
+
+        if (forcedLokasiSamsat) {
+            $('#userKabkota').prop('disabled', true);
         }
     });
 </script>

@@ -10,6 +10,7 @@ use App\Models\SengStatusVerifikasi;
 use App\Models\SengStatusFile;
 use App\Models\SengWilayah;
 use App\Models\SengPendataanKendaraan;
+use App\Models\WilayahSamsat;
 
 
 class BackController extends Controller
@@ -23,6 +24,7 @@ class BackController extends Controller
         $userId = Auth::user()->id ?? null;
         $userRoleId = Auth::user()->roles[0]->id ?? null;
         $userKotaId = Auth::user()->kota ?? null;
+        $userLokasiSamsat = Auth::user()->lokasi_samsat ?? null;
 
         // Query awal
         $verifikasis = SengPendataanKendaraan::query();
@@ -39,15 +41,22 @@ class BackController extends Controller
         if ($userRoleId == 1 || $userRoleId == 2) {
             // No additional WHERE clause for roles 1 and 2
             if ($request->kabkota_id) {
-                $verifikasis->where('kota', $request->kabkota_id);
+                $verifikasis->where('kota_dagri', $request->kabkota_id);
             }
         } elseif ($userRoleId == 4 || $userRoleId == 3) {
             // Add WHERE clause for role 4
-            $verifikasis->where('kota', $userKotaId);
+            $verifikasis->where('kota_dagri', $userKotaId);
 
         } elseif ($userRoleId == 7) {
             // Add WHERE clause for role 7
             $verifikasis->where('created_by', $userId);
+        }
+
+        // Jika akun punya lokasi_samsat, paksa hanya data lokasi samsat tersebut.
+        if (!empty($userLokasiSamsat)) {
+            $verifikasis->where('kota', $userLokasiSamsat);
+        } elseif ($request->lokasi_samsat) {
+            $verifikasis->where('kota', $request->lokasi_samsat);
         }
     
         // Filter berdasarkan input dari form
@@ -61,6 +70,9 @@ class BackController extends Controller
 
         if ($request->district_id) {
             $verifikasis->where('kec', $request->district_id);
+        }
+        if ($request->status_verifikasi_id) {
+            $verifikasis->where('status_verifikasi', $request->status_verifikasi_id);
         }
         if ($request->tanggal_start && $request->tanggal_end) {
             $verifikasis->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
@@ -83,8 +95,9 @@ class BackController extends Controller
         // Ambil data status verifikasi dan wilayah
         $statuss = SengStatus::all();
         $kabkotas = SengWilayah::where('id_up', 33)->get();
+        $samsats = WilayahSamsat::select('id', 'nama', 'kabkota')->orderBy('nama')->get();
     
-        return view('backend.dashboard.index', compact('kabkotas', 'statuss', 'data'));
+        return view('backend.dashboard.index', compact('kabkotas', 'statuss', 'data', 'samsats'));
     }
 
 

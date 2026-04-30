@@ -239,6 +239,7 @@ class VerifikasiController extends Controller
         if($data->status == 2){
             $data_html = [
                 'nama' => $data->nama,
+                'nama_pembuat_pernyataan' => $data->nama_pembuat_pernyataan,
                 'alamat' => $data->alamat.''.$data->desa_name.''.$data->kec_name,
                 'kota' => $data->kota_name,
                 'no_polisi' => $data->nopol,

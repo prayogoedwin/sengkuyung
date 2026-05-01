@@ -13,6 +13,7 @@ use App\Http\Controllers\RekapController;
 use App\Http\Controllers\PelaporanController;
 use App\Http\Controllers\PerbandinganKodeWilayahController;
 use App\Http\Controllers\DataTertagihController;
+use App\Http\Controllers\CacheManagementController;
 Route::middleware([LogActivity::class])->group(function () {
     Route::prefix('dapur')->middleware('auth')->group(function () {
         Route::get('/dashboard', [BackController::class, 'index'])->name('dashboard');
@@ -71,6 +72,10 @@ Route::middleware([LogActivity::class])->group(function () {
             ->name('data-tertagih.template');
         Route::post('/data-tertagih/{id}/status', [DataTertagihController::class, 'updateStatus'])->name('data-tertagih.update-status');
         Route::delete('/data-tertagih/{id}', [DataTertagihController::class, 'destroy'])->name('data-tertagih.destroy');
+
+        Route::get('/cache-management', [CacheManagementController::class, 'index'])->name('cache-management.index');
+        Route::post('/cache-management/clear-selected', [CacheManagementController::class, 'clearSelected'])->name('cache-management.clear-selected');
+        Route::post('/cache-management/clear-group', [CacheManagementController::class, 'clearGroup'])->name('cache-management.clear-group');
     });
 });
 

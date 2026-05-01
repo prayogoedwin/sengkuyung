@@ -8,13 +8,16 @@ use App\Models\SengStatus;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
 use App\Helpers\Helper;
+use App\Support\ApiCacheManager;
 
 class SengStatusController extends Controller
 {
     public function index(Request $request)
     {
-        // $data = SengStatus::all();
-        $data = SengStatus::whereNotIn('id', [8, 9])->get();
+        $cacheKey = 'api:seng-status:index';
+        $data = ApiCacheManager::remember($cacheKey, ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+            return SengStatus::whereNotIn('id', [8, 9])->get();
+        });
     
         // Ubah menjadi array agar tidak mengganggu objek asli
         $data = $data->map(function ($item) {

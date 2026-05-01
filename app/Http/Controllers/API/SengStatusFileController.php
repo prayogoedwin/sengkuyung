@@ -8,21 +8,26 @@ use App\Models\SengStatusFile;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
 use App\Helpers\Helper;
+use App\Support\ApiCacheManager;
 
 class SengStatusFileController extends Controller
 {
     public function index(Request $request)
     {
-        $query = SengStatusFile::query();
+        $status = (string) $request->input('status', '');
+        $cacheSuffix = $status !== '' ? $status : 'all';
+        $cacheKey = 'api:seng-status-file:index:' . $cacheSuffix;
 
-        // Cek apakah parameter kode ada dan tidak kosong
-        if ($request->has('status') && !empty($request->status)) {
+        $data = ApiCacheManager::remember($cacheKey, ApiCacheManager::DEFAULT_TTL_SECONDS, static function () use ($status) {
+            $query = SengStatusFile::query();
 
-            $sts = Helper::decodeId($request->status);
-            $query->where('id_status', $sts);
-        }
+            if ($status !== '') {
+                $decodedStatus = Helper::decodeId($status);
+                $query->where('id_status', $decodedStatus);
+            }
 
-        $data = $query->get();
+            return $query->get();
+        });
 
         // Ubah menjadi array agar tidak mengganggu objek asli
         $data = $data->map(function ($item) {

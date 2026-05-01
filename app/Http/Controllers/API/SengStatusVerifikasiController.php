@@ -8,12 +8,16 @@ use App\Models\SengStatusVerifikasi;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
 use App\Helpers\Helper;
+use App\Support\ApiCacheManager;
 
 class SengStatusVerifikasiController extends Controller
 {
     public function index(Request $request)
     {
-        $data = SengStatusVerifikasi::all();
+        $cacheKey = 'api:seng-status-verifikasi:index';
+        $data = ApiCacheManager::remember($cacheKey, ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+            return SengStatusVerifikasi::all();
+        });
     
         // Ubah menjadi array agar tidak mengganggu objek asli
         $data = $data->map(function ($item) {

@@ -13,6 +13,7 @@ use App\Models\SengWilayahKel;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Support\ApiCacheManager;
 
 class RekapController extends Controller
 {
@@ -275,9 +276,15 @@ class RekapController extends Controller
             ->get();
     
         // Ambil data status verifikasi dan wilayah
-        $statuss = SengStatus::all();
-        $kabkotas = SengWilayah::where('id_up', 33)->get();
-        $status_verifikasis = SengStatusVerifikasi::select('*')->get();
+        $statuss = ApiCacheManager::remember('admin:master:status:all', ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+            return SengStatus::all();
+        });
+        $kabkotas = ApiCacheManager::remember('admin:master:kabkota:all', ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+            return SengWilayah::where('id_up', 33)->get();
+        });
+        $status_verifikasis = ApiCacheManager::remember('admin:master:status-verifikasi:all', ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+            return SengStatusVerifikasi::select('*')->get();
+        });
 
     
         return view('backend.rekap.index',  compact(

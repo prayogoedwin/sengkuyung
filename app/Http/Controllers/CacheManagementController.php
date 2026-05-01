@@ -15,6 +15,7 @@ class CacheManagementController extends Controller
         'api:seng-status-verifikasi:' => 'API Status Verifikasi',
         'api:seng-wilayah:' => 'API Wilayah',
         'admin:data-tertagih:' => 'Admin Data Tertagih',
+        'admin:master:' => 'Admin Master Data',
     ];
 
     public function index(): View

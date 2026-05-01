@@ -11,6 +11,7 @@ use App\Models\SengStatusFile;
 use App\Models\SengWilayah;
 use App\Models\SengPendataanKendaraan;
 use App\Models\WilayahSamsat;
+use App\Support\ApiCacheManager;
 
 
 class BackController extends Controller
@@ -96,9 +97,15 @@ class BackController extends Controller
         ];
     
         // Ambil data status verifikasi dan wilayah
-        $statuss = SengStatus::all();
-        $kabkotas = SengWilayah::where('id_up', 33)->get();
-        $samsats = WilayahSamsat::select('id', 'nama', 'kabkota')->orderBy('nama')->get();
+        $statuss = ApiCacheManager::remember('admin:master:status:all', ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+            return SengStatus::all();
+        });
+        $kabkotas = ApiCacheManager::remember('admin:master:kabkota:all', ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+            return SengWilayah::where('id_up', 33)->get();
+        });
+        $samsats = ApiCacheManager::remember('admin:master:wilayah-samsat:all', ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+            return WilayahSamsat::select('id', 'nama', 'kabkota')->orderBy('nama')->get();
+        });
     
         return view('backend.dashboard.index', compact('kabkotas', 'statuss', 'data', 'samsats'));
     }

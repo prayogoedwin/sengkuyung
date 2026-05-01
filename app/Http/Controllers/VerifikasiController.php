@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Helpers\FileEncryption;
 use Illuminate\Support\Facades\Storage;
 use App\Models\ActivityLog;
+use App\Support\ApiCacheManager;
 
 class VerifikasiController extends Controller
 {
@@ -171,11 +172,15 @@ class VerifikasiController extends Controller
 
         }
 
-        $status_verifikasis = SengStatusVerifikasi::select('*')->get();
+        $status_verifikasis = ApiCacheManager::remember('admin:master:status-verifikasi:all', ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+            return SengStatusVerifikasi::select('*')->get();
+        });
 
-        $kabkotas = SengWilayah::select('*')
-        ->where('id_up', 33)
-        ->get();
+        $kabkotas = ApiCacheManager::remember('admin:master:kabkota:all', ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+            return SengWilayah::select('*')
+                ->where('id_up', 33)
+                ->get();
+        });
 
         return view('backend.verifikasis.index',  compact('kabkotas', 'status_verifikasis'));
     }

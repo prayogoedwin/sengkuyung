@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Support\ApiCacheManager;
 
 // class UserController extends Controller implements HasMiddleware
 class UserController extends Controller 
@@ -117,16 +118,22 @@ class UserController extends Controller
             ->get();
 
         if (in_array($userRoleId, [4, 5, 6], true)) {
-            $kabkotas = SengWilayah::select('*')
-                ->where('id', $userKotaId)
-                ->get();
+            $kabkotas = ApiCacheManager::remember('admin:master:kabkota:role-scope:' . (string) $userKotaId, ApiCacheManager::DEFAULT_TTL_SECONDS, static function () use ($userKotaId) {
+                return SengWilayah::select('*')
+                    ->where('id', $userKotaId)
+                    ->get();
+            });
         } else {
-            $kabkotas = SengWilayah::select('*')
-                ->where('id_up', 33)
-                ->get();
+            $kabkotas = ApiCacheManager::remember('admin:master:kabkota:all', ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+                return SengWilayah::select('*')
+                    ->where('id_up', 33)
+                    ->get();
+            });
         }
 
-        $samsats = WilayahSamsat::select('*')->get();
+        $samsats = ApiCacheManager::remember('admin:master:wilayah-samsat:all-full', ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+            return WilayahSamsat::select('*')->get();
+        });
 
        
         return view('backend.users.index',  compact('roles', 'kabkotas', 'samsats'));

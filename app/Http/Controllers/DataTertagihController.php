@@ -6,6 +6,7 @@ use App\Models\DataTertagih;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Support\ApiCacheManager;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx as XlsxWriter;
 use Yajra\DataTables\Facades\DataTables;
@@ -41,47 +42,60 @@ class DataTertagihController extends Controller
         if ($request->ajax()) {
             $currentYear = (int) date('Y');
             $year = $request->filled('year') ? (int) $request->year : $currentYear;
+            $isTerdata = $request->filled('is_terdata') ? (string) $request->is_terdata : 'all';
+            $noPolisi = trim((string) $request->input('no_polisi', ''));
+            $queryParams = $request->query();
+            ksort($queryParams);
+            $cacheHash = md5(json_encode($queryParams));
+            $cacheKey = "admin:data-tertagih:index:{$year}:{$isTerdata}:" . md5($noPolisi) . ":{$cacheHash}";
 
-            $query = DataTertagih::query()->where('year', $year);
+            $payload = ApiCacheManager::remember($cacheKey, ApiCacheManager::DEFAULT_TTL_SECONDS, static function () use ($year, $request) {
+                $query = DataTertagih::query()->where('year', $year);
 
-            if ($request->filled('is_terdata')) {
-                $query->where('is_terdata', (int) $request->is_terdata);
-            }
+                if ($request->filled('is_terdata')) {
+                    $query->where('is_terdata', (int) $request->is_terdata);
+                }
 
-            if ($request->filled('no_polisi')) {
-                $query->where('no_polisi', 'like', '%' . $request->no_polisi . '%');
-            }
+                if ($request->filled('no_polisi')) {
+                    $query->where('no_polisi', 'like', '%' . $request->no_polisi . '%');
+                }
 
-            $query->orderBy('id', 'desc');
+                $query->orderBy('id', 'desc');
 
-            return DataTables::of($query)
-                ->addIndexColumn()
-                ->addColumn('alamat', function ($row) {
-                    return (string) ($row->alamat ?? '');
-                })
-                ->addColumn('status_terdata', function ($row) {
-                    return (int) $row->is_terdata === 1 ? 'Terdata'.$row->id : 'Belum Terdata'.$row->id;
-                })
-                ->addColumn('actions', function ($row) {
-                    $toggleTo = (int) $row->is_terdata === 1 ? 0 : 1;
-                    $toggleText = $toggleTo === 1 ? 'Set Terdata' : 'Set Belum';
+                return DataTables::of($query)
+                    ->addIndexColumn()
+                    ->addColumn('alamat', function ($row) {
+                        return (string) ($row->alamat ?? '');
+                    })
+                    ->addColumn('status_terdata', function ($row) {
+                        return (int) $row->is_terdata === 1 ? 'Terdata'.$row->id : 'Belum Terdata'.$row->id;
+                    })
+                    ->addColumn('actions', function ($row) {
+                        $toggleTo = (int) $row->is_terdata === 1 ? 0 : 1;
+                        $toggleText = $toggleTo === 1 ? 'Set Terdata' : 'Set Belum';
 
-                    // return '
-                    //     <button class="btn btn-sm btn-warning" onclick="toggleTertagihStatus(' . $row->id . ', ' . $toggleTo . ')">' . $toggleText . '</button>
-                    //     <button class="btn btn-sm btn-danger" onclick="deleteTertagih(' . $row->id . ')">Delete</button>
-                    // ';
-                    return '';
-                })
-                ->rawColumns(['actions'])
-                ->make(true);
+                        // return '
+                        //     <button class="btn btn-sm btn-warning" onclick="toggleTertagihStatus(' . $row->id . ', ' . $toggleTo . ')">' . $toggleText . '</button>
+                        //     <button class="btn btn-sm btn-danger" onclick="deleteTertagih(' . $row->id . ')">Delete</button>
+                        // ';
+                        return '';
+                    })
+                    ->rawColumns(['actions'])
+                    ->make(true)
+                    ->getData(true);
+            });
+
+            return response()->json($payload);
         }
 
         $defaultYear = (int) date('Y');
-        $years = DataTertagih::select('year')
-            ->distinct()
-            ->orderBy('year', 'desc')
-            ->pluck('year')
-            ->toArray();
+        $years = ApiCacheManager::remember('admin:data-tertagih:years', ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+            return DataTertagih::select('year')
+                ->distinct()
+                ->orderBy('year', 'desc')
+                ->pluck('year')
+                ->toArray();
+        });
 
         if (!in_array($defaultYear, $years, true)) {
             array_unshift($years, $defaultYear);
@@ -163,6 +177,8 @@ class DataTertagihController extends Controller
 
         fclose($handle);
 
+        ApiCacheManager::forgetByPrefix('admin:data-tertagih:');
+
         return redirect()
             ->route('data-tertagih.index')
             ->with('success', 'Import CSV selesai. Data masuk: ' . $inserted . '. Duplikat (nopol+tahun sama) dilewati: ' . $skippedDuplicate);
@@ -197,6 +213,7 @@ class DataTertagihController extends Controller
         $data->updated_at = Carbon::now();
         $data->updated_by = Auth::id();
         $data->save();
+        ApiCacheManager::forgetByPrefix('admin:data-tertagih:');
 
         return response()->json([
             'success' => true,
@@ -208,6 +225,7 @@ class DataTertagihController extends Controller
     {
         $data = DataTertagih::findOrFail($id);
         $data->delete();
+        ApiCacheManager::forgetByPrefix('admin:data-tertagih:');
 
         return response()->json([
             'success' => true,

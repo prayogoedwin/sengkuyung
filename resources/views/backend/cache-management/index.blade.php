@@ -26,13 +26,23 @@
 
                         <div class="card mb-4">
                             <div class="card-header">
-                                <h5 class="mb-0">Kelola Cache API</h5>
+                                <h5 class="mb-0">Kelola Cache {{ $scopeLabel }}</h5>
                             </div>
                             <div class="card-body">
-                                <p class="mb-3">Hapus cache per grup endpoint API.</p>
+                                <p class="mb-3">Hapus cache per grup endpoint {{ $scopeLabel }}.</p>
+                                <div class="mb-3 d-flex flex-wrap gap-2">
+                                    <a href="{{ route('cache-management.scope', ['scope' => 'admin']) }}"
+                                        class="btn btn-sm {{ $scope === 'admin' ? 'btn-primary' : 'btn-outline-primary' }}">
+                                        Lihat Cache Admin
+                                    </a>
+                                    <a href="{{ route('cache-management.scope', ['scope' => 'api']) }}"
+                                        class="btn btn-sm {{ $scope === 'api' ? 'btn-primary' : 'btn-outline-primary' }}">
+                                        Lihat Cache API
+                                    </a>
+                                </div>
                                 <div class="d-flex flex-wrap gap-2">
                                     @foreach ($cacheGroups as $prefix => $label)
-                                        <form action="{{ route('cache-management.clear-group') }}" method="POST">
+                                        <form action="{{ route('cache-management.clear-group', ['scope' => $scope]) }}" method="POST">
                                             @csrf
                                             <input type="hidden" name="prefix" value="{{ $prefix }}">
                                             <button type="submit" class="btn btn-outline-danger btn-sm">
@@ -51,10 +61,10 @@
                             <div class="card-body">
                                 @if (empty($trackedKeys))
                                     <div class="alert alert-info mb-0">
-                                        Belum ada cache key API yang tercatat.
+                                        Belum ada cache key {{ $scopeLabel }} yang tercatat.
                                     </div>
                                 @else
-                                    <form method="POST" action="{{ route('cache-management.clear-selected') }}">
+                                    <form method="POST" action="{{ route('cache-management.clear-selected', ['scope' => $scope]) }}">
                                         @csrf
 
                                         <div class="mb-3">

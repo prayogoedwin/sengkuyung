@@ -74,8 +74,15 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::delete('/data-tertagih/{id}', [DataTertagihController::class, 'destroy'])->name('data-tertagih.destroy');
 
         Route::get('/cache-management', [CacheManagementController::class, 'index'])->name('cache-management.index');
-        Route::post('/cache-management/clear-selected', [CacheManagementController::class, 'clearSelected'])->name('cache-management.clear-selected');
-        Route::post('/cache-management/clear-group', [CacheManagementController::class, 'clearGroup'])->name('cache-management.clear-group');
+        Route::get('/cache-management/{scope}', [CacheManagementController::class, 'scope'])
+            ->whereIn('scope', ['admin', 'api'])
+            ->name('cache-management.scope');
+        Route::post('/cache-management/{scope}/clear-selected', [CacheManagementController::class, 'clearSelected'])
+            ->whereIn('scope', ['admin', 'api'])
+            ->name('cache-management.clear-selected');
+        Route::post('/cache-management/{scope}/clear-group', [CacheManagementController::class, 'clearGroup'])
+            ->whereIn('scope', ['admin', 'api'])
+            ->name('cache-management.clear-group');
     });
 });
 

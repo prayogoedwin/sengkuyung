@@ -14,7 +14,7 @@
             Version
 
                 <a href="https://github.com/themeselection/sneat-html-admin-template-free/issues" target="_blank"
-                    class="footer-link me-4">V 2.0 (Beta)</a>
+                    class="footer-link me-4">V 2.5 (Beta)</a>
             </div>
         </div>
     </footer>

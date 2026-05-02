@@ -13,6 +13,8 @@ class ApiCacheManager
 
     public const DATA_TTL_SECONDS = 1800;
 
+    public const DASHBOARD_TTL_SECONDS = 600;
+
     // Backward compatibility: old usage points to data TTL.
     public const DEFAULT_TTL_SECONDS = self::DATA_TTL_SECONDS;
 
@@ -24,6 +26,11 @@ class ApiCacheManager
     public static function dataTtl(): int
     {
         return self::envTtl('CACHE_TTL_DATA_SECONDS', self::DATA_TTL_SECONDS);
+    }
+
+    public static function dashboardTtl(): int
+    {
+        return self::envTtl('CACHE_TTL_DASHBOARD_SECONDS', self::DASHBOARD_TTL_SECONDS);
     }
 
     public static function remember(string $key, int $ttlSeconds, Closure $callback): mixed

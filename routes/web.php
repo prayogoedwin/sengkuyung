@@ -83,6 +83,9 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::post('/cache-management/{scope}/clear-group', [CacheManagementController::class, 'clearGroup'])
             ->whereIn('scope', ['admin', 'api'])
             ->name('cache-management.clear-group');
+        Route::post('/cache-management/{scope}/clear-all', [CacheManagementController::class, 'clearAll'])
+            ->whereIn('scope', ['admin', 'api'])
+            ->name('cache-management.clear-all');
     });
 });
 

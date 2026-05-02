@@ -40,6 +40,17 @@
                                         Lihat Cache API
                                     </a>
                                 </div>
+                                <div class="mb-3">
+                                    <form action="{{ route('cache-management.clear-all', ['scope' => $scope]) }}" method="POST"
+                                        class="d-inline"
+                                        onsubmit="return confirm('Hapus SEMUA cache {{ $scopeLabel }} (semua grup)?');">
+                                        @csrf
+                                        <button type="submit" class="btn btn-danger btn-sm">
+                                            Hapus semua cache {{ $scopeLabel }}
+                                        </button>
+                                    </form>
+                                    <span class="text-muted small ms-2">Menghapus semua key yang diawali <code>{{ $scope === 'admin' ? 'admin:' : 'api:' }}</code></span>
+                                </div>
                                 <div class="d-flex flex-wrap gap-2">
                                     @foreach ($cacheGroups as $prefix => $label)
                                         <form action="{{ route('cache-management.clear-group', ['scope' => $scope]) }}" method="POST">

@@ -105,6 +105,21 @@ class CacheManagementController extends Controller
             ->with('success', "Berhasil menghapus {$deletedCount} cache key dari grup.");
     }
 
+    public function clearAll(string $scope): RedirectResponse
+    {
+        $this->ensureSuperAdmin();
+        $scope = $this->normalizeScope($scope);
+        $prefix = self::SCOPE_PREFIXES[$scope];
+
+        $deletedCount = ApiCacheManager::forgetByPrefix($prefix);
+
+        $label = strtoupper($scope);
+
+        return redirect()
+            ->route('cache-management.scope', ['scope' => $scope])
+            ->with('success', "Berhasil menghapus semua cache {$label} ({$deletedCount} key).");
+    }
+
     private function getGroupsByScope(string $scope): array
     {
         return $scope === 'api' ? self::API_CACHE_GROUPS : self::ADMIN_CACHE_GROUPS;

@@ -15,7 +15,6 @@ class CacheManagementController extends Controller
         'api:master:status-file:' => 'API Status File',
         'api:master:status-verifikasi:' => 'API Status Verifikasi',
         'api:master:wilayah:' => 'API Wilayah',
-        'api:data:' => 'API Data',
     ];
 
     private const ADMIN_CACHE_GROUPS = [

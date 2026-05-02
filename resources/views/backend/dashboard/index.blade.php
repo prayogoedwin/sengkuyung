@@ -45,7 +45,7 @@
                             
                             <div class="row" style="margin-bottom:14px">
 
-                                <form method="GET" action="{{ route('dashboard') }}">
+                                <form id="dashboardWilayahFilterForm" method="GET" action="{{ route('dashboard') }}">
                                     <div class="row">
                                         {{-- <div class="col-md-2">
                                             <label for="kabupaten1">Kabupaten</label>
@@ -393,6 +393,11 @@
         if (forcedLokasiSamsat) {
             $('#userKabkota').prop('disabled', true);
         }
+
+        // Select yang disabled tidak ikut submit (GET); aktifkan sebelum kirim agar kabkota_id & lokasi_samsat konsisten di URL/cache.
+        $('#dashboardWilayahFilterForm').on('submit', function () {
+            $(this).find('select:disabled').prop('disabled', false);
+        });
     });
 </script>
 

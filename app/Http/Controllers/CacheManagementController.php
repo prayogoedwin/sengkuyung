@@ -20,6 +20,7 @@ class CacheManagementController extends Controller
 
     private const ADMIN_CACHE_GROUPS = [
         'admin:dashboard:' => 'Admin Dashboard (statistik kartu)',
+        'admin:rekap:' => 'Admin Rekap (grafik & ringkasan)',
         'admin:data-tertagih:' => 'Admin Data Tertagih',
         'admin:master:' => 'Admin Master Data',
     ];

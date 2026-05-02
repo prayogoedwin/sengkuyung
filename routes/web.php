@@ -15,7 +15,7 @@ use App\Http\Controllers\PerbandinganKodeWilayahController;
 use App\Http\Controllers\DataTertagihController;
 use App\Http\Controllers\CacheManagementController;
 Route::middleware([LogActivity::class])->group(function () {
-    Route::prefix('dapur')->middleware('auth')->group(function () {
+    Route::prefix('dapur')->middleware(['auth', 'deny.petugas.web'])->group(function () {
         Route::get('/dashboard', [BackController::class, 'index'])->name('dashboard');
         Route::get('/rekap', [RekapController::class, 'index'])->name('rekap.index');
 

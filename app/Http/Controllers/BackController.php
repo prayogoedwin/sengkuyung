@@ -51,8 +51,8 @@ class BackController extends Controller
 
     /**
      * Kunci cache statistik: hanya constraint yang benar-benar dipakai di query (mirror applyDashboardFiltersToQuery).
-     * Tanpa "persona" per role — super-admin, admin prov, kabkota, kecamatan, dll. berbagi cache
-     * selama kombinasi filter SQL-nya sama (role 7 tetap terpisah lewat created_by).
+     * Tanpa "persona" per role — super-admin, admin prov, UPTD, dll. berbagi cache selama filter SQL sama.
+     * Petugas (role 7) memakai API mobile; scope web tidak membedakan created_by.
      *
      * @return array<string, mixed>
      */
@@ -60,13 +60,11 @@ class BackController extends Controller
     {
         $user = Auth::user();
         $userRoleId = $user->roles[0]->id ?? null;
-        $userId = $user->id;
         $userKotaId = $user->kota ?? null;
         $userLokasiSamsat = $user->lokasi_samsat ?? null;
 
         $scope = [
             'kota_dagri' => null,
-            'created_by' => null,
             'kota_layanan' => null,
             'kec' => null,
             'desa' => null,
@@ -82,8 +80,6 @@ class BackController extends Controller
             if ($userKotaId !== null && $userKotaId !== '') {
                 $scope['kota_dagri'] = (string) $userKotaId;
             }
-        } elseif ($userRoleId == 7) {
-            $scope['created_by'] = (int) $userId;
         }
 
         if (!empty($userLokasiSamsat)) {
@@ -112,50 +108,49 @@ class BackController extends Controller
     }
 
     /**
-     * Kunci cache yang bisa dibaca di menu Kelola Cache: berisi nilai param yang dipakai query
-     * (bukan hash saja). Jika kombinasi sangat panjang, ditambah sufiks __h_{md5} supaya tetap unik.
+     * Kunci cache ringkas untuk Kelola Cache, contoh:
+     * admin:dashboard:stats:kabkota:3375-lokasisamsat:21-kec:2102-kel:2102006-statusverifikasi:1-start:2025-01-01-end:2025-12-31
+     * Jika terlalu panjang, ditambah sufiks -h-{md5}.
      */
     private function readableDashboardStatsCacheKey(Request $request): string
     {
         $scope = $this->canonicalDashboardStatsScope($request);
 
-        $parts = [];
-        $seg = static function (string $label, string $value): string {
-            $safe = preg_replace('/[^a-zA-Z0-9._@-]/', '_', $value);
+        $safe = static function (?string $value): string {
+            if ($value === null || $value === '') {
+                return '';
+            }
 
-            return $label . '_' . $safe;
+            return preg_replace('/[^a-zA-Z0-9._@-]/', '_', $value);
         };
 
+        $pairs = [];
         if ($scope['kota_dagri'] !== null && $scope['kota_dagri'] !== '') {
-            $parts[] = $seg('kabkota', (string) $scope['kota_dagri']);
-        }
-        if ($scope['created_by'] !== null) {
-            $parts[] = 'petugas_user_' . (int) $scope['created_by'];
+            $pairs[] = 'kabkota:' . $safe((string) $scope['kota_dagri']);
         }
         if ($scope['kota_layanan'] !== null && $scope['kota_layanan'] !== '') {
-            $parts[] = $seg('lokasi_samsat', (string) $scope['kota_layanan']);
+            $pairs[] = 'lokasisamsat:' . $safe((string) $scope['kota_layanan']);
         }
         if ($scope['kec'] !== null && $scope['kec'] !== '') {
-            $parts[] = $seg('kecamatan_samsat', (string) $scope['kec']);
+            $pairs[] = 'kec:' . $safe((string) $scope['kec']);
         }
         if ($scope['desa'] !== null && $scope['desa'] !== '') {
-            $parts[] = $seg('kelurahan_samsat', (string) $scope['desa']);
+            $pairs[] = 'kel:' . $safe((string) $scope['desa']);
         }
         if ($scope['status_verifikasi'] !== null && $scope['status_verifikasi'] !== '') {
-            $parts[] = $seg('status_verifikasi', (string) $scope['status_verifikasi']);
+            $pairs[] = 'statusverifikasi:' . $safe((string) $scope['status_verifikasi']);
         }
         if ($scope['periode'] !== null) {
-            $start = (string) $scope['periode']['start'];
-            $end = (string) $scope['periode']['end'];
-            $parts[] = 'tanggal_' . preg_replace('/[^0-9-]/', '_', $start) . '_sampai_' . preg_replace('/[^0-9-]/', '_', $end);
+            $pairs[] = 'start:' . $safe((string) $scope['periode']['start']);
+            $pairs[] = 'end:' . $safe((string) $scope['periode']['end']);
         }
 
-        $body = count($parts) > 0 ? implode('__', $parts) : 'tanpa_filter';
+        $body = count($pairs) > 0 ? implode('-', $pairs) : 'none';
         $prefix = 'admin:dashboard:stats:';
         $full = $prefix . $body;
 
-        if (strlen($full) > 220) {
-            return $prefix . substr($body, 0, 160) . '__h_' . md5(json_encode($scope));
+        if (strlen($full) > 240) {
+            return $prefix . substr($body, 0, 180) . '-h-' . md5(json_encode($scope));
         }
 
         return $full;
@@ -163,7 +158,6 @@ class BackController extends Controller
 
     private function applyDashboardFiltersToQuery($verifikasis, Request $request): void
     {
-        $userId = Auth::user()->id ?? null;
         $userRoleId = Auth::user()->roles[0]->id ?? null;
         $userKotaId = Auth::user()->kota ?? null;
         $userLokasiSamsat = Auth::user()->lokasi_samsat ?? null;
@@ -174,8 +168,6 @@ class BackController extends Controller
             }
         } elseif ($userRoleId == 4 || $userRoleId == 3) {
             $verifikasis->where('kota_dagri', $userKotaId);
-        } elseif ($userRoleId == 7) {
-            $verifikasis->where('created_by', $userId);
         }
 
         if (!empty($userLokasiSamsat)) {

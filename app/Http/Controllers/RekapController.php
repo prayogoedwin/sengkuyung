@@ -34,9 +34,55 @@ class RekapController extends Controller
 
     public function index(Request $request)
     {
-        $userRole = auth()->user()->role;
         $user = User::findOrFail(auth()->id());
+        $userRoleId = Auth::user()->roles[0]->id ?? null;
 
+        $computed = ApiCacheManager::remember(
+            $this->readableRekapCacheKey($request),
+            ApiCacheManager::dashboardTtl(),
+            fn () => $this->buildRekapComputedPayload($request, $userRoleId, $user)
+        );
+
+        $data = $computed['data'];
+        $koordinats = $computed['koordinats'];
+        $mapPoints = $computed['mapPoints'];
+        $barChartData = $computed['barChartData'];
+        $topKota = $computed['topKota'];
+        $topKecamatan = $computed['topKecamatan'];
+        $topKelurahan = $computed['topKelurahan'];
+
+        // Ambil data master form (sama seperti sebelumnya)
+        $statuss = ApiCacheManager::remember('admin:master:status:all', ApiCacheManager::masterTtl(), static function () {
+            return SengStatus::all();
+        });
+        $kabkotas = ApiCacheManager::remember('admin:master:kabkota:all', ApiCacheManager::masterTtl(), static function () {
+            return SengWilayah::where('id_up', 33)->get();
+        });
+        $status_verifikasis = ApiCacheManager::remember('admin:master:status-verifikasi:all', ApiCacheManager::masterTtl(), static function () {
+            return SengStatusVerifikasi::select('*')->get();
+        });
+
+        return view('backend.rekap.index', compact(
+            'kabkotas',
+            'statuss',
+            'status_verifikasis',
+            'data',
+            'koordinats',
+            'mapPoints',
+            'barChartData',
+            'topKota',
+            'topKecamatan',
+            'topKelurahan'
+        ));
+    }
+
+    /**
+     * Payload grafik/peta/top yang di-cache (TTL sama dengan dashboard: CACHE_TTL_DASHBOARD_SECONDS).
+     *
+     * @return array<string, mixed>
+     */
+    private function buildRekapComputedPayload(Request $request, ?int $userRoleId, User $user): array
+    {
         $kabkotaId = $request->input('kabkota_id');
         $lokasiSamsatId = $request->input('lokasi_samsat');
         $kecamatanSamsatId = $request->input('kecamatan_samsat');
@@ -44,10 +90,8 @@ class RekapController extends Controller
 
         // Query pendataan untuk statistik PKB dan Top 5.
         $pendataanQuery = SengPendataanKendaraan::query();
-        if ($userRole == 4) {
+        if ($userRoleId === 4) {
             $pendataanQuery->where('kota', $user->uptd_id);
-        } elseif ($userRole == 7) {
-            $pendataanQuery->where('created_by', auth()->id());
         }
 
         if (!$request->tanggal_start && !$request->tanggal_end) {
@@ -55,7 +99,7 @@ class RekapController extends Controller
         }
 
         if ($kabkotaId) {
-            if ($userRole == 4) {
+            if ($userRoleId === 4) {
                 $pendataanQuery->where('kota', $user->uptd_id);
             } else {
                 $pendataanQuery->where('kota_dagri', $kabkotaId);
@@ -134,7 +178,6 @@ class RekapController extends Controller
             $chartGroupColumnPendataan = 'desa';
             $chartTitle = 'Perbandingan Kelurahan';
         } elseif ($kabkotaId) {
-            // Jika pilih kab/kota saja (atau kab/kota + lokasi), bandingkan antar kecamatan.
             $chartLevel = 'kecamatan';
             $chartGroupColumnTertagih = 'id_kecamatan';
             $chartGroupColumnPendataan = 'kec';
@@ -206,7 +249,6 @@ class RekapController extends Controller
             'pkb' => $chartNominalPkbData,
         ];
 
-        // Marker peta berdasarkan agregasi data tertagih per lokasi samsat.
         $mapGrouped = (clone $dataTertagihQuery)
             ->select('id_lokasi_samsat', DB::raw('COUNT(*) as total'))
             ->groupBy('id_lokasi_samsat')
@@ -253,7 +295,6 @@ class RekapController extends Controller
             $koordinats = $koordinats ?: (object) ['lat' => -7.150975, 'lng' => 110.140259];
         }
 
-        // Top 5 pendataan berdasarkan wilayah dari tabel seng_pendataan_kendaraan.
         $topKota = (clone $pendataanQuery)
             ->selectRaw("COALESCE(NULLIF(kota_name, ''), '-') as wilayah, COUNT(*) as total")
             ->groupBy('kota_name')
@@ -274,24 +315,81 @@ class RekapController extends Controller
             ->orderByDesc('total')
             ->limit(5)
             ->get();
-    
-        // Ambil data status verifikasi dan wilayah
-        $statuss = ApiCacheManager::remember('admin:master:status:all', ApiCacheManager::masterTtl(), static function () {
-            return SengStatus::all();
-        });
-        $kabkotas = ApiCacheManager::remember('admin:master:kabkota:all', ApiCacheManager::masterTtl(), static function () {
-            return SengWilayah::where('id_up', 33)->get();
-        });
-        $status_verifikasis = ApiCacheManager::remember('admin:master:status-verifikasi:all', ApiCacheManager::masterTtl(), static function () {
-            return SengStatusVerifikasi::select('*')->get();
-        });
 
-    
-        return view('backend.rekap.index',  compact(
-            'kabkotas','statuss','status_verifikasis',
-            'data', 'koordinats', 'mapPoints',
-            'barChartData', 'topKota', 'topKecamatan', 'topKelurahan'
-        ));
+        return compact(
+            'data',
+            'koordinats',
+            'mapPoints',
+            'barChartData',
+            'topKota',
+            'topKecamatan',
+            'topKelurahan'
+        );
+    }
+
+    /**
+     * Kunci cache: sama seperti dashboard — filter yang dipakai query (parameter request).
+     * Petugas (role 7) memakai API mobile; tidak diperingkas di kunci web ini.
+     */
+    private function readableRekapCacheKey(Request $request): string
+    {
+        $safe = static function (?string $value): string {
+            if ($value === null || $value === '') {
+                return '';
+            }
+
+            return preg_replace('/[^a-zA-Z0-9._@-]/', '_', $value);
+        };
+
+        $pairs = [];
+
+        if ($request->filled('kabkota_id')) {
+            $pairs[] = 'kabkota:' . $safe((string) $request->kabkota_id);
+        }
+        if ($request->filled('lokasi_samsat')) {
+            $pairs[] = 'lokasisamsat:' . $safe((string) $request->lokasi_samsat);
+        }
+        if ($request->filled('kecamatan_samsat')) {
+            $pairs[] = 'kec:' . $safe((string) $request->kecamatan_samsat);
+        }
+        if ($request->filled('kelurahan_samsat')) {
+            $pairs[] = 'kel:' . $safe((string) $request->kelurahan_samsat);
+        }
+        if ($request->filled('status_id')) {
+            $pairs[] = 'statuskendaraan:' . $safe((string) $request->status_id);
+        }
+        if ($request->filled('status_verifikasi_id')) {
+            $pairs[] = 'statusverifikasi:' . $safe((string) $request->status_verifikasi_id);
+        }
+
+        if ($request->filled('tanggal_start') && $request->filled('tanggal_end')) {
+            $pairs[] = 'start:' . $safe((string) $request->tanggal_start);
+            $pairs[] = 'end:' . $safe((string) $request->tanggal_end);
+        } else {
+            $pairs[] = 'tahun:' . (int) now()->year;
+        }
+
+        $body = count($pairs) > 0 ? implode('-', $pairs) : 'none';
+        $prefix = 'admin:rekap:page:';
+        $full = $prefix . $body;
+
+        if (strlen($full) > 260) {
+            $scope = [
+                'kabkota_id' => $request->input('kabkota_id'),
+                'lokasi_samsat' => $request->input('lokasi_samsat'),
+                'kecamatan_samsat' => $request->input('kecamatan_samsat'),
+                'kelurahan_samsat' => $request->input('kelurahan_samsat'),
+                'status_id' => $request->input('status_id'),
+                'status_verifikasi_id' => $request->input('status_verifikasi_id'),
+                'tanggal' => $request->filled('tanggal_start') && $request->filled('tanggal_end')
+                    ? [$request->tanggal_start, $request->tanggal_end]
+                    : ['default_year' => (int) now()->year],
+            ];
+
+            return $prefix . substr($body, 0, 160) . '-h-' . md5(json_encode($scope));
+        }
+
+        return $full;
     }
 
     private function codeVariants($value): array

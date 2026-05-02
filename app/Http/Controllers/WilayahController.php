@@ -20,7 +20,7 @@ class WilayahController extends Controller
         }
 
         $cacheKey = 'admin:master:wilayah:districts-by-kabkota:' . (string) $kabkotaId;
-        $districts = ApiCacheManager::remember($cacheKey, ApiCacheManager::DEFAULT_TTL_SECONDS, static function () use ($kabkotaId) {
+        $districts = ApiCacheManager::remember($cacheKey, ApiCacheManager::masterTtl(), static function () use ($kabkotaId) {
             return SengWilayah::where('id_up', $kabkotaId)->get();
         });
 
@@ -36,7 +36,7 @@ class WilayahController extends Controller
         }
 
         $cacheKey = 'admin:master:wilayah:samsat-by-kabkota:' . (string) $kabkotaId;
-        $samsats = ApiCacheManager::remember($cacheKey, ApiCacheManager::DEFAULT_TTL_SECONDS, static function () use ($kabkotaId) {
+        $samsats = ApiCacheManager::remember($cacheKey, ApiCacheManager::masterTtl(), static function () use ($kabkotaId) {
             return SengSaamsat::where('kabkota', $kabkotaId)
                 ->orderBy('lokasi')
                 ->get(['id', 'id_wilayah_samsat', 'lokasi']);
@@ -54,7 +54,7 @@ class WilayahController extends Controller
         }
 
         $cacheKey = 'admin:master:wilayah:kecamatan-by-samsat:' . (string) $lokasiSamsatId;
-        $kecamatans = ApiCacheManager::remember($cacheKey, ApiCacheManager::DEFAULT_TTL_SECONDS, static function () use ($lokasiSamsatId) {
+        $kecamatans = ApiCacheManager::remember($cacheKey, ApiCacheManager::masterTtl(), static function () use ($lokasiSamsatId) {
             return SengWilayahKec::where(function ($query) use ($lokasiSamsatId) {
                     $query->where('id_lokasi_samsat', $lokasiSamsatId);
 
@@ -78,7 +78,7 @@ class WilayahController extends Controller
         }
 
         $cacheKey = 'admin:master:wilayah:kelurahan-by-kecamatan:' . (string) $kecamatanId;
-        $kelurahans = ApiCacheManager::remember($cacheKey, ApiCacheManager::DEFAULT_TTL_SECONDS, static function () use ($kecamatanId) {
+        $kelurahans = ApiCacheManager::remember($cacheKey, ApiCacheManager::masterTtl(), static function () use ($kecamatanId) {
             return SengWilayahKel::where('id_kecamatan', $kecamatanId)
                 ->orderBy('kelurahan')
                 ->get(['id_kelurahan', 'kelurahan']);

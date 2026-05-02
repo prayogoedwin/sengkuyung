@@ -14,8 +14,8 @@ class SengStatusVerifikasiController extends Controller
 {
     public function index(Request $request)
     {
-        $cacheKey = 'api:seng-status-verifikasi:index';
-        $data = ApiCacheManager::remember($cacheKey, ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+        $cacheKey = 'api:master:status-verifikasi:index';
+        $data = ApiCacheManager::remember($cacheKey, ApiCacheManager::masterTtl(), static function () {
             return SengStatusVerifikasi::all();
         });
     

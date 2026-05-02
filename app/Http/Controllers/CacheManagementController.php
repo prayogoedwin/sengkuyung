@@ -10,10 +10,12 @@ use Illuminate\View\View;
 class CacheManagementController extends Controller
 {
     private const API_CACHE_GROUPS = [
-        'api:seng-status:' => 'API Status',
-        'api:seng-status-file:' => 'API Status File',
-        'api:seng-status-verifikasi:' => 'API Status Verifikasi',
-        'api:seng-wilayah:' => 'API Wilayah',
+        'api:master:' => 'API Master Data',
+        'api:master:status:' => 'API Status',
+        'api:master:status-file:' => 'API Status File',
+        'api:master:status-verifikasi:' => 'API Status Verifikasi',
+        'api:master:wilayah:' => 'API Wilayah',
+        'api:data:' => 'API Data',
     ];
 
     private const ADMIN_CACHE_GROUPS = [

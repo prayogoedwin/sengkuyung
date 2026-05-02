@@ -49,7 +49,7 @@ class DataTertagihController extends Controller
             $cacheHash = md5(json_encode($queryParams));
             $cacheKey = "admin:data-tertagih:index:{$year}:{$isTerdata}:" . md5($noPolisi) . ":{$cacheHash}";
 
-            $payload = ApiCacheManager::remember($cacheKey, ApiCacheManager::DEFAULT_TTL_SECONDS, static function () use ($year, $request) {
+            $payload = ApiCacheManager::remember($cacheKey, ApiCacheManager::dataTtl(), static function () use ($year, $request) {
                 $query = DataTertagih::query()->where('year', $year);
 
                 if ($request->filled('is_terdata')) {
@@ -89,7 +89,7 @@ class DataTertagihController extends Controller
         }
 
         $defaultYear = (int) date('Y');
-        $years = ApiCacheManager::remember('admin:data-tertagih:years', ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+        $years = ApiCacheManager::remember('admin:data-tertagih:years', ApiCacheManager::dataTtl(), static function () {
             return DataTertagih::select('year')
                 ->distinct()
                 ->orderBy('year', 'desc')

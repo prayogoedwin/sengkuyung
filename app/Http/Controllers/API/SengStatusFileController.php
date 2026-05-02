@@ -16,9 +16,9 @@ class SengStatusFileController extends Controller
     {
         $status = (string) $request->input('status', '');
         $cacheSuffix = $status !== '' ? $status : 'all';
-        $cacheKey = 'api:seng-status-file:index:' . $cacheSuffix;
+        $cacheKey = 'api:master:status-file:index:' . $cacheSuffix;
 
-        $data = ApiCacheManager::remember($cacheKey, ApiCacheManager::DEFAULT_TTL_SECONDS, static function () use ($status) {
+        $data = ApiCacheManager::remember($cacheKey, ApiCacheManager::masterTtl(), static function () use ($status) {
             $query = SengStatusFile::query();
 
             if ($status !== '') {

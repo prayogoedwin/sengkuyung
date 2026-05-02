@@ -32,14 +32,14 @@ class PelaporanController extends Controller
 
         if ($isKabkota && !empty($user->kota)) {
             $selectedKabkotaId = (string) $user->kota;
-            $kabkotas = ApiCacheManager::remember('admin:master:kabkota:pelaporan-scope:' . (string) $user->kota, ApiCacheManager::DEFAULT_TTL_SECONDS, static function () use ($user) {
+            $kabkotas = ApiCacheManager::remember('admin:master:kabkota:pelaporan-scope:' . (string) $user->kota, ApiCacheManager::masterTtl(), static function () use ($user) {
                 return SengWilayah::query()
                     ->where('id_up', 33)
                     ->where('id', $user->kota)
                     ->get();
             });
         } else {
-            $kabkotas = ApiCacheManager::remember('admin:master:kabkota:all', ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+            $kabkotas = ApiCacheManager::remember('admin:master:kabkota:all', ApiCacheManager::masterTtl(), static function () {
                 return SengWilayah::query()
                     ->where('id_up', 33)
                     ->get();

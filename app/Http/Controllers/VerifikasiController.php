@@ -172,11 +172,11 @@ class VerifikasiController extends Controller
 
         }
 
-        $status_verifikasis = ApiCacheManager::remember('admin:master:status-verifikasi:all', ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+        $status_verifikasis = ApiCacheManager::remember('admin:master:status-verifikasi:all', ApiCacheManager::masterTtl(), static function () {
             return SengStatusVerifikasi::select('*')->get();
         });
 
-        $kabkotas = ApiCacheManager::remember('admin:master:kabkota:all', ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+        $kabkotas = ApiCacheManager::remember('admin:master:kabkota:all', ApiCacheManager::masterTtl(), static function () {
             return SengWilayah::select('*')
                 ->where('id_up', 33)
                 ->get();

@@ -97,13 +97,13 @@ class BackController extends Controller
         ];
     
         // Ambil data status verifikasi dan wilayah
-        $statuss = ApiCacheManager::remember('admin:master:status:all', ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+        $statuss = ApiCacheManager::remember('admin:master:status:all', ApiCacheManager::masterTtl(), static function () {
             return SengStatus::all();
         });
-        $kabkotas = ApiCacheManager::remember('admin:master:kabkota:all', ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+        $kabkotas = ApiCacheManager::remember('admin:master:kabkota:all', ApiCacheManager::masterTtl(), static function () {
             return SengWilayah::where('id_up', 33)->get();
         });
-        $samsats = ApiCacheManager::remember('admin:master:wilayah-samsat:all', ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+        $samsats = ApiCacheManager::remember('admin:master:wilayah-samsat:all', ApiCacheManager::masterTtl(), static function () {
             return WilayahSamsat::select('id', 'nama', 'kabkota')->orderBy('nama')->get();
         });
     

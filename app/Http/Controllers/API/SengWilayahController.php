@@ -23,8 +23,8 @@ class SengWilayahController extends Controller
         }
 
         $cacheSuffix = $kode !== '' ? $kode : 'root';
-        $cacheKey = 'api:seng-wilayah:index:' . $cacheSuffix;
-        $data = ApiCacheManager::remember($cacheKey, ApiCacheManager::DEFAULT_TTL_SECONDS, static function () use ($kode) {
+        $cacheKey = 'api:master:wilayah:index:' . $cacheSuffix;
+        $data = ApiCacheManager::remember($cacheKey, ApiCacheManager::masterTtl(), static function () use ($kode) {
             $query = SengWilayah::query();
 
             if ($kode !== '') {

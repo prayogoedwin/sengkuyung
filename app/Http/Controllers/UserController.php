@@ -118,20 +118,20 @@ class UserController extends Controller
             ->get();
 
         if (in_array($userRoleId, [4, 5, 6], true)) {
-            $kabkotas = ApiCacheManager::remember('admin:master:kabkota:role-scope:' . (string) $userKotaId, ApiCacheManager::DEFAULT_TTL_SECONDS, static function () use ($userKotaId) {
+            $kabkotas = ApiCacheManager::remember('admin:master:kabkota:role-scope:' . (string) $userKotaId, ApiCacheManager::masterTtl(), static function () use ($userKotaId) {
                 return SengWilayah::select('*')
                     ->where('id', $userKotaId)
                     ->get();
             });
         } else {
-            $kabkotas = ApiCacheManager::remember('admin:master:kabkota:all', ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+            $kabkotas = ApiCacheManager::remember('admin:master:kabkota:all', ApiCacheManager::masterTtl(), static function () {
                 return SengWilayah::select('*')
                     ->where('id_up', 33)
                     ->get();
             });
         }
 
-        $samsats = ApiCacheManager::remember('admin:master:wilayah-samsat:all-full', ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+        $samsats = ApiCacheManager::remember('admin:master:wilayah-samsat:all-full', ApiCacheManager::masterTtl(), static function () {
             return WilayahSamsat::select('*')->get();
         });
 

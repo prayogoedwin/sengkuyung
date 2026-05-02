@@ -14,8 +14,8 @@ class SengStatusController extends Controller
 {
     public function index(Request $request)
     {
-        $cacheKey = 'api:seng-status:index';
-        $data = ApiCacheManager::remember($cacheKey, ApiCacheManager::DEFAULT_TTL_SECONDS, static function () {
+        $cacheKey = 'api:master:status:index';
+        $data = ApiCacheManager::remember($cacheKey, ApiCacheManager::masterTtl(), static function () {
             return SengStatus::whereNotIn('id', [8, 9])->get();
         });
     

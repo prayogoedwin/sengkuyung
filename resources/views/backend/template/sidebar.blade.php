@@ -114,7 +114,7 @@
                 </a>
             </li>
 
-            <li class="menu-item {{ request()->routeIs('perbandingan-kode-wilayah.index') ? 'active' : '' }}">
+            <li class="menu-item {{ request()->routeIs('perbandingan-kode-wilayah.index') ? 'active' : '' }}" hidden>
                 <a href="{{ route('perbandingan-kode-wilayah.index') }}" class="menu-link">
                     <i class="menu-icon tf-icons bx bx-git-compare"></i>
                     <div data-i18n="Analytics">Perbandingan Kode Wilayah</div>
@@ -126,7 +126,7 @@
 
             @if (!$isWilayahLower)
                 @if ($isUptd)
-                <li class="menu-item {{ request()->routeIs('perbandingan-kode-wilayah.index') ? 'active' : '' }}">
+                <li class="menu-item {{ request()->routeIs('perbandingan-kode-wilayah.index') ? 'active' : '' }}" hidden>
                     <a href="{{ route('perbandingan-kode-wilayah.index') }}" class="menu-link">
                         <i class="menu-icon tf-icons bx bx-git-compare"></i>
                         <div data-i18n="Analytics">Perbandingan Kode Wilayah</div>

@@ -167,6 +167,169 @@ class ApiDocs
     {
     }
 
+    #[OA\Get(
+        path: 'api/status',
+        tags: ['API Master'],
+        summary: 'Master: daftar status pendataan (kendaraan)',
+        description: 'Data referensi status. Di server di-cache (grup `api:master:`, TTL default 24 jam; atur lewat `CACHE_TTL_MASTER_SECONDS`). ID di response di-encode.',
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Berhasil',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'List data ditemukan'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(
+                                properties: [
+                                    new OA\Property(property: 'id', type: 'string', example: 'abc123', description: 'ID terenkode'),
+                                    new OA\Property(property: 'nama', type: 'string', example: 'DIMILIKI'),
+                                ],
+                                type: 'object'
+                            )
+                        ),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+        ]
+    )]
+    public function apiMasterStatus()
+    {
+    }
+
+    #[OA\Get(
+        path: 'api/status-verifikasi',
+        tags: ['API Master'],
+        summary: 'Master: daftar status verifikasi',
+        description: 'Data referensi status verifikasi. Di server di-cache (grup `api:master:`, TTL default 24 jam).',
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Berhasil',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'List data ditemukan'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(
+                                properties: [
+                                    new OA\Property(property: 'id', type: 'string', description: 'ID terenkode'),
+                                    new OA\Property(property: 'nama', type: 'string', example: 'MENUNGGU VERIFIKASI'),
+                                ],
+                                type: 'object'
+                            )
+                        ),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+        ]
+    )]
+    public function apiMasterStatusVerifikasi()
+    {
+    }
+
+    #[OA\Get(
+        path: 'api/wilayah',
+        tags: ['API Master'],
+        summary: 'Master: hierarki wilayah',
+        description: 'Tanpa query `kode`: daftar root (biasanya provinsi/konteks aplikasi). Dengan `kode`: anak wilayah berdasarkan `id_up`. Di server di-cache per kombinasi parameter (grup `api:master:wilayah:`, TTL default 24 jam).',
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(
+                name: 'kode',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string'),
+                description: 'Opsional. ID parent untuk filter `id_up`. Kosong = daftar root.'
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Berhasil',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'List data ditemukan: Semua wilayah'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(
+                                properties: [
+                                    new OA\Property(property: 'id', type: 'integer', example: 33),
+                                    new OA\Property(property: 'kode', type: 'string', nullable: true),
+                                    new OA\Property(property: 'nama', type: 'string', example: 'JAWA TENGAH'),
+                                    new OA\Property(property: 'id_up', type: 'integer', nullable: true),
+                                    new OA\Property(property: 'kode_samsat', type: 'string', nullable: true),
+                                ],
+                                type: 'object'
+                            )
+                        ),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+        ]
+    )]
+    public function apiMasterWilayah()
+    {
+    }
+
+    #[OA\Get(
+        path: 'api/status-file',
+        tags: ['API Master'],
+        summary: 'Master: template/daftar file per status pendataan',
+        description: 'Filter opsional `status` (encoded id status). Di server di-cache per nilai filter (grup `api:master:status-file:`, TTL default 24 jam).',
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(
+                name: 'status',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string'),
+                description: 'Opsional. Encoded ID status untuk filter `id_status`. Kosong = semua.'
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Berhasil',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'List data ditemukan'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(
+                                properties: [
+                                    new OA\Property(property: 'nama_file', type: 'string'),
+                                    new OA\Property(property: 'type_file', type: 'string'),
+                                    new OA\Property(property: 'ukuran_file', type: 'string', nullable: true),
+                                    new OA\Property(property: 'keterangan_file', type: 'string', nullable: true),
+                                ],
+                                type: 'object'
+                            )
+                        ),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+        ]
+    )]
+    public function apiMasterStatusFile()
+    {
+    }
+
     #[OA\Post(
         path: 'api/data-tertagih/list',
         tags: ['Data Tertagih'],

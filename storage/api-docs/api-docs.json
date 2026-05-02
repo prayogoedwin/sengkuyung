@@ -307,6 +307,271 @@
                 ]
             }
         },
+        "api/status": {
+            "get": {
+                "tags": [
+                    "API Master"
+                ],
+                "summary": "Master: daftar status pendataan (kendaraan)",
+                "description": "Data referensi status. Di server di-cache (grup `api:master:`, TTL default 24 jam; atur lewat `CACHE_TTL_MASTER_SECONDS`). ID di response di-encode.",
+                "operationId": "0697fd8c3a5b339445391d88442145fb",
+                "responses": {
+                    "200": {
+                        "description": "Berhasil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "List data ditemukan"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "description": "ID terenkode",
+                                                        "type": "string",
+                                                        "example": "abc123"
+                                                    },
+                                                    "nama": {
+                                                        "type": "string",
+                                                        "example": "DIMILIKI"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "api/status-verifikasi": {
+            "get": {
+                "tags": [
+                    "API Master"
+                ],
+                "summary": "Master: daftar status verifikasi",
+                "description": "Data referensi status verifikasi. Di server di-cache (grup `api:master:`, TTL default 24 jam).",
+                "operationId": "3ba8af8ec7af75c82783ae79d29ed1e1",
+                "responses": {
+                    "200": {
+                        "description": "Berhasil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "List data ditemukan"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "description": "ID terenkode",
+                                                        "type": "string"
+                                                    },
+                                                    "nama": {
+                                                        "type": "string",
+                                                        "example": "MENUNGGU VERIFIKASI"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "api/wilayah": {
+            "get": {
+                "tags": [
+                    "API Master"
+                ],
+                "summary": "Master: hierarki wilayah",
+                "description": "Tanpa query `kode`: daftar root (biasanya provinsi/konteks aplikasi). Dengan `kode`: anak wilayah berdasarkan `id_up`. Di server di-cache per kombinasi parameter (grup `api:master:wilayah:`, TTL default 24 jam).",
+                "operationId": "11e1fe98f204311a8fe9425a1069b7a5",
+                "parameters": [
+                    {
+                        "name": "kode",
+                        "in": "query",
+                        "description": "Opsional. ID parent untuk filter `id_up`. Kosong = daftar root.",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Berhasil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "List data ditemukan: Semua wilayah"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 33
+                                                    },
+                                                    "kode": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "nama": {
+                                                        "type": "string",
+                                                        "example": "JAWA TENGAH"
+                                                    },
+                                                    "id_up": {
+                                                        "type": "integer",
+                                                        "nullable": true
+                                                    },
+                                                    "kode_samsat": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "api/status-file": {
+            "get": {
+                "tags": [
+                    "API Master"
+                ],
+                "summary": "Master: template/daftar file per status pendataan",
+                "description": "Filter opsional `status` (encoded id status). Di server di-cache per nilai filter (grup `api:master:status-file:`, TTL default 24 jam).",
+                "operationId": "3b95dd816c9f0aa9218edb627d47e05b",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Opsional. Encoded ID status untuk filter `id_status`. Kosong = semua.",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Berhasil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "List data ditemukan"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "nama_file": {
+                                                        "type": "string"
+                                                    },
+                                                    "type_file": {
+                                                        "type": "string"
+                                                    },
+                                                    "ukuran_file": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "keterangan_file": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "api/data-tertagih/list": {
             "post": {
                 "tags": [
@@ -1025,6 +1290,10 @@
         {
             "name": "Auth",
             "description": "Auth"
+        },
+        {
+            "name": "API Master",
+            "description": "API Master"
         },
         {
             "name": "Data Tertagih",

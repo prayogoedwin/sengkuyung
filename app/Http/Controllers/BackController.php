@@ -16,8 +16,7 @@ class BackController extends Controller
 
     public function index(Request $request)
     {
-        $scope = $this->canonicalDashboardStatsScope($request);
-        $cacheKey = 'admin:dashboard:stats:' . md5(json_encode($scope));
+        $cacheKey = $this->readableDashboardStatsCacheKey($request);
 
         $data = ApiCacheManager::remember($cacheKey, ApiCacheManager::dashboardTtl(), function () use ($request) {
             $verifikasis = SengPendataanKendaraan::query();
@@ -110,6 +109,56 @@ class BackController extends Controller
         }
 
         return $scope;
+    }
+
+    /**
+     * Kunci cache yang bisa dibaca di menu Kelola Cache: berisi nilai param yang dipakai query
+     * (bukan hash saja). Jika kombinasi sangat panjang, ditambah sufiks __h_{md5} supaya tetap unik.
+     */
+    private function readableDashboardStatsCacheKey(Request $request): string
+    {
+        $scope = $this->canonicalDashboardStatsScope($request);
+
+        $parts = [];
+        $seg = static function (string $label, string $value): string {
+            $safe = preg_replace('/[^a-zA-Z0-9._@-]/', '_', $value);
+
+            return $label . '_' . $safe;
+        };
+
+        if ($scope['kota_dagri'] !== null && $scope['kota_dagri'] !== '') {
+            $parts[] = $seg('kabkota', (string) $scope['kota_dagri']);
+        }
+        if ($scope['created_by'] !== null) {
+            $parts[] = 'petugas_user_' . (int) $scope['created_by'];
+        }
+        if ($scope['kota_layanan'] !== null && $scope['kota_layanan'] !== '') {
+            $parts[] = $seg('lokasi_samsat', (string) $scope['kota_layanan']);
+        }
+        if ($scope['kec'] !== null && $scope['kec'] !== '') {
+            $parts[] = $seg('kecamatan_samsat', (string) $scope['kec']);
+        }
+        if ($scope['desa'] !== null && $scope['desa'] !== '') {
+            $parts[] = $seg('kelurahan_samsat', (string) $scope['desa']);
+        }
+        if ($scope['status_verifikasi'] !== null && $scope['status_verifikasi'] !== '') {
+            $parts[] = $seg('status_verifikasi', (string) $scope['status_verifikasi']);
+        }
+        if ($scope['periode'] !== null) {
+            $start = (string) $scope['periode']['start'];
+            $end = (string) $scope['periode']['end'];
+            $parts[] = 'tanggal_' . preg_replace('/[^0-9-]/', '_', $start) . '_sampai_' . preg_replace('/[^0-9-]/', '_', $end);
+        }
+
+        $body = count($parts) > 0 ? implode('__', $parts) : 'tanpa_filter';
+        $prefix = 'admin:dashboard:stats:';
+        $full = $prefix . $body;
+
+        if (strlen($full) > 220) {
+            return $prefix . substr($body, 0, 160) . '__h_' . md5(json_encode($scope));
+        }
+
+        return $full;
     }
 
     private function applyDashboardFiltersToQuery($verifikasis, Request $request): void

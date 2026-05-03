@@ -19,18 +19,37 @@ use App\Support\ApiCacheManager;
 // class UserController extends Controller implements HasMiddleware
 class UserController extends Controller 
 {
+    private function getCurrentUserRoleName(): string
+    {
+        return strtolower((string) optional(Auth::user()->roles->first())->name);
+    }
+
+    private function roleIdsByNames(array $names): array
+    {
+        if (empty($names)) {
+            return [];
+        }
+
+        return Role::query()
+            ->whereIn('name', $names)
+            ->pluck('id')
+            ->map(static fn ($id) => (int) $id)
+            ->all();
+    }
+
     private function getCurrentUserRoleId(): ?int
     {
         return Auth::user()->roles[0]->id ?? null;
     }
 
-    private function getAllowedRoleIdsByCreator(?int $creatorRoleId): array
+    private function getAllowedRoleIdsByCreator(string $creatorRoleName): array
     {
-        return match ($creatorRoleId) {
-            4 => [5, 6, 7], // kabkota -> kecamatan, kelurahan, petugas
-            5 => [6, 7],    // kecamatan -> kelurahan, petugas
-            6 => [7],       // kelurahan -> petugas
-            default => [2, 3, 4, 5, 6, 7],
+        return match ($creatorRoleName) {
+            'uptd', 'uppd' => $this->roleIdsByNames(['kabkota', 'kecamatan', 'kelurahan', 'petugas']),
+            'kabkota' => $this->roleIdsByNames(['kecamatan', 'kelurahan', 'petugas']),
+            'kecamatan' => $this->roleIdsByNames(['kelurahan', 'petugas']),
+            'kelurahan' => $this->roleIdsByNames(['petugas']),
+            default => $this->roleIdsByNames(['admin', 'uptd', 'uppd', 'kabkota', 'kecamatan', 'kelurahan', 'petugas']),
         };
     }
 
@@ -42,10 +61,14 @@ class UserController extends Controller
     // }
     public function index(Request $request)
     {
-
         $userId = Auth::user()->id ?? null;
         $userRoleId = $this->getCurrentUserRoleId();
+        $userRoleName = $this->getCurrentUserRoleName();
         $userKotaId = Auth::user()->kota ?? null;
+        $isUptdScope = in_array($userRoleName, ['uptd', 'uppd'], true);
+        $isKabkotaScope = $userRoleName === 'kabkota';
+        $isKecamatanScope = $userRoleName === 'kecamatan';
+        $isKelurahanScope = $userRoleName === 'kelurahan';
 
         if ($request->ajax()) {
             // $users = User::select('*')->where('email != ');
@@ -67,15 +90,15 @@ class UserController extends Controller
             }
 
             // Jika role-nya 4, filter berdasarkan kota milik user
-            if ($userRoleId == 4) {
+            if ($isUptdScope) {
                 $usersQuery->where('kota', $userKotaId);
                 $usersQuery->whereHas('roles', function ($q) {
-                    $q->where('id', 7);
+                    $q->whereIn('name', ['kabkota', 'kecamatan', 'kelurahan', 'petugas']);
                 });
             }
 
-             // Jika role-nya 4, filter berdasarkan kota milik user
-            if ($userRoleId != 4 && $userRoleId != 1 && $userRoleId != 2) {
+            // Untuk role wilayah lain, sembunyikan data di luar scope mereka.
+            if (!$isUptdScope && $userRoleId != 1 && $userRoleId != 2) {
                 $usersQuery->where('kota', 'KuotaMaya');
             }
 
@@ -112,12 +135,12 @@ class UserController extends Controller
                 ->make(true);
         }
 
-        $allowedRoleIds = $this->getAllowedRoleIdsByCreator($userRoleId);
+        $allowedRoleIds = $this->getAllowedRoleIdsByCreator($userRoleName);
         $roles = Role::select('id', 'name')
             ->whereIn('id', $allowedRoleIds)
             ->get();
 
-        if (in_array($userRoleId, [4, 5, 6], true)) {
+        if ($isUptdScope || $isKabkotaScope || $isKecamatanScope || $isKelurahanScope) {
             $kabkotas = ApiCacheManager::remember('admin:master:kabkota:role-scope:' . (string) $userKotaId, ApiCacheManager::masterTtl(), static function () use ($userKotaId) {
                 return SengWilayah::select('*')
                     ->where('id', $userKotaId)
@@ -175,8 +198,12 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $creator = Auth::user();
-        $creatorRoleId = $this->getCurrentUserRoleId();
-        $allowedRoleIds = $this->getAllowedRoleIdsByCreator($creatorRoleId);
+        $creatorRoleName = $this->getCurrentUserRoleName();
+        $allowedRoleIds = $this->getAllowedRoleIdsByCreator($creatorRoleName);
+        $isUptdCreator = in_array($creatorRoleName, ['uptd', 'uppd'], true);
+        $isKabkotaCreator = $creatorRoleName === 'kabkota';
+        $isKecamatanCreator = $creatorRoleName === 'kecamatan';
+        $isKelurahanCreator = $creatorRoleName === 'kelurahan';
 
         // Validasi input
         $validator = Validator::make($request->all(), [
@@ -252,6 +279,13 @@ class UserController extends Controller
             $uptdId = null;
             $kecamatanKemendagri = $request->kecamatan_samsat;
             $kelurahanKemendagri = $isKelurahanOrPetugasRole ? $request->kelurahan_samsat : null;
+
+            if ($isUptdCreator && (string) $kota !== (string) $creator->kota) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Akun UPPD hanya boleh membuat user di kabkota samsat miliknya.',
+                ], 403);
+            }
         }else{
             $kota = $request->kabkota_id;
             $uptdId = $request->uptd_id;
@@ -259,15 +293,15 @@ class UserController extends Controller
             $kelurahanKemendagri = $request->kelurahan;
         }
 
-        if (in_array($creatorRoleId, [4, 5, 6], true)) {
+        if ($isUptdCreator || $isKabkotaCreator || $isKecamatanCreator || $isKelurahanCreator) {
             $kota = $creator->kota;
         }
 
-        if (in_array($creatorRoleId, [5, 6], true) && !$isPetugasRole) {
+        if (($isKecamatanCreator || $isKelurahanCreator) && !$isPetugasRole) {
             $kecamatanKemendagri = $creator->kecamatan;
         }
 
-        if ($creatorRoleId === 6 && !$isPetugasRole) {
+        if ($isKelurahanCreator && !$isPetugasRole) {
             $kelurahanKemendagri = $creator->kelurahan;
         }
 

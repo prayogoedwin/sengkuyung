@@ -20,7 +20,7 @@
             $roleName = strtolower((string) optional($user->roles->first())->name);
             $isSuperAdmin = $user->hasRole('super-admin') || $user->hasRole('superadmin');
             $isAdminProv = $user->hasRole('admin') || $user->hasRole('adminprov');
-            $isUptd = $user->hasRole('uptd');
+            $isUptd = $user->hasRole('uptd') || $user->hasRole('uppd');
             $isKabkota = $user->hasRole('kabkota');
             $isKecamatan = $user->hasRole('kecamatan');
             $isKelurahan = $user->hasRole('kelurahan');
@@ -162,7 +162,7 @@
                 @endif
             @endif
 
-            @if ($isKabkota || $isKecamatan || $isKelurahan)
+            @if ($isUptd || $isKabkota || $isKecamatan || $isKelurahan)
             <li class="menu-item {{ request()->routeIs('user.index') ? 'active' : '' }}">
                 <a href="{{ route('user.index') }}" class="menu-link">
                     {{-- <i class="menu-icon tf-icons bx bx-home-circle"></i> --}}

@@ -9,6 +9,7 @@ use Illuminate\Routing\Controllers\Middleware;
 use Spatie\Permission\Models\Role;
 use App\Models\SengWilayah;
 use App\Models\WilayahSamsat;
+use App\Models\SengWilayahKel;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
@@ -107,26 +108,55 @@ class UserController extends Controller
 
             // Kecamatan: tampilkan user kelurahan/petugas pada kecamatan yang sama.
             if ($isKecamatanScope) {
+                $currentKecamatanSamsat = $user->kecamatan_samsat ?: $user->kecamatan;
+                $kelurahanIdsInKecamatan = [];
+                if (!empty($currentKecamatanSamsat)) {
+                    $kelurahanIdsInKecamatan = SengWilayahKel::query()
+                        ->where('id_kecamatan', $currentKecamatanSamsat)
+                        ->pluck('id_kelurahan')
+                        ->map(static fn ($id) => (string) $id)
+                        ->all();
+                }
+
                 $usersQuery->where('kota', $userKotaId);
-                $usersQuery->where(function ($query) use ($user) {
-                    $query->where('kecamatan', $user->kecamatan)
-                        ->orWhere('kecamatan_samsat', $user->kecamatan_samsat);
-                });
-                $usersQuery->whereHas('roles', function ($q) {
-                    $q->whereIn('name', ['kelurahan', 'petugas']);
+                $usersQuery->where(function ($query) use ($currentKecamatanSamsat, $kelurahanIdsInKecamatan) {
+                    $query->where(function ($sub) use ($currentKecamatanSamsat) {
+                        $sub->whereHas('roles', function ($roleQuery) {
+                            $roleQuery->where('name', 'kelurahan');
+                        });
+
+                        if (!empty($currentKecamatanSamsat)) {
+                            $sub->where('kecamatan_samsat', $currentKecamatanSamsat);
+                        } else {
+                            $sub->whereRaw('1 = 0');
+                        }
+                    })->orWhere(function ($sub) use ($kelurahanIdsInKecamatan) {
+                        $sub->whereHas('roles', function ($roleQuery) {
+                            $roleQuery->where('name', 'petugas');
+                        });
+
+                        if (!empty($kelurahanIdsInKecamatan)) {
+                            $sub->whereIn('kelurahan_samsat', $kelurahanIdsInKecamatan);
+                        } else {
+                            $sub->whereRaw('1 = 0');
+                        }
+                    });
                 });
             }
 
             // Kelurahan: tampilkan user petugas pada kelurahan yang sama.
             if ($isKelurahanScope) {
+                $currentKelurahanSamsat = $user->kelurahan_samsat ?: $user->kelurahan;
                 $usersQuery->where('kota', $userKotaId);
-                $usersQuery->where(function ($query) use ($user) {
-                    $query->where('kelurahan', $user->kelurahan)
-                        ->orWhere('kelurahan_samsat', $user->kelurahan_samsat);
-                });
                 $usersQuery->whereHas('roles', function ($q) {
                     $q->where('name', 'petugas');
                 });
+
+                if (!empty($currentKelurahanSamsat)) {
+                    $usersQuery->where('kelurahan_samsat', $currentKelurahanSamsat);
+                } else {
+                    $usersQuery->whereRaw('1 = 0');
+                }
             }
 
             if ($request->filled('role_name')) {
@@ -198,7 +228,7 @@ class UserController extends Controller
         });
 
        
-        return view('backend.users.index',  compact('roles', 'kabkotas', 'samsats'));
+        return view('backend.users.index',  compact('roles', 'kabkotas', 'samsats', 'userRoleName'));
     }
 
      public function ganti_password(Request $request)

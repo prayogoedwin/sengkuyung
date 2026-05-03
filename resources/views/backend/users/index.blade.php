@@ -19,10 +19,15 @@
                                                     <label for="filterRole" class="mb-0">Filter Role</label>
                                                     <select class="form-control form-control-sm" id="filterRole" style="max-width: 220px;">
                                                         <option value="">Semua Role</option>
-                                                        <option value="kabkota">Kabkota</option>
-                                                        <option value="kecamatan">Kecamatan</option>
-                                                        <option value="kelurahan">Kelurahan</option>
-                                                        <option value="petugas">Petugas</option>
+                                                        @if (in_array($userRoleName ?? '', ['super-admin', 'superadmin', 'admin', 'uptd', 'uppd', 'kabkota'], true))
+                                                            <option value="kecamatan">Kecamatan</option>
+                                                        @endif
+                                                        @if (in_array($userRoleName ?? '', ['super-admin', 'superadmin', 'admin', 'uptd', 'uppd', 'kabkota', 'kecamatan'], true))
+                                                            <option value="kelurahan">Kelurahan</option>
+                                                        @endif
+                                                        @if (in_array($userRoleName ?? '', ['super-admin', 'superadmin', 'admin', 'uptd', 'uppd', 'kabkota', 'kecamatan', 'kelurahan'], true))
+                                                            <option value="petugas">Petugas</option>
+                                                        @endif
                                                     </select>
                                                 </div>
                                             </div>

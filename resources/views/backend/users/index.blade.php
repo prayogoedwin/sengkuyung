@@ -243,6 +243,35 @@
                                     @endforeach
                                 </select>
                             </div>
+
+                            <div class="mb-3">
+                                <label for="editKabkota" class="form-label">Kabkota</label>
+                                <input type="text" class="form-control" id="editKabkota" disabled>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editLokasiSamsat" class="form-label">Lokasi Samsat</label>
+                                <input type="text" class="form-control" id="editLokasiSamsat" disabled>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editKecamatanSamsat" class="form-label">Kecamatan Samsat</label>
+                                <input type="text" class="form-control" id="editKecamatanSamsat" disabled>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editKelurahanSamsat" class="form-label">Kelurahan Samsat</label>
+                                <input type="text" class="form-control" id="editKelurahanSamsat" disabled>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editRw" class="form-label">RW</label>
+                                <input type="text" class="form-control" id="editRw" disabled>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editRt" class="form-label">RT</label>
+                                <input type="text" class="form-control" id="editRt" disabled>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editAlamatLengkap" class="form-label">Alamat Lengkap</label>
+                                <input type="text" class="form-control" id="editAlamatLengkap" disabled>
+                            </div>
                             <button type="submit" class="btn btn-primary" onclick="updateUser()">Save Changes</button>
                         </form>
                     </div>
@@ -477,6 +506,19 @@
         function showEditModal(adminId) {
             // alert('a');
             var detailUrl = "{{ route('user.detail', ':id') }}".replace(':id', adminId);
+
+            function getKabkotaLabel(kotaId) {
+                if (!kotaId) return '-';
+                const option = $('#userKabkota option[value="' + kotaId + '"]');
+                return option.length ? option.text() : String(kotaId);
+            }
+
+            function getSamsatLabel(lokasiSamsatId) {
+                if (!lokasiSamsatId) return '-';
+                const option = $('#userSamsat option[value="' + lokasiSamsatId + '"]');
+                return option.length ? option.text() : String(lokasiSamsatId);
+            }
+
             $.ajax({
                 url: detailUrl,
                 type: 'GET',
@@ -497,6 +539,14 @@
                     } else {
                         $('#editRole').val(''); // Kosongkan jika tidak ada peran
                     }
+
+                    $('#editKabkota').val(getKabkotaLabel(user.kota));
+                    $('#editLokasiSamsat').val(getSamsatLabel(user.lokasi_samsat));
+                    $('#editKecamatanSamsat').val(user.kecamatan_samsat || '-');
+                    $('#editKelurahanSamsat').val(user.kelurahan_samsat || '-');
+                    $('#editRw').val(user.rw || '-');
+                    $('#editRt').val(user.rt || '-');
+                    $('#editAlamatLengkap').val(user.alamat_lengkap || '-');
 
                     // Tampilkan modal edit
                     $('#modal-edit').modal('show');

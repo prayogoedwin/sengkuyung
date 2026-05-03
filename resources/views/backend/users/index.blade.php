@@ -15,7 +15,16 @@
                                     <div class="card-body">
                                         <div class="row align-items-center m-l-0">
                                             <div class="col-sm-6">
-
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <label for="filterRole" class="mb-0">Filter Role</label>
+                                                    <select class="form-control form-control-sm" id="filterRole" style="max-width: 220px;">
+                                                        <option value="">Semua Role</option>
+                                                        <option value="kabkota">Kabkota</option>
+                                                        <option value="kecamatan">Kecamatan</option>
+                                                        <option value="kelurahan">Kelurahan</option>
+                                                        <option value="petugas">Petugas</option>
+                                                    </select>
+                                                </div>
                                             </div>
                                             <div class="col-sm-6 text-end">
                                                 <button class="btn btn-success btn-sm btn-round has-ripple"
@@ -284,10 +293,15 @@
 @push('js')
     <script>
         $(document).ready(function() {
-            $('#simpletable').DataTable({
+            var userTable = $('#simpletable').DataTable({
                 processing: true,
                 serverSide: true,
-                ajax: '{{ route('user.index') }}',
+                ajax: {
+                    url: '{{ route('user.index') }}',
+                    data: function(d) {
+                        d.role_name = $('#filterRole').val();
+                    }
+                },
                 autoWidth: false, // Menonaktifkan auto-width
                 columns: [{
                         data: 'DT_RowIndex',
@@ -312,6 +326,10 @@
                         searchable: false
                     },
                 ]
+            });
+
+            $('#filterRole').on('change', function() {
+                userTable.ajax.reload();
             });
         });
     </script>

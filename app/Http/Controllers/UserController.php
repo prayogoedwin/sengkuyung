@@ -84,12 +84,12 @@ class UserController extends Controller
                 'ucitech13@gmail.com'
             ]);
 
-            // Jika role-nya 4, filter berdasarkan kota milik user
+            // Role petugas hanya boleh melihat akun dirinya sendiri.
             if ($userRoleId == 7) {
                 $usersQuery->where('id', $userId);
             }
 
-            // Jika role-nya 4, filter berdasarkan kota milik user
+            // UPTD/UPPD: tampilkan turunan di kabkota milik akun.
             if ($isUptdScope) {
                 $usersQuery->where('kota', $userKotaId);
                 $usersQuery->whereHas('roles', function ($q) {
@@ -97,8 +97,47 @@ class UserController extends Controller
                 });
             }
 
-            // Untuk role wilayah lain, sembunyikan data di luar scope mereka.
-            if (!$isUptdScope && $userRoleId != 1 && $userRoleId != 2) {
+            // Kabkota: tampilkan user kecamatan/kelurahan/petugas pada kabkota yang sama.
+            if ($isKabkotaScope) {
+                $usersQuery->where('kota', $userKotaId);
+                $usersQuery->whereHas('roles', function ($q) {
+                    $q->whereIn('name', ['kecamatan', 'kelurahan', 'petugas']);
+                });
+            }
+
+            // Kecamatan: tampilkan user kelurahan/petugas pada kecamatan yang sama.
+            if ($isKecamatanScope) {
+                $usersQuery->where('kota', $userKotaId);
+                $usersQuery->where(function ($query) use ($user) {
+                    $query->where('kecamatan', $user->kecamatan)
+                        ->orWhere('kecamatan_samsat', $user->kecamatan_samsat);
+                });
+                $usersQuery->whereHas('roles', function ($q) {
+                    $q->whereIn('name', ['kelurahan', 'petugas']);
+                });
+            }
+
+            // Kelurahan: tampilkan user petugas pada kelurahan yang sama.
+            if ($isKelurahanScope) {
+                $usersQuery->where('kota', $userKotaId);
+                $usersQuery->where(function ($query) use ($user) {
+                    $query->where('kelurahan', $user->kelurahan)
+                        ->orWhere('kelurahan_samsat', $user->kelurahan_samsat);
+                });
+                $usersQuery->whereHas('roles', function ($q) {
+                    $q->where('name', 'petugas');
+                });
+            }
+
+            if ($request->filled('role_name')) {
+                $roleName = strtolower((string) $request->role_name);
+                $usersQuery->whereHas('roles', function ($q) use ($roleName) {
+                    $q->whereRaw('LOWER(name) = ?', [$roleName]);
+                });
+            }
+
+            // Untuk role tidak dikenali, sembunyikan data.
+            if (!$isUptdScope && !$isKabkotaScope && !$isKecamatanScope && !$isKelurahanScope && $userRoleId != 1 && $userRoleId != 2 && $userRoleId != 7) {
                 $usersQuery->where('kota', 'KuotaMaya');
             }
 

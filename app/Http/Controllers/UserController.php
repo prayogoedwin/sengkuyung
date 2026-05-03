@@ -62,10 +62,11 @@ class UserController extends Controller
     // }
     public function index(Request $request)
     {
-        $userId = Auth::user()->id ?? null;
+        $user = Auth::user();
+        $userId = $user->id ?? null;
         $userRoleId = $this->getCurrentUserRoleId();
         $userRoleName = $this->getCurrentUserRoleName();
-        $userKotaId = Auth::user()->kota ?? null;
+        $userKotaId = $user->kota ?? null;
         $isUptdScope = in_array($userRoleName, ['uptd', 'uppd'], true);
         $isKabkotaScope = $userRoleName === 'kabkota';
         $isKecamatanScope = $userRoleName === 'kecamatan';

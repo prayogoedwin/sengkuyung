@@ -22,7 +22,7 @@
         <p>Menerangkan bahwa Kendaraan:<br>
         Nomor Polisi&nbsp;&nbsp;&nbsp;: {{ $no_polisi }}<br>
         Merk/Tipe&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: {{ $merk }} / {{ $tipe }}<br>
-        Adalah benar telah berganti kepemilikan</p>
+        Adalah benar {{ $nama_tipe }}</p>
 
         <p>Demikian surat keterangan dibuat untuk dipergunakan sebagaimana mestinya</p>
     </div>

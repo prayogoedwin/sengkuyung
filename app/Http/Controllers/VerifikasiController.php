@@ -240,6 +240,7 @@ class VerifikasiController extends Controller
         ->orderBy('created_at', 'desc')
         ->get();
 
+        $name_tipe = Helper::getTipe($request->tipe);
         $html = null;
         if($data->status == 2 || $data->status == 10){
             $data_html = [
@@ -250,6 +251,7 @@ class VerifikasiController extends Controller
                 'no_polisi' => $data->nopol,
                 'merk' => $data->merk,
                 'tipe' => $data->tipe,
+                'nama_tipe' => $name_tipe,
                 'tanggal' => now()->format('d F Y')
             ];
             $html = view('backend/html/surat_pernyataan', $data_html)->render();

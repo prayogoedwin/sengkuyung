@@ -184,6 +184,8 @@ class SengPendataanKendaraanController extends Controller
             // }
         }
 
+       
+
         $requestData = array_merge($request->all(), [
             'status' => $status->id,
             'status_name' => $status->nama,
@@ -219,6 +221,7 @@ class SengPendataanKendaraanController extends Controller
         $data->id = $encodedId;
 
         Helper::logActivity($request, $encodedId, 'POST', $responseData);
+        $name_tipe = Helper::getTipe($request->tipe);
 
         $html = null;
         if($dStatus == 2 || $dStatus == 10){
@@ -229,6 +232,7 @@ class SengPendataanKendaraanController extends Controller
                 'no_polisi' => $request->nopol,
                 'merk' => $request->merk,
                 'tipe' => $request->tipe,
+                'nama_tipe' => $name_tipe,
                 'nama_pembuat_pernyataan' => $request->nama_pembuat_pernyataan,
                 'tanggal' => now()->format('d F Y') // Format tanggal: 20 Februari 2025
             ];

@@ -187,6 +187,23 @@ class Helper
         ]);
     }
 
+
+    function getTipe(int $id): string
+    {
+        return match($id) {
+            1  => 'DIMILIKI',
+            2  => 'GANTI KEPEMILIKAN',
+            3  => 'RUSAK BERAT',
+            4  => 'HILANG',
+            5  => 'MENINGGAL DUNIA TANPA AHLI WARIS',
+            6  => 'MENUTUP USAHA / PAILIT',
+            7  => 'DICABUT REGISTRASINYA',
+            8  => 'TERKENA BENCANA ALAM',
+            9  => 'TIDAK PUNYA KEKAYAAN LAGI',
+            10 => 'TIDAK DIKETAHUI ALAMAT / KEDUDUKANNYA',
+            default => '-',
+        };
+    }
     // $safeRequestData = $request->except(['password', 'password_confirmation', '_token']);
     // Helper::logActivityCustom($request, $id, 'POST', $safeRequestData, $response);
 

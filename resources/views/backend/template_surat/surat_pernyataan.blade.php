@@ -39,7 +39,7 @@
         <p style="margin-top: 15px;">Menerangkan bahwa Kendaraan:</p>
         <p>Nomor Polisi : {{ $no_polisi }}</p>
         <p>Merk/Tipe : {{ $merk }} / {{ $tipe }}</p>
-        <p>Adalah benar telah berganti kepemilikan</p>
+        <p>Adalah benar telah {{ $nama_tipe }}</p>
         <p>Demikian surat keterangan dibuat untuk digunakan sebagaimana mestinya</p>
         
         <p style="text-align: center; margin-top: 30px;">{{ $kota }}, {{ $tanggal }}</p>

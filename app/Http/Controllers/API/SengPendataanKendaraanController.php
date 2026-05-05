@@ -221,7 +221,8 @@ class SengPendataanKendaraanController extends Controller
         $data->id = $encodedId;
 
         Helper::logActivity($request, $encodedId, 'POST', $responseData);
-        $name_tipe = Helper::getTipe($request->tipe);
+        // $name_tipe = Helper::getTipe($request->tipe);
+        $name_tipe = 'Ganti Kepemilikan / TDA';
 
         $html = null;
         if($dStatus == 2 || $dStatus == 10){

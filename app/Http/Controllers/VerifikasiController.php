@@ -240,7 +240,8 @@ class VerifikasiController extends Controller
         ->orderBy('created_at', 'desc')
         ->get();
 
-        $name_tipe = Helper::getTipe($request->tipe);
+        // $name_tipe = Helper::getTipe($request->tipe);
+        $name_tipe = 'Ganti Kepemilikan / TDA';
         $html = null;
         if($data->status == 2 || $data->status == 10){
             $data_html = [

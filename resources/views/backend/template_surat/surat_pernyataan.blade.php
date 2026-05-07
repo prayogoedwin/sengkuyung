@@ -27,7 +27,7 @@
     <h3>SURAT PERNYATAAN</h3>
     <div class="content">
         <p>Yang bertanda tangan di bawah ini:</p>
-        <p>Nama : {{ $nama }}</p>
+        <p>Nama : {{ $nama_pembuat_pernyataan }}</p>
         <p>Alamat : {{ $alamat }}</p>
         @if($desa)
         <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{{ $desa }}</p>
@@ -44,7 +44,7 @@
         
         <p style="text-align: center; margin-top: 30px;">{{ $kota }}, {{ $tanggal }}</p>
         <p style="text-align: center;">Yang Membuat Pernyataan</p>
-        <p style="text-align: center; margin-top: 60px;">{{ $nama }}</p>
+        <p style="text-align: center; margin-top: 60px;">{{ $nama_pembuat_pernyataan }}</p>
     </div>
 </body>
 </html>

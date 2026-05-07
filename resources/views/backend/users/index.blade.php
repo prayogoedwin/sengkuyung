@@ -122,7 +122,9 @@
                                         <select class="form-control" id="userUptd" name="uptd_id">
                                             <option value="">Pilih Samsat</option>
                                             @foreach ($samsats as $smst)
-                                                <option value="{{ $smst->id }}" data-kabkota="{{ $smst->kabkota }}">{{ $smst->nama }}</option>
+                                                <option value="{{ $smst->id_wilayah_samsat ?: $smst->id }}" data-kabkota="{{ $smst->kabkota }}">
+                                                    {{ $smst->lokasi ?: $smst->lokasi_singkat ?: $smst->id_wilayah_samsat ?: $smst->id }}
+                                                </option>
                                             @endforeach
                                         </select>
                                     </div>

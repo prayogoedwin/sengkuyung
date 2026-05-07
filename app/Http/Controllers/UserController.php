@@ -8,7 +8,7 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Spatie\Permission\Models\Role;
 use App\Models\SengWilayah;
-use App\Models\WilayahSamsat;
+use App\Models\SengSaamsat;
 use App\Models\SengWilayahKel;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Validator;
@@ -20,6 +20,37 @@ use App\Support\ApiCacheManager;
 // class UserController extends Controller implements HasMiddleware
 class UserController extends Controller 
 {
+    private function resolveSamsatContext(?string $selectedSamsatId): array
+    {
+        if (empty($selectedSamsatId)) {
+            return [
+                'kabkota' => null,
+                'lokasi_samsat' => null,
+                'uptd_id' => null,
+            ];
+        }
+
+        $samsat = SengSaamsat::query()
+            ->select('id', 'id_wilayah_samsat', 'kabkota')
+            ->where('id_wilayah_samsat', $selectedSamsatId)
+            ->orWhere('id', $selectedSamsatId)
+            ->first();
+
+        if ($samsat) {
+            return [
+                'kabkota' => $samsat->kabkota ? (string) $samsat->kabkota : null,
+                'lokasi_samsat' => $samsat->id_wilayah_samsat ? (string) $samsat->id_wilayah_samsat : (string) $samsat->id,
+                'uptd_id' => (string) $samsat->id,
+            ];
+        }
+
+        return [
+            'kabkota' => null,
+            'lokasi_samsat' => null,
+            'uptd_id' => null,
+        ];
+    }
+
     private function getCurrentUserRoleName(): string
     {
         return strtolower((string) optional(Auth::user()->roles->first())->name);
@@ -224,8 +255,10 @@ class UserController extends Controller
             });
         }
 
-        $samsats = ApiCacheManager::remember('admin:master:wilayah-samsat:all-full', ApiCacheManager::masterTtl(), static function () {
-            return WilayahSamsat::select('*')->get();
+        $samsats = ApiCacheManager::remember('admin:master:seng-samsat:all-full', ApiCacheManager::masterTtl(), static function () {
+            return SengSaamsat::select('id', 'id_wilayah_samsat', 'kabkota', 'lokasi', 'lokasi_singkat')
+                ->orderBy('lokasi')
+                ->get();
         });
 
        
@@ -304,14 +337,14 @@ class UserController extends Controller
 
         if ($isUptdRole) {
             $validator = Validator::make($request->all(), [
-                'uptd_id' => 'required|exists:wilayah_samsat,id',
+                'uptd_id' => 'required|string',
             ]);
 
             if ($validator->fails()) {
                 return response()->json(['success' => false, 'errors' => $validator->errors()]);
             }
 
-            $samsat = WilayahSamsat::find($request->uptd_id);
+            $samsatContext = $this->resolveSamsatContext((string) $request->uptd_id);
 
             $kota = $request->kabkota_id;
             $uptdId = $request->uptd_id;
@@ -319,8 +352,15 @@ class UserController extends Controller
             $kecamatanKemendagri = $request->district_id;
             $kelurahanKemendagri = $request->kelurahan;
 
-            if ($samsat) {
-                $kota = $samsat->kabkota;
+            if (!empty($samsatContext['kabkota'])) {
+                $kota = $samsatContext['kabkota'];
+                $lokasiSamsat = $samsatContext['lokasi_samsat'];
+                $uptdId = $samsatContext['uptd_id'];
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Mapping samsat tidak ditemukan. Pastikan data samsat memiliki kabkota yang valid.',
+                ], 422);
             }
         } elseif($isSamsatBasedRole){
             $rules = [

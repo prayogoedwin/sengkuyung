@@ -123,7 +123,10 @@
                                             <option value="">Pilih Samsat</option>
                                             @foreach ($samsats as $smst)
                                                 <option value="{{ $smst->id_wilayah_samsat ?: $smst->id }}" data-kabkota="{{ $smst->kabkota }}">
-                                                    {{ $smst->lokasi ?: $smst->lokasi_singkat ?: $smst->id_wilayah_samsat ?: $smst->id }}
+                                                    {{ $smst->lokasi ?: $smst->id_wilayah_samsat ?: $smst->id }}
+                                                    @if (!empty($smst->lokasi_singkat))
+                                                        ({{ $smst->lokasi_singkat }})
+                                                    @endif
                                                 </option>
                                             @endforeach
                                         </select>

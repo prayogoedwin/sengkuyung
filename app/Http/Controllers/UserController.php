@@ -257,6 +257,7 @@ class UserController extends Controller
 
         $samsats = ApiCacheManager::remember('admin:master:seng-samsat:all-full', ApiCacheManager::masterTtl(), static function () {
             return SengSaamsat::select('id', 'id_wilayah_samsat', 'kabkota', 'lokasi', 'lokasi_singkat')
+                ->whereRaw('CAST(id AS UNSIGNED) <= 37')
                 ->orderBy('lokasi')
                 ->get();
         });

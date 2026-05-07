@@ -10,6 +10,7 @@ use App\Models\SengStatusVerifikasi;
 use App\Models\SengStatusFile;
 use App\Models\SengWilayah;
 use App\Models\SengWilayahKec;
+use App\Models\SengSaamsat;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
@@ -204,7 +205,16 @@ class VerifikasiController extends Controller
                 ->where('id', $lokasiSamsatId)
                 ->first();
 
-            return $row?->kabkota ? (string) $row->kabkota : null;
+            if ($row?->kabkota) {
+                return (string) $row->kabkota;
+            }
+
+            $samsat = SengSaamsat::select('kabkota')
+                ->where('id_wilayah_samsat', $lokasiSamsatId)
+                ->orWhere('id', $lokasiSamsatId)
+                ->first();
+
+            return $samsat?->kabkota ? (string) $samsat->kabkota : null;
         });
     }
 

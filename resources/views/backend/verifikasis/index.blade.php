@@ -49,7 +49,7 @@
 
                                             <div class="col-md-3">
                                                 <label for="userKabkota">Kabupaten/Kota</label>
-                                                <select class="form-control" id="userKabkota" name="kota" {{ $isUppd ? 'disabled' : '' }}>
+                                                <select class="form-control" id="userKabkota" name="kota" {{ $isUppd && !empty($userKotaId) ? 'disabled' : '' }}>
                                                     <option value="">Pilih Kabkota</option>
                                                     @foreach ($kabkotas as $kbkt)
                                                         @if ($isScopedKabkota)

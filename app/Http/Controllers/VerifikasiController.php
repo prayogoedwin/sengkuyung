@@ -296,7 +296,18 @@ class VerifikasiController extends Controller
                         ->orWhere('id', (string) $data->kota)
                         ->first();
 
-                    return $samsat?->lokasi ?: $samsat?->lokasi_singkat ?: null;
+                    if (!$samsat) {
+                        return null;
+                    }
+
+                    $lokasi = trim((string) ($samsat->lokasi ?? ''));
+                    $lokasiSingkat = trim((string) ($samsat->lokasi_singkat ?? ''));
+
+                    if ($lokasi !== '' && $lokasiSingkat !== '') {
+                        return $lokasi . ' (' . $lokasiSingkat . ')';
+                    }
+
+                    return $lokasi !== '' ? $lokasi : ($lokasiSingkat !== '' ? $lokasiSingkat : null);
                 }
             ) ?: $lokasiSamsatDisplay;
         }

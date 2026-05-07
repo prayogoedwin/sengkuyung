@@ -50,7 +50,11 @@ class VerifikasiController extends Controller
                     $verifikasis->where('kota_dagri', $request->kota);
                 }
             } elseif ($isUptd || $isKabkota) {
-                $verifikasis->where('kota_dagri', $userKotaId);
+                if (!empty($userKotaId)) {
+                    $verifikasis->where('kota_dagri', $userKotaId);
+                } elseif ($request->kota) {
+                    $verifikasis->where('kota_dagri', $request->kota);
+                }
             } elseif ($user && $user->hasRole('petugas')) {
                 $verifikasis->where('created_by', $userId);
             }

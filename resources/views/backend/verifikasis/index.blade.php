@@ -52,8 +52,12 @@
                                                     <option value="">Pilih Kabkota</option>
                                                     @foreach ($kabkotas as $kbkt)
                                                         @if ($isScopedKabkota)
-                                                            @if ($kbkt->id == $userKotaId)
-                                                                <option value="{{ $kbkt->id }}" selected>{{ $kbkt->nama }}</option>
+                                                            @if (!empty($userKotaId))
+                                                                @if ($kbkt->id == $userKotaId)
+                                                                    <option value="{{ $kbkt->id }}" selected>{{ $kbkt->nama }}</option>
+                                                                @endif
+                                                            @else
+                                                                <option value="{{ $kbkt->id }}">{{ $kbkt->nama }}</option>
                                                             @endif
                                                         @else
                                                             <option value="{{ $kbkt->id }}">{{ $kbkt->nama }}</option>

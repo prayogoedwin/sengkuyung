@@ -27,10 +27,16 @@ class VerifikasiController extends Controller
     {
         if ($request->ajax()) {
 
-            $userId = Auth::user()->id ?? null;
-            $userRoleId = Auth::user()->roles[0]->id ?? null;
-            $userKotaId = Auth::user()->kota ?? null;
-            $userLokasiSamsat = Auth::user()->lokasi_samsat ?? null;
+            $user = Auth::user();
+            $userId = $user->id ?? null;
+            $userKotaId = $user->kota ?? null;
+            $userLokasiSamsat = $user->lokasi_samsat ?? null;
+            $userKecamatanSamsat = $user->kecamatan_samsat ?? null;
+            $userKelurahanSamsat = $user->kelurahan_samsat ?? null;
+            $isSuperAdmin = $user && ($user->hasRole('super-admin') || $user->hasRole('superadmin'));
+            $isAdminProv = $user && ($user->hasRole('admin') || $user->hasRole('adminprov'));
+            $isUptd = $user && ($user->hasRole('uptd') || $user->hasRole('uppd'));
+            $isKabkota = $user && $user->hasRole('kabkota');
 
             // $userRole = auth()->user()->role; 
             // Cari admin berdasarkan ID
@@ -38,35 +44,14 @@ class VerifikasiController extends Controller
             // $verifikasis = SengPendataanKendaraan::select('*')->get();
             $verifikasis = SengPendataanKendaraan::query();
 
-
-            // Jika bukan role 1 atau 2, dan tidak ada filter, maka kembalikan data kosong
-            if (!in_array($userRoleId, [1, 2])) {
-                $noFilters = !$request->status_verifikasi_id
-                    && !$request->kota
-                    && !$request->lokasi_samsat
-                    && !$request->kecamatan_samsat
-                    && !$request->kelurahan_samsat
-                    && !$request->nopol
-                    && !$request->tanggal_start
-                    && !$request->tanggal_end;
-
-                if ($noFilters) {
-                    $verifikasis->whereRaw('1 = 0'); // data kosong
-                }
-            }
-
             // Apply filters based on user role
-            if ($userRoleId == 1 || $userRoleId == 2) {
-                // No additional WHERE clause for roles 1 and 2
+            if ($isSuperAdmin || $isAdminProv) {
                 if ($request->kota) {
                     $verifikasis->where('kota_dagri', $request->kota);
                 }
-            } elseif ($userRoleId == 4 || $userRoleId == 3) {
-                // Add WHERE clause for role 4
+            } elseif ($isUptd || $isKabkota) {
                 $verifikasis->where('kota_dagri', $userKotaId);
-
-            } elseif ($userRoleId == 7) {
-                // Add WHERE clause for role 7
+            } elseif ($user && $user->hasRole('petugas')) {
                 $verifikasis->where('created_by', $userId);
             }
 
@@ -83,11 +68,15 @@ class VerifikasiController extends Controller
                 $verifikasis->where('kota', $request->lokasi_samsat);
             }
 
-            if ($request->kecamatan_samsat) {
+            if (!empty($userKecamatanSamsat)) {
+                $verifikasis->where('kec', $userKecamatanSamsat);
+            } elseif ($request->kecamatan_samsat) {
                 $verifikasis->where('kec', $request->kecamatan_samsat);
             }
 
-            if ($request->kelurahan_samsat) {
+            if (!empty($userKelurahanSamsat)) {
+                $verifikasis->where('desa', $userKelurahanSamsat);
+            } elseif ($request->kelurahan_samsat) {
                 $verifikasis->where('desa', $request->kelurahan_samsat);
             }
 
@@ -153,7 +142,7 @@ class VerifikasiController extends Controller
                     });
 
                 // Tambahkan kolom options berdasarkan role
-                if ($userRoleId == 1 || $userRoleId == 2 || $userRoleId == 3) {
+                if ($isSuperAdmin || $isAdminProv || $isUptd) {
                     $datatable->addColumn('options', function ($verifikasi) {
                         return '
                             <a href="' . route('verifikasi-detail.index', ['id' => Helper::encodeId($verifikasi->id)]) . '" class="btn btn-primary btn-sm">Verif</a>

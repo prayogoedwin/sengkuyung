@@ -20,12 +20,13 @@
             $roleName = strtolower((string) optional($user->roles->first())->name);
             $isSuperAdmin = $user->hasRole('super-admin') || $user->hasRole('superadmin');
             $isAdminProv = $user->hasRole('admin') || $user->hasRole('adminprov');
-            $isUptd = $user->hasRole('uptd') || $user->hasRole('uppd');
+            $isUppd = $user->hasRole('uppd');
+            $isUptd = $user->hasRole('uptd') || $isUppd;
             $isKabkota = $user->hasRole('kabkota');
             $isKecamatan = $user->hasRole('kecamatan');
             $isKelurahan = $user->hasRole('kelurahan');
             $isWilayahLower = $isKecamatan || $isKelurahan;
-            $canSeeDataTertagih = $isSuperAdmin || $isAdminProv || $isUptd;
+            $canSeeDataTertagih = $isSuperAdmin || $isAdminProv || ($isUptd && !$isUppd);
         @endphp
 
         <!-- Dashboard -->

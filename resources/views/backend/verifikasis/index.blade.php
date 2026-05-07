@@ -40,7 +40,7 @@
                                             </div>
                                            
                                             @php
-                                                $userRoleId = Auth::user()->roles[0]->id ?? null;
+                                                $isScopedKabkota = Auth::user()->hasRole('kabkota') || Auth::user()->hasRole('uptd') || Auth::user()->hasRole('uppd');
                                                 $userKotaId = Auth::user()->kota ?? null;
                                             @endphp
 
@@ -51,7 +51,7 @@
                                                 <select class="form-control" id="userKabkota" name="kota">
                                                     <option value="">Pilih Kabkota</option>
                                                     @foreach ($kabkotas as $kbkt)
-                                                        @if ($userRoleId == 3 || $userRoleId == 4)
+                                                        @if ($isScopedKabkota)
                                                             @if ($kbkt->id == $userKotaId)
                                                                 <option value="{{ $kbkt->id }}" selected>{{ $kbkt->nama }}</option>
                                                             @endif

@@ -34,7 +34,11 @@
                                                         </tr>
                                                         <tr>
                                                             <th>Kabupaten/Kota</th>
-                                                            <td>{{ $data->kota_name }}</td>
+                                                            <td>{{ $kabkotaDisplay ?? $data->kota_name }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Lokasi Samsat</th>
+                                                            <td>{{ $lokasiSamsatDisplay ?? $data->kota_name }}</td>
                                                         </tr>
                                                         <tr>
                                                             <th>Kecamatan</th>

@@ -273,6 +273,34 @@ class VerifikasiController extends Controller
         ->orderBy('created_at', 'desc')
         ->get();
 
+        $kabkotaDisplay = $data->kota_name;
+        if (!empty($data->kota_dagri)) {
+            $kabkotaDisplay = ApiCacheManager::remember(
+                'admin:master:kabkota:name-by-id:' . (string) $data->kota_dagri,
+                ApiCacheManager::masterTtl(),
+                static function () use ($data) {
+                    $wilayah = SengWilayah::select('nama')->where('id', (string) $data->kota_dagri)->first();
+                    return $wilayah?->nama ?: null;
+                }
+            ) ?: $kabkotaDisplay;
+        }
+
+        $lokasiSamsatDisplay = $data->kota_name;
+        if (!empty($data->kota)) {
+            $lokasiSamsatDisplay = ApiCacheManager::remember(
+                'admin:master:seng-samsat:nama-by-id:' . (string) $data->kota,
+                ApiCacheManager::masterTtl(),
+                static function () use ($data) {
+                    $samsat = SengSaamsat::select('lokasi', 'lokasi_singkat')
+                        ->where('id_wilayah_samsat', (string) $data->kota)
+                        ->orWhere('id', (string) $data->kota)
+                        ->first();
+
+                    return $samsat?->lokasi ?: $samsat?->lokasi_singkat ?: null;
+                }
+            ) ?: $lokasiSamsatDisplay;
+        }
+
         // $name_tipe = Helper::getTipe($request->tipe);
         $name_tipe = 'Ganti Kepemilikan / TDA';
         $html = null;
@@ -338,7 +366,7 @@ class VerifikasiController extends Controller
             // }
         }
 
-        return view('backend.verifikasis.show', compact('data', 'status_verifikasis', 'html', 'decryptedFiles', 'activityLogs'));
+        return view('backend.verifikasis.show', compact('data', 'status_verifikasis', 'html', 'decryptedFiles', 'activityLogs', 'kabkotaDisplay', 'lokasiSamsatDisplay'));
     }
 
     // Helper method untuk get mime type

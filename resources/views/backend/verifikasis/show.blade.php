@@ -121,6 +121,14 @@
                                                                 </a>
                                                             </td>
                                                         </tr>
+                                                        <tr>
+                                                            <th>{{ $data->file2_ket }}</th>
+                                                            <td>
+                                                                <a href="{{ asset($data->file2_url) }}" target="_blank">
+                                                                    <img src="{{ asset($data->file2_url) }}" alt="{{ $data->file2_ket }}" style="width: 50%;">
+                                                                </a>
+                                                            </td>
+                                                        </tr>
                                                     </table>
                                                 @else
                                                     <iframe srcdoc="{!! htmlentities($html) !!}" style="width:100%; height:500px; border:1px solid #ddd;"></iframe>

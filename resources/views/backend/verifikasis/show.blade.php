@@ -62,10 +62,10 @@
                                                             <th width="30%">No Polisi</th>
                                                             <td>{{ $data->nopol }}</td>
                                                         </tr>
-                                                        <tr>
+                                                        {{-- <tr>
                                                             <th>NOPD</th>
                                                             <td>{{ $data->nopd }}</td>
-                                                        </tr>
+                                                        </tr> --}}
                                                         <tr>
                                                             <th>Jenis Kendaraan</th>
                                                             <td>{{ $data->jenis_kbm }}</td>

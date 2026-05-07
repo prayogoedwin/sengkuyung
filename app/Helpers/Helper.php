@@ -188,7 +188,7 @@ class Helper
     }
 
 
-    function getTipe(int $id): string
+    public static function getTipe(int $id): string
     {
         return match($id) {
             1  => 'DIMILIKI',

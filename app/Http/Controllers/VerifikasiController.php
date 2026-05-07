@@ -442,6 +442,8 @@ class VerifikasiController extends Controller
             ], Response::HTTP_NOT_FOUND);
         }
 
+        $name_tipe = Helper::getTipe($data->tipe);
+
         // Prepare data for the view
         $suratData = [
             'nama' => $data->nama,
@@ -453,6 +455,7 @@ class VerifikasiController extends Controller
             'no_polisi' => $data->nopol,
             'merk' => $data->merk,
             'tipe' => $data->tipe,
+            'nama_tipe' => $name_tipe,
             'tanggal' => now()->locale('id')->isoFormat('D MMMM YYYY') // Format: 20 Februari 2025
         ];
 

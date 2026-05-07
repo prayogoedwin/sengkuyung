@@ -443,7 +443,7 @@ class VerifikasiController extends Controller
         }
 
         // $name_tipe = Helper::getTipe($data->tipe);
-        $name_tipe = 'Ganti Kepemilikan / TIDAK DIKETAHUI ALAMAT ATAU KEDUDUKANNYA';
+        $name_tipe = 'GANTI KEPEMILIKAN / TIDAK DIKETAHUI ALAMAT ATAU KEDUDUKANNYA';
 
         // Prepare data for the view
         $suratData = [

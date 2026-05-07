@@ -239,8 +239,8 @@ class SengPendataanKendaraanController extends Controller
         $data->id = $encodedId;
 
         Helper::logActivity($request, $encodedId, 'POST', $responseData);
-        // $name_tipe = Helper::getTipe($request->tipe);
-        $name_tipe = 'Ganti Kepemilikan / TIDAK DIKETAHUI ALAMAT ATAU KEDUDUKANNYA';
+        // $name_tipe = Helper::getTipe($request->tipe);;
+        $name_tipe = 'GANTI KEPEMILIKAN / TIDAK DIKETAHUI ALAMAT ATAU KEDUDUKANNYA';
 
         $html = null;
         if($dStatus == 2 || $dStatus == 10){

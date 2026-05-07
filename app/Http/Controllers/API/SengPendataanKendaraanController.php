@@ -184,20 +184,37 @@ class SengPendataanKendaraanController extends Controller
             // }
         }
 
-       
+        if($dStatus == 2 || $dStatus == 10){
 
-        $requestData = array_merge($request->all(), [
-            'status' => $status->id,
-            'status_name' => $status->nama,
-            'status_verifikasi' => $status_verifikasi->id,
-            'status_verifikasi_name' => $status_verifikasi->nama,
-            'kota_dagri' => $kota_dagri->kabkota,
-            'kec_dagri' => $kec_dagri->kode_dagri,
-            // 'kode_samsat' => $request->kota,
-            'created_by' => $user->id,
-            'updated_by' => $user->id
-        ]);
+            $requestData = array_merge($request->all(), [
+                'status' => $status->id,
+                'status_name' => $status->nama,
+                'status_verifikasi' => $status_verifikasi->id,
+                'status_verifikasi_name' => $status_verifikasi->nama,
+                'kota_dagri' => $kota_dagri->kabkota,
+                'kec_dagri' => $kec_dagri->kode_dagri,
+                // 'kode_samsat' => $request->kota,
+                'created_by' => $user->id,
+                'updated_by' => $user->id
+            ]);
 
+        }else{
+
+            $requestData = array_merge($request->all(), [
+                'status' => $status->id,
+                'status_name' => $status->nama,
+                'status_verifikasi' => $status_verifikasi->id,
+                'status_verifikasi_name' => $status_verifikasi->nama,
+                'kota_dagri' => $kota_dagri->kabkota,
+                'kec_dagri' => $kec_dagri->kode_dagri,
+                'is_selesai' => 1,
+                // 'kode_samsat' => $request->kota,
+                'created_by' => $user->id,
+                'updated_by' => $user->id
+            ]);
+            
+        }
+    
         // Simpan data
         $data = SengPendataanKendaraan::create($requestData);
 

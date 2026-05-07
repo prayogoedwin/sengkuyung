@@ -35,9 +35,10 @@ class WilayahController extends Controller
             return response()->json(['success' => false, 'message' => 'Kabkota ID is required.'], 400);
         }
 
-        $cacheKey = 'admin:master:wilayah:samsat-by-kabkota:' . (string) $kabkotaId;
+        $cacheKey = 'admin:master:wilayah:samsat-by-kabkota:v2:' . (string) $kabkotaId;
         $samsats = ApiCacheManager::remember($cacheKey, ApiCacheManager::masterTtl(), static function () use ($kabkotaId) {
             return SengSaamsat::where('kabkota', $kabkotaId)
+                ->whereRaw('CAST(id AS UNSIGNED) <= 37')
                 ->orderBy('lokasi')
                 ->get(['id', 'id_wilayah_samsat', 'lokasi']);
         });

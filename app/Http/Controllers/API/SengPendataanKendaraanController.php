@@ -193,6 +193,7 @@ class SengPendataanKendaraanController extends Controller
                 'status_verifikasi_name' => $status_verifikasi->nama,
                 'kota_dagri' => $kota_dagri->kabkota,
                 'kec_dagri' => $kec_dagri->kode_dagri,
+                'is_selesai' => 1,
                 // 'kode_samsat' => $request->kota,
                 'created_by' => $user->id,
                 'updated_by' => $user->id
@@ -207,7 +208,7 @@ class SengPendataanKendaraanController extends Controller
                 'status_verifikasi_name' => $status_verifikasi->nama,
                 'kota_dagri' => $kota_dagri->kabkota,
                 'kec_dagri' => $kec_dagri->kode_dagri,
-                'is_selesai' => 1,
+               
                 // 'kode_samsat' => $request->kota,
                 'created_by' => $user->id,
                 'updated_by' => $user->id

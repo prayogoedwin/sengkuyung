@@ -37,6 +37,8 @@ class VerifikasiController extends Controller
             $isAdminProv = $user && ($user->hasRole('admin') || $user->hasRole('adminprov'));
             $isUptd = $user && ($user->hasRole('uptd') || $user->hasRole('uppd'));
             $isKabkota = $user && $user->hasRole('kabkota');
+            $resolvedKabkotaId = $this->resolveKabkotaIdFromLokasiSamsat($userLokasiSamsat);
+            $effectiveKotaId = $userKotaId ?: $resolvedKabkotaId;
 
             // $userRole = auth()->user()->role; 
             // Cari admin berdasarkan ID
@@ -50,8 +52,8 @@ class VerifikasiController extends Controller
                     $verifikasis->where('kota_dagri', $request->kota);
                 }
             } elseif ($isUptd || $isKabkota) {
-                if (!empty($userKotaId)) {
-                    $verifikasis->where('kota_dagri', $userKotaId);
+                if (!empty($effectiveKotaId)) {
+                    $verifikasis->where('kota_dagri', $effectiveKotaId);
                 } elseif ($request->kota) {
                     $verifikasis->where('kota_dagri', $request->kota);
                 }
@@ -175,7 +177,35 @@ class VerifikasiController extends Controller
                 ->get();
         });
 
-        return view('backend.verifikasis.index',  compact('kabkotas', 'status_verifikasis'));
+        $user = Auth::user();
+        $isUppd = $user && $user->hasRole('uppd');
+        $resolvedKabkotaId = $this->resolveKabkotaIdFromLokasiSamsat($user->lokasi_samsat ?? null);
+        $selectedKabkotaId = $user->kota ?? $resolvedKabkotaId;
+
+        if ($isUppd && !empty($selectedKabkotaId)) {
+            $kabkotas = $kabkotas->filter(function ($kbkt) use ($selectedKabkotaId) {
+                return (string) $kbkt->id === (string) $selectedKabkotaId;
+            })->values();
+        }
+
+        return view('backend.verifikasis.index',  compact('kabkotas', 'status_verifikasis', 'selectedKabkotaId', 'isUppd'));
+    }
+
+    private function resolveKabkotaIdFromLokasiSamsat(?string $lokasiSamsatId): ?string
+    {
+        if (empty($lokasiSamsatId)) {
+            return null;
+        }
+
+        $cacheKey = 'admin:master:wilayah-samsat:kabkota-by-lokasi:' . (string) $lokasiSamsatId;
+
+        return ApiCacheManager::remember($cacheKey, ApiCacheManager::masterTtl(), static function () use ($lokasiSamsatId) {
+            $row = WilayahSamsat::select('kabkota')
+                ->where('id', $lokasiSamsatId)
+                ->first();
+
+            return $row?->kabkota ? (string) $row->kabkota : null;
+        });
     }
 
     // Show a single record

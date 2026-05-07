@@ -566,6 +566,7 @@ class SengPendataanKendaraanController extends Controller
         // Encode kembali ID sebelum dikirim
         $responseData = $data->toArray();
         $responseData['id'] = Helper::encodeId($data->id);
+        $responseData['status_encode'] = Helper::encodeId($data->status);
 
         $baseUrl = config('app.url'); // Ambil BASE_URL dari .env
 

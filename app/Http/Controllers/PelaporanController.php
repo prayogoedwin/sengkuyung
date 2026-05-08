@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 use App\Models\WilayahSamsat;
+use App\Models\SengSaamsat;
 use App\Models\SengPendataanKendaraan;
 use App\Models\SengStatus;
 use App\Models\SengStatusVerifikasi;
@@ -23,19 +24,69 @@ use Illuminate\Http\Request;
 
 class PelaporanController extends Controller
 {
+    private function resolveKabkotaFromLokasiSamsat(?string $lokasiSamsatId): ?string
+    {
+        if (empty($lokasiSamsatId)) {
+            return null;
+        }
+
+        $cacheKey = 'admin:master:pelaporan:kabkota-by-lokasisamsat:' . (string) $lokasiSamsatId;
+
+        return ApiCacheManager::remember($cacheKey, ApiCacheManager::masterTtl(), static function () use ($lokasiSamsatId) {
+            $samsat = SengSaamsat::query()
+                ->select('kabkota')
+                ->where('id_wilayah_samsat', (string) $lokasiSamsatId)
+                ->orWhere('id', (string) $lokasiSamsatId)
+                ->first();
+
+            if ($samsat?->kabkota) {
+                return (string) $samsat->kabkota;
+            }
+
+            $wilayahSamsat = WilayahSamsat::query()
+                ->select('kabkota')
+                ->where('id', (string) $lokasiSamsatId)
+                ->first();
+
+            return $wilayahSamsat?->kabkota ? (string) $wilayahSamsat->kabkota : null;
+        });
+    }
+
+    private function applyUppdScope(Request $request, $user): void
+    {
+        if (!$user || !$user->hasRole('uppd')) {
+            return;
+        }
+
+        $lokasiSamsat = (string) ($user->lokasi_samsat ?? '');
+        $kabkotaBySamsat = $this->resolveKabkotaFromLokasiSamsat($lokasiSamsat);
+        $kabkotaScoped = (string) ($user->kota ?: $kabkotaBySamsat ?: '');
+
+        if ($kabkotaScoped !== '') {
+            $request->merge(['kabkota_id' => $kabkotaScoped]);
+        }
+        if ($lokasiSamsat !== '') {
+            $request->merge(['lokasi_samsat' => $lokasiSamsat]);
+        }
+    }
+
     public function index(Request $request)
     {
         $user = User::findOrFail(auth()->id());
         $isKabkota = $user->hasRole('kabkota');
+        $isUppd = $user->hasRole('uppd');
         $selectedKabkotaId = null;
         $userLokasiSamsat = (string) ($user->lokasi_samsat ?? '');
+        $kabkotaBySamsat = $this->resolveKabkotaFromLokasiSamsat($userLokasiSamsat);
+        $scopedKabkotaId = (string) ($user->kota ?: $kabkotaBySamsat ?: '');
+        $isScopedKabkota = $isKabkota || $isUppd;
 
-        if ($isKabkota && !empty($user->kota)) {
-            $selectedKabkotaId = (string) $user->kota;
-            $kabkotas = ApiCacheManager::remember('admin:master:kabkota:pelaporan-scope:' . (string) $user->kota, ApiCacheManager::masterTtl(), static function () use ($user) {
+        if ($isScopedKabkota && !empty($scopedKabkotaId)) {
+            $selectedKabkotaId = $scopedKabkotaId;
+            $kabkotas = ApiCacheManager::remember('admin:master:kabkota:pelaporan-scope:' . (string) $scopedKabkotaId, ApiCacheManager::masterTtl(), static function () use ($scopedKabkotaId) {
                 return SengWilayah::query()
                     ->where('id_up', 33)
-                    ->where('id', $user->kota)
+                    ->where('id', $scopedKabkotaId)
                     ->get();
             });
         } else {
@@ -49,6 +100,7 @@ class PelaporanController extends Controller
         return view('backend.pelaporan.index', compact(
             'kabkotas',
             'isKabkota',
+            'isScopedKabkota',
             'selectedKabkotaId',
             'userLokasiSamsat'
         ));
@@ -56,6 +108,7 @@ class PelaporanController extends Controller
 
     public function pelaporanCsv(Request $request){
         $user = auth()->user();
+        $this->applyUppdScope($request, $user);
         if ($user && $user->hasRole('kabkota') && !empty($user->kota)) {
             $request->merge(['kabkota_id' => $user->kota]);
         }
@@ -73,6 +126,7 @@ class PelaporanController extends Controller
     public function pelaporanExcel(Request $request)
     {
         $user = auth()->user();
+        $this->applyUppdScope($request, $user);
         if ($user && $user->hasRole('kabkota') && !empty($user->kota)) {
             $request->merge(['kabkota_id' => $user->kota]);
         }
@@ -410,6 +464,7 @@ class PelaporanController extends Controller
 
     public function pelaporanPdf(Request $request){
         $user = auth()->user();
+        $this->applyUppdScope($request, $user);
         if ($user && $user->hasRole('kabkota') && !empty($user->kota)) {
             $request->merge(['kabkota_id' => $user->kota]);
         }

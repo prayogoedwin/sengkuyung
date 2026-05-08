@@ -25,7 +25,7 @@
                                         <div class="row mb-3">
                                             <div class="col-md-12">
                                                 <label for="userKabkota">Kabupaten/Kota</label>
-                                                <select class="form-control" id="userKabkota" name="kabkota_id" {{ !empty($isKabkota) && $isKabkota ? 'disabled' : '' }}>
+                                                <select class="form-control" id="userKabkota" name="kabkota_id" {{ !empty($isScopedKabkota) && $isScopedKabkota ? 'disabled' : '' }}>
                                                     <option value="">Pilih Kabkota</option>
                                                     @foreach ($kabkotas as $kbkt)
                                                         <option value="{{ $kbkt->id }}" {{ (string) ($selectedKabkotaId ?? '') === (string) $kbkt->id ? 'selected' : '' }}>{{ $kbkt->nama }}</option>
@@ -236,7 +236,7 @@
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const lockedKabkotaId = @json($selectedKabkotaId ?? '');
-        const isKabkotaLocked = @json((bool) ($isKabkota ?? false));
+        const isKabkotaLocked = @json((bool) ($isScopedKabkota ?? false));
 
         const buildQuery = () => {
             const kabkota = document.getElementById("userKabkota").value;

@@ -92,7 +92,7 @@
                 </li>
             @endif
 
-            @if ($isKabkota)
+            @if ($isKabkota || $isUppd)
                 <li class="menu-item {{ request()->routeIs('pelaporan.index') ? 'active' : '' }}">
                     <a href="{{ route('pelaporan.index') }}" class="menu-link">
                         <i class="menu-icon tf-icons bx bx-file"></i>  {{-- Ikon Pelaporan --}}
@@ -153,7 +153,7 @@
                     </li>
                 @endif
 
-                @if ($isKabkota)
+                @if ($isKabkota || $isUppd)
                     <li class="menu-item {{ request()->routeIs('pelaporan.index') ? 'active' : '' }}">
                         <a href="{{ route('pelaporan.index') }}" class="menu-link">
                             <i class="menu-icon tf-icons bx bx-file"></i>  {{-- Ikon Pelaporan --}}

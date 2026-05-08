@@ -8,6 +8,8 @@ use App\Models\SengStatus;
 use App\Models\SengStatusVerifikasi;
 use App\Models\SengStatusFile;
 use App\Models\SengWilayah;
+use App\Models\SengWilayahKec;
+use App\Models\SengWilayahKel;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
@@ -58,6 +60,65 @@ class PelaporanController extends Controller
 
             return isset($row->kelurahan) ? (string) $row->kelurahan : null;
         });
+    }
+
+    private function resolveWilayahContext(Request $request): array
+    {
+        if ($request->filled('kelurahan_samsat')) {
+            return ['level' => 'kelurahan', 'label' => 'Kelurahan'];
+        }
+        if ($request->filled('kecamatan_samsat') || $request->filled('district_id')) {
+            return ['level' => 'kecamatan', 'label' => 'Kecamatan'];
+        }
+        if ($request->filled('lokasi_samsat')) {
+            return ['level' => 'samsat', 'label' => 'Samsat'];
+        }
+        return ['level' => 'kabkota', 'label' => 'Kabkota'];
+    }
+
+    private function mapWilayahName(string $level, ?string $code): string
+    {
+        $code = trim((string) $code);
+        if ($code === '' || $code === '-') {
+            return '-';
+        }
+
+        if ($level === 'samsat') {
+            $samsat = SengSaamsat::query()
+                ->select('lokasi', 'lokasi_singkat')
+                ->where('id_wilayah_samsat', $code)
+                ->orWhere('id', $code)
+                ->first();
+
+            return $samsat?->lokasi ?: $samsat?->lokasi_singkat ?: $code;
+        }
+
+        if ($level === 'kecamatan') {
+            $kec = SengWilayahKec::query()
+                ->select('kecamatan')
+                ->where('id_kecamatan', $code)
+                ->first();
+            if ($kec?->kecamatan) {
+                return (string) $kec->kecamatan;
+            }
+        }
+
+        if ($level === 'kelurahan') {
+            $kel = SengWilayahKel::query()
+                ->select('kelurahan')
+                ->where('id_kelurahan', $code)
+                ->first();
+            if ($kel?->kelurahan) {
+                return (string) $kel->kelurahan;
+            }
+        }
+
+        $wilayah = SengWilayah::query()
+            ->select('nama')
+            ->where('id', $code)
+            ->first();
+
+        return $wilayah?->nama ?: $code;
     }
 
     private function resolveKabkotaFromLokasiSamsat(?string $lokasiSamsatId): ?string
@@ -367,17 +428,17 @@ class PelaporanController extends Controller
         fputcsv($file, [$judul]); // header utama
         fputcsv($file, ['']); // baris kosong lagi
 
+        $rekapPayload = $this->getRekapData($request);
+        $rekapData = $rekapPayload['rows'];
+        $wilayahLabel = $rekapPayload['wilayahLabel'];
+
         // Header CSV
         fputcsv($file, [
-            'NO', 'WILAYAH', 'DIMILIKI', 'GANTI KEPEMILIKAN', 'RUSAK BERAT', 'HILANG',
+            'NO', 'WILAYAH (' . strtoupper($wilayahLabel) . ')', 'DIMILIKI', 'GANTI KEPEMILIKAN', 'RUSAK BERAT', 'HILANG',
             'MENINGGAL DUNIA TANPA AHLI WARIS', 'MENUTUP USAHA / PAILIT', 
             'DICABUT REGISTRASINYA', 'TERKENA BENCANA ALAM', 
             'TIDAK MEMPUNYAI KEKAYAAN LAGI', 'TIDAK DIKETAHUI ALAMAT'
         ]);
-
-        
-        
-        $rekapData = $this->getRekapData($request);
 
         // Tulis data ke CSV
         $no = 1;
@@ -491,12 +552,14 @@ class PelaporanController extends Controller
 
     public function rekapExcel(Request $request)
     {
-        $rekapData = $this->getRekapData($request);
+        $rekapPayload = $this->getRekapData($request);
+        $rekapData = $rekapPayload['rows'];
+        $wilayahLabel = $rekapPayload['wilayahLabel'];
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->fromArray([
-            'NO', 'WILAYAH', 'DIMILIKI', 'GANTI KEPEMILIKAN', 'RUSAK BERAT', 'HILANG',
+            'NO', 'WILAYAH (' . strtoupper($wilayahLabel) . ')', 'DIMILIKI', 'GANTI KEPEMILIKAN', 'RUSAK BERAT', 'HILANG',
             'MENINGGAL DUNIA TANPA AHLI WARIS', 'MENUTUP USAHA / PAILIT',
             'DICABUT REGISTRASINYA', 'TERKENA BENCANA ALAM',
             'TIDAK MEMPUNYAI KEKAYAAN LAGI', 'TIDAK DIKETAHUI ALAMAT',
@@ -696,7 +759,9 @@ class PelaporanController extends Controller
 
         $judul = mb_strtoupper('REKAP PELAPORAN ' . $kotajudul . $kecjudul . $periode, 'UTF-8');
 
-        $rekapData = $this->getRekapData($request);
+        $rekapPayload = $this->getRekapData($request);
+        $rekapData = $rekapPayload['rows'];
+        $wilayahLabel = $rekapPayload['wilayahLabel'];
 
         // Mulai HTML untuk PDF
         $html = '
@@ -710,7 +775,7 @@ class PelaporanController extends Controller
                 <thead>
                     <tr>
                         <th>NO</th>
-                        <th>WILAYAH</th>
+                        <th>WILAYAH (' . strtoupper($wilayahLabel) . ')</th>
                         <th>DIMILIKI</th>
                         <th>GANTI KEPEMILIKAN</th>
                         <th>RUSAK BERAT</th>
@@ -761,7 +826,7 @@ class PelaporanController extends Controller
             ->header('Content-Disposition', "attachment; filename=\"$fileName\"");
     }
 
-    private function getRekapData(Request $request)
+    private function getRekapData(Request $request): array
     {
         $baseQuery = SengPendataanKendaraan::query();
 
@@ -791,31 +856,49 @@ class PelaporanController extends Controller
         if ($request->kelurahan_samsat) {
             $variants = $this->codeVariants($request->kelurahan_samsat);
             $kelurahanName = $this->resolveKelurahanNameById((string) $request->kelurahan_samsat);
-            $baseQuery->where(function ($q) use ($variants, $kelurahanName) {
+
+            $kelurahanFilter = function ($q) use ($variants, $kelurahanName) {
                 $q->whereIn('desa', $variants)
                     ->orWhereIn('kel_dagri', $variants);
 
                 if (!empty($kelurahanName)) {
                     $q->orWhere('desa_name', $kelurahanName);
                 }
-            });
+            };
+
+            // Jika kode kelurahan terpilih tidak memiliki data pada scope aktif,
+            // fallback ke scope kecamatan agar hasil tidak kosong total.
+            $hasKelurahanData = (clone $baseQuery)->where($kelurahanFilter)->exists();
+            if ($hasKelurahanData) {
+                $baseQuery->where($kelurahanFilter);
+            }
         }
 
         if ($request->tanggal_start && $request->tanggal_end) {
             $baseQuery->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
         }
 
-        $wilayahExpr = $request->kabkota_id
-            ? "COALESCE(NULLIF(kec_name, ''), NULLIF(kec_dagri, ''), NULLIF(kec, ''), '-')"
-            : "COALESCE(NULLIF(kota_name, ''), NULLIF(kota_dagri, ''), NULLIF(kota, ''), '-')";
+        $context = $this->resolveWilayahContext($request);
+        $level = $context['level'];
+        $wilayahLabel = $context['label'];
+
+        if ($level === 'kelurahan') {
+            $groupExpr = "COALESCE(NULLIF(kel_dagri, ''), NULLIF(desa, ''), NULLIF(desa_name, ''), '-')";
+        } elseif ($level === 'kecamatan') {
+            $groupExpr = "COALESCE(NULLIF(kec_dagri, ''), NULLIF(kec, ''), NULLIF(kec_name, ''), '-')";
+        } elseif ($level === 'samsat') {
+            $groupExpr = "COALESCE(NULLIF(kota, ''), '-')";
+        } else {
+            $groupExpr = "COALESCE(NULLIF(kota_dagri, ''), NULLIF(kota, ''), NULLIF(kota_name, ''), '-')";
+        }
 
         $sub = $baseQuery
-            ->selectRaw("$wilayahExpr AS wilayah")
+            ->selectRaw("$groupExpr AS group_code")
             ->selectRaw('status');
 
-        return DB::query()
+        $rows = DB::query()
             ->fromSub($sub, 'rekap_source')
-            ->select('wilayah')
+            ->select('group_code')
             ->selectRaw("SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS DIMILIKI")
             ->selectRaw("SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS GANTI_KEPEMILIKAN")
             ->selectRaw("SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) AS RUSAK_BERAT")
@@ -826,9 +909,19 @@ class PelaporanController extends Controller
             ->selectRaw("SUM(CASE WHEN status = 8 THEN 1 ELSE 0 END) AS BENCANA_ALAM")
             ->selectRaw("SUM(CASE WHEN status = 9 THEN 1 ELSE 0 END) AS TIDAK_PUNYA_KEKAYAAN")
             ->selectRaw("SUM(CASE WHEN status = 10 THEN 1 ELSE 0 END) AS TIDAK_DIKEATAHUI_ALAMAT")
-            ->groupBy('wilayah')
-            ->orderBy('wilayah')
+            ->groupBy('group_code')
+            ->orderBy('group_code')
             ->get();
+
+        $rows = $rows->map(function ($row) use ($level) {
+            $row->wilayah = $this->mapWilayahName($level, isset($row->group_code) ? (string) $row->group_code : null);
+            return $row;
+        })->sortBy('wilayah')->values();
+
+        return [
+            'rows' => $rows,
+            'wilayahLabel' => $wilayahLabel,
+        ];
     }
 
 }

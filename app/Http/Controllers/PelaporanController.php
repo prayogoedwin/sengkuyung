@@ -70,16 +70,46 @@ class PelaporanController extends Controller
         }
     }
 
+    private function applyKecamatanScope(Request $request, $user): void
+    {
+        if (!$user || !$user->hasRole('kecamatan')) {
+            return;
+        }
+
+        $lokasiSamsat = (string) ($user->lokasi_samsat ?? '');
+        $kabkotaBySamsat = $this->resolveKabkotaFromLokasiSamsat($lokasiSamsat);
+        $kabkotaScoped = (string) ($user->kota ?: $kabkotaBySamsat ?: '');
+        $kecamatanScoped = (string) ($user->kecamatan_samsat ?: $user->kecamatan ?: '');
+
+        if ($kabkotaScoped !== '') {
+            $request->merge(['kabkota_id' => $kabkotaScoped]);
+        }
+        if ($lokasiSamsat !== '') {
+            $request->merge(['lokasi_samsat' => $lokasiSamsat]);
+        }
+        if ($kecamatanScoped !== '') {
+            $request->merge(['kecamatan_samsat' => $kecamatanScoped]);
+        }
+
+        // Role kecamatan hanya boleh rekap.
+        $request->merge(['tipe' => 2]);
+    }
+
     public function index(Request $request)
     {
         $user = User::findOrFail(auth()->id());
         $isKabkota = $user->hasRole('kabkota');
         $isUppd = $user->hasRole('uppd');
+        $isKecamatan = $user->hasRole('kecamatan');
         $selectedKabkotaId = null;
         $userLokasiSamsat = (string) ($user->lokasi_samsat ?? '');
+        $selectedKecamatanSamsatId = (string) ($user->kecamatan_samsat ?: $user->kecamatan ?: '');
         $kabkotaBySamsat = $this->resolveKabkotaFromLokasiSamsat($userLokasiSamsat);
         $scopedKabkotaId = (string) ($user->kota ?: $kabkotaBySamsat ?: '');
-        $isScopedKabkota = $isKabkota || $isUppd;
+        $isScopedKabkota = $isKabkota || $isUppd || $isKecamatan;
+        $isLokasiSamsatLocked = $isUppd || $isKecamatan;
+        $isKecamatanSamsatLocked = $isKecamatan;
+        $isKecamatanRekapOnly = $isKecamatan;
 
         if ($isScopedKabkota && !empty($scopedKabkotaId)) {
             $selectedKabkotaId = $scopedKabkotaId;
@@ -102,13 +132,18 @@ class PelaporanController extends Controller
             'isKabkota',
             'isScopedKabkota',
             'selectedKabkotaId',
-            'userLokasiSamsat'
+            'userLokasiSamsat',
+            'selectedKecamatanSamsatId',
+            'isLokasiSamsatLocked',
+            'isKecamatanSamsatLocked',
+            'isKecamatanRekapOnly'
         ));
     }
 
     public function pelaporanCsv(Request $request){
         $user = auth()->user();
         $this->applyUppdScope($request, $user);
+        $this->applyKecamatanScope($request, $user);
         if ($user && $user->hasRole('kabkota') && !empty($user->kota)) {
             $request->merge(['kabkota_id' => $user->kota]);
         }
@@ -127,6 +162,7 @@ class PelaporanController extends Controller
     {
         $user = auth()->user();
         $this->applyUppdScope($request, $user);
+        $this->applyKecamatanScope($request, $user);
         if ($user && $user->hasRole('kabkota') && !empty($user->kota)) {
             $request->merge(['kabkota_id' => $user->kota]);
         }
@@ -465,6 +501,7 @@ class PelaporanController extends Controller
     public function pelaporanPdf(Request $request){
         $user = auth()->user();
         $this->applyUppdScope($request, $user);
+        $this->applyKecamatanScope($request, $user);
         if ($user && $user->hasRole('kabkota') && !empty($user->kota)) {
             $request->merge(['kabkota_id' => $user->kota]);
         }

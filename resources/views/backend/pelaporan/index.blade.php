@@ -35,14 +35,14 @@
 
                                             <div class="col-md-12">
                                                 <label for="lokasiSamsat">Lokasi Samsat</label>
-                                                <select class="form-control" id="lokasiSamsat" name="lokasi_samsat">
+                                                <select class="form-control" id="lokasiSamsat" name="lokasi_samsat" {{ !empty($isLokasiSamsatLocked) && $isLokasiSamsatLocked ? 'disabled' : '' }}>
                                                     <option value="">Pilih Lokasi Samsat</option>
                                                 </select>
                                             </div>
 
                                             <div class="col-md-12">
                                                 <label for="kecamatanSamsat">Kecamatan Samsat</label>
-                                                <select class="form-control" id="kecamatanSamsat" name="kecamatan_samsat">
+                                                <select class="form-control" id="kecamatanSamsat" name="kecamatan_samsat" {{ !empty($isKecamatanSamsatLocked) && $isKecamatanSamsatLocked ? 'disabled' : '' }}>
                                                     <option value="">Pilih Kecamatan Samsat</option>
                                                 </select>
                                             </div>
@@ -67,8 +67,12 @@
                                             <div class="col-md-12 mt-2 mb-2">
                                                 <label for="kecamatan">Tipe Pelaporan</label>
                                                 <select class="form-control" id="tipe" name="tipe">
-                                                    <option value="1">Jurnal</option>
-                                                    <option value="2">Rekap</option>
+                                                    @if (!empty($isKecamatanRekapOnly) && $isKecamatanRekapOnly)
+                                                        <option value="2" selected>Rekap</option>
+                                                    @else
+                                                        <option value="1">Jurnal</option>
+                                                        <option value="2">Rekap</option>
+                                                    @endif
                                                 </select>
                                             </div>
                                            
@@ -106,8 +110,9 @@
 <script>
     $(document).ready(function() {
         var forcedLokasiSamsat = '{{ $userLokasiSamsat ?? '' }}';
+        var forcedKecamatanSamsat = '{{ $selectedKecamatanSamsatId ?? '' }}';
         var selectedLokasiSamsat = '';
-        var selectedKecamatanSamsat = '';
+        var selectedKecamatanSamsat = forcedKecamatanSamsat || '';
         var selectedKelurahanSamsat = '';
 
         function loadSamsatsByKabkota(kabkotaId, selectedSamsat) {
@@ -173,6 +178,11 @@
                         });
                     }
                     $('#kecamatanSamsat').html(options);
+
+                    if (forcedKecamatanSamsat) {
+                        $('#kecamatanSamsat').val(String(forcedKecamatanSamsat)).prop('disabled', true);
+                    }
+
                     $('#kecamatanSamsat').trigger('change');
                 },
                 error: function() {
@@ -237,6 +247,7 @@
     document.addEventListener("DOMContentLoaded", function () {
         const lockedKabkotaId = @json($selectedKabkotaId ?? '');
         const isKabkotaLocked = @json((bool) ($isScopedKabkota ?? false));
+        const isKecamatanRekapOnly = @json((bool) ($isKecamatanRekapOnly ?? false));
 
         const buildQuery = () => {
             const kabkota = document.getElementById("userKabkota").value;
@@ -276,6 +287,9 @@
         document.getElementById("resetFilter").addEventListener("click", function (e) {
             e.preventDefault();
             document.getElementById("pelaporanFilterForm").reset();
+            if (isKecamatanRekapOnly) {
+                document.getElementById("tipe").value = '2';
+            }
             if (isKabkotaLocked && lockedKabkotaId) {
                 document.getElementById("userKabkota").value = lockedKabkotaId;
             }

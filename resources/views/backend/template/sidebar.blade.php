@@ -153,7 +153,7 @@
                     </li>
                 @endif
 
-                @if ($isKabkota || $isUppd)
+                @if ($isKabkota || $isUppd || $isKecamatan)
                     <li class="menu-item {{ request()->routeIs('pelaporan.index') ? 'active' : '' }}">
                         <a href="{{ route('pelaporan.index') }}" class="menu-link">
                             <i class="menu-icon tf-icons bx bx-file"></i>  {{-- Ikon Pelaporan --}}
@@ -161,6 +161,15 @@
                         </a>
                     </li>
                 @endif
+            @endif
+
+            @if ($isKecamatan)
+                <li class="menu-item {{ request()->routeIs('pelaporan.index') ? 'active' : '' }}">
+                    <a href="{{ route('pelaporan.index') }}" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-file"></i>  {{-- Ikon Pelaporan --}}
+                        <div data-i18n="Analytics">Pelaporan</div>
+                    </a>
+                </li>
             @endif
 
             @if ($isUptd || $isKabkota || $isKecamatan || $isKelurahan)

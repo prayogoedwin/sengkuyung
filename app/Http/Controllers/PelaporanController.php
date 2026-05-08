@@ -55,7 +55,8 @@ class PelaporanController extends Controller
         return ApiCacheManager::remember($cacheKey, ApiCacheManager::masterTtl(), static function () use ($kelurahanId) {
             $row = DB::table('wilayah_samsat_kel')
                 ->select('kelurahan')
-                ->where('id_kelurahan', (string) $kelurahanId)
+                ->where('kode_dagri_kelurahan', (string) $kelurahanId)
+                ->orWhere('id_kelurahan', (string) $kelurahanId)
                 ->first();
 
             return isset($row->kelurahan) ? (string) $row->kelurahan : null;
@@ -96,20 +97,48 @@ class PelaporanController extends Controller
         if ($level === 'kecamatan') {
             $kec = SengWilayahKec::query()
                 ->select('kecamatan')
-                ->where('id_kecamatan', $code)
+                ->where('kode_dagri', $code)
+                ->orWhere('id_kecamatan', $code)
                 ->first();
             if ($kec?->kecamatan) {
                 return (string) $kec->kecamatan;
+            }
+
+            $kecFromPendataan = SengPendataanKendaraan::query()
+                ->select('kec_name')
+                ->where(function ($q) use ($code) {
+                    $q->where('kec', $code)
+                        ->orWhere('kec_dagri', $code);
+                })
+                ->whereNotNull('kec_name')
+                ->where('kec_name', '!=', '')
+                ->value('kec_name');
+            if (!empty($kecFromPendataan)) {
+                return (string) $kecFromPendataan;
             }
         }
 
         if ($level === 'kelurahan') {
             $kel = SengWilayahKel::query()
                 ->select('kelurahan')
-                ->where('id_kelurahan', $code)
+                ->where('kode_dagri_kelurahan', $code)
+                ->orWhere('id_kelurahan', $code)
                 ->first();
             if ($kel?->kelurahan) {
                 return (string) $kel->kelurahan;
+            }
+
+            $kelFromPendataan = SengPendataanKendaraan::query()
+                ->select('desa_name')
+                ->where(function ($q) use ($code) {
+                    $q->where('desa', $code)
+                        ->orWhere('kel_dagri', $code);
+                })
+                ->whereNotNull('desa_name')
+                ->where('desa_name', '!=', '')
+                ->value('desa_name');
+            if (!empty($kelFromPendataan)) {
+                return (string) $kelFromPendataan;
             }
         }
 
@@ -835,10 +864,7 @@ class PelaporanController extends Controller
         }
 
         if ($request->kabkota_id) {
-            $baseQuery->where(function ($q) use ($request) {
-                $q->where('kota', $request->kabkota_id)
-                    ->orWhere('kota_dagri', $request->kabkota_id);
-            });
+            $baseQuery->where('kota_dagri', $request->kabkota_id);
         }
 
         if ($request->lokasi_samsat) {
@@ -847,31 +873,11 @@ class PelaporanController extends Controller
 
         $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;
         if ($kecamatanFilter) {
-            $baseQuery->where(function ($q) use ($kecamatanFilter) {
-                $q->where('kec', $kecamatanFilter)
-                    ->orWhere('kec_dagri', $kecamatanFilter);
-            });
+            $baseQuery->whereIn('kec_dagri', $this->codeVariants($kecamatanFilter));
         }
 
         if ($request->kelurahan_samsat) {
-            $variants = $this->codeVariants($request->kelurahan_samsat);
-            $kelurahanName = $this->resolveKelurahanNameById((string) $request->kelurahan_samsat);
-
-            $kelurahanFilter = function ($q) use ($variants, $kelurahanName) {
-                $q->whereIn('desa', $variants)
-                    ->orWhereIn('kel_dagri', $variants);
-
-                if (!empty($kelurahanName)) {
-                    $q->orWhere('desa_name', $kelurahanName);
-                }
-            };
-
-            // Jika kode kelurahan terpilih tidak memiliki data pada scope aktif,
-            // fallback ke scope kecamatan agar hasil tidak kosong total.
-            $hasKelurahanData = (clone $baseQuery)->where($kelurahanFilter)->exists();
-            if ($hasKelurahanData) {
-                $baseQuery->where($kelurahanFilter);
-            }
+            $baseQuery->whereIn('desa', $this->codeVariants($request->kelurahan_samsat));
         }
 
         if ($request->tanggal_start && $request->tanggal_end) {
@@ -883,13 +889,13 @@ class PelaporanController extends Controller
         $wilayahLabel = $context['label'];
 
         if ($level === 'kelurahan') {
-            $groupExpr = "COALESCE(NULLIF(kel_dagri, ''), NULLIF(desa, ''), NULLIF(desa_name, ''), '-')";
+            $groupExpr = "COALESCE(NULLIF(desa_name, ''), NULLIF(desa, ''), '-')";
         } elseif ($level === 'kecamatan') {
-            $groupExpr = "COALESCE(NULLIF(kec_dagri, ''), NULLIF(kec, ''), NULLIF(kec_name, ''), '-')";
+            $groupExpr = "COALESCE(NULLIF(kec_name, ''), NULLIF(kec_dagri, ''), '-')";
         } elseif ($level === 'samsat') {
             $groupExpr = "COALESCE(NULLIF(kota, ''), '-')";
         } else {
-            $groupExpr = "COALESCE(NULLIF(kota_dagri, ''), NULLIF(kota, ''), NULLIF(kota_name, ''), '-')";
+            $groupExpr = "COALESCE(NULLIF(kota_name, ''), NULLIF(kota_dagri, ''), '-')";
         }
 
         $sub = $baseQuery

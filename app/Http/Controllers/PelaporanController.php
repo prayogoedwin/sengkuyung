@@ -24,6 +24,42 @@ use Illuminate\Http\Request;
 
 class PelaporanController extends Controller
 {
+    private function codeVariants($value): array
+    {
+        $v = trim((string) $value);
+        if ($v === '') {
+            return [];
+        }
+
+        $out = [$v];
+        if (ctype_digit($v)) {
+            $stripped = ltrim($v, '0');
+            $stripped = $stripped === '' ? '0' : $stripped;
+            $out[] = $stripped;
+            $out[] = (string) (int) $v;
+        }
+
+        return array_values(array_unique($out));
+    }
+
+    private function resolveKelurahanNameById(?string $kelurahanId): ?string
+    {
+        if (empty($kelurahanId)) {
+            return null;
+        }
+
+        $cacheKey = 'admin:master:pelaporan:kelurahan-name-by-id:' . (string) $kelurahanId;
+
+        return ApiCacheManager::remember($cacheKey, ApiCacheManager::masterTtl(), static function () use ($kelurahanId) {
+            $row = DB::table('wilayah_samsat_kel')
+                ->select('kelurahan')
+                ->where('id_kelurahan', (string) $kelurahanId)
+                ->first();
+
+            return isset($row->kelurahan) ? (string) $row->kelurahan : null;
+        });
+    }
+
     private function resolveKabkotaFromLokasiSamsat(?string $lokasiSamsatId): ?string
     {
         if (empty($lokasiSamsatId)) {
@@ -753,9 +789,15 @@ class PelaporanController extends Controller
         }
 
         if ($request->kelurahan_samsat) {
-            $baseQuery->where(function ($q) use ($request) {
-                $q->where('desa', $request->kelurahan_samsat)
-                    ->orWhere('kel_dagri', $request->kelurahan_samsat);
+            $variants = $this->codeVariants($request->kelurahan_samsat);
+            $kelurahanName = $this->resolveKelurahanNameById((string) $request->kelurahan_samsat);
+            $baseQuery->where(function ($q) use ($variants, $kelurahanName) {
+                $q->whereIn('desa', $variants)
+                    ->orWhereIn('kel_dagri', $variants);
+
+                if (!empty($kelurahanName)) {
+                    $q->orWhere('desa_name', $kelurahanName);
+                }
             });
         }
 

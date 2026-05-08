@@ -755,7 +755,7 @@ class PelaporanController extends Controller
         if ($request->kelurahan_samsat) {
             $baseQuery->where(function ($q) use ($request) {
                 $q->where('desa', $request->kelurahan_samsat)
-                    ->orWhere('desa_dagri', $request->kelurahan_samsat);
+                    ->orWhere('kel_dagri', $request->kelurahan_samsat);
             });
         }
 

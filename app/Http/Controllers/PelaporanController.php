@@ -92,12 +92,15 @@ class PelaporanController extends Controller
     private function resolveWilayahContext(Request $request): array
     {
         if ($request->filled('kelurahan_samsat')) {
-            return ['level' => 'kelurahan', 'label' => 'Kelurahan'];
+            return ['level' => 'petugas', 'label' => 'Petugas'];
         }
         if ($request->filled('kecamatan_samsat') || $request->filled('district_id')) {
-            return ['level' => 'kecamatan', 'label' => 'Kecamatan'];
+            return ['level' => 'kelurahan', 'label' => 'Kelurahan'];
         }
         if ($request->filled('lokasi_samsat')) {
+            return ['level' => 'kecamatan', 'label' => 'Kecamatan'];
+        }
+        if ($request->filled('kabkota_id')) {
             return ['level' => 'samsat', 'label' => 'Samsat'];
         }
         return ['level' => 'kabkota', 'label' => 'Kabkota'];
@@ -118,6 +121,15 @@ class PelaporanController extends Controller
                 ->first();
 
             return $samsat?->lokasi ?: $samsat?->lokasi_singkat ?: $code;
+        }
+
+        if ($level === 'petugas') {
+            $petugas = User::query()
+                ->select('name')
+                ->where('id', $code)
+                ->first();
+
+            return $petugas?->name ?: $code;
         }
 
         if ($level === 'kecamatan') {
@@ -914,7 +926,9 @@ class PelaporanController extends Controller
         $level = $context['level'];
         $wilayahLabel = $context['label'];
 
-        if ($level === 'kelurahan') {
+        if ($level === 'petugas') {
+            $groupExpr = "COALESCE(NULLIF(created_by, ''), '-')";
+        } elseif ($level === 'kelurahan') {
             $groupExpr = "COALESCE(NULLIF(desa_name, ''), NULLIF(desa, ''), '-')";
         } elseif ($level === 'kecamatan') {
             $groupExpr = "COALESCE(NULLIF(kec_name, ''), NULLIF(kec_dagri, ''), '-')";

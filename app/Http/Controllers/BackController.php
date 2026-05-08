@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Models\SengStatus;
 use App\Models\SengWilayah;
 use App\Models\SengPendataanKendaraan;
@@ -16,6 +17,17 @@ class BackController extends Controller
 
     public function index(Request $request)
     {
+        $user = Auth::user();
+        $isKecamatanScope = $user && $user->hasRole('kecamatan');
+        $isScopedKabkota = $user && (
+            $user->hasRole('kabkota')
+            || $user->hasRole('uptd')
+            || $user->hasRole('uppd')
+            || $isKecamatanScope
+        );
+        $userLokasiSamsat = (string) ($user->lokasi_samsat ?? '');
+        $userKecamatanSamsat = (string) ($user->kecamatan_samsat ?: $user->kecamatan ?: '');
+
         $cacheKey = $this->readableDashboardStatsCacheKey($request);
 
         $data = ApiCacheManager::remember($cacheKey, ApiCacheManager::dashboardTtl(), function () use ($request) {
@@ -46,7 +58,33 @@ class BackController extends Controller
             return WilayahSamsat::select('id', 'nama', 'kabkota')->orderBy('nama')->get();
         });
     
-        return view('backend.dashboard.index', compact('kabkotas', 'statuss', 'data', 'samsats'));
+        return view('backend.dashboard.index', compact(
+            'kabkotas',
+            'statuss',
+            'data',
+            'samsats',
+            'isKecamatanScope',
+            'isScopedKabkota',
+            'userLokasiSamsat',
+            'userKecamatanSamsat'
+        ));
+    }
+
+    private function resolveKecamatanDagriValue(?string $value): ?string
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        $row = DB::table('wilayah_samsat_kec')
+            ->select('kode_dagri')
+            ->where('id_kecamatan', $value)
+            ->first();
+
+        return isset($row->kode_dagri) && $row->kode_dagri !== null && $row->kode_dagri !== ''
+            ? (string) $row->kode_dagri
+            : $value;
     }
 
     /**
@@ -62,6 +100,8 @@ class BackController extends Controller
         $userRoleId = $user->roles[0]->id ?? null;
         $userKotaId = $user->kota ?? null;
         $userLokasiSamsat = $user->lokasi_samsat ?? null;
+        $userKecamatanSamsat = $user->kecamatan_samsat ?: $user->kecamatan ?: null;
+        $isKecamatanScope = $user && $user->hasRole('kecamatan');
 
         $scope = [
             'kota_dagri' => null,
@@ -88,8 +128,10 @@ class BackController extends Controller
             $scope['kota_layanan'] = (string) $request->lokasi_samsat;
         }
 
-        if ($request->filled('kecamatan_samsat')) {
-            $scope['kec'] = (string) $request->kecamatan_samsat;
+        if ($isKecamatanScope && !empty($userKecamatanSamsat)) {
+            $scope['kec'] = (string) $this->resolveKecamatanDagriValue((string) $userKecamatanSamsat);
+        } elseif ($request->filled('kecamatan_samsat')) {
+            $scope['kec'] = (string) $this->resolveKecamatanDagriValue((string) $request->kecamatan_samsat);
         }
         if ($request->filled('kelurahan_samsat')) {
             $scope['desa'] = (string) $request->kelurahan_samsat;
@@ -161,6 +203,8 @@ class BackController extends Controller
         $userRoleId = Auth::user()->roles[0]->id ?? null;
         $userKotaId = Auth::user()->kota ?? null;
         $userLokasiSamsat = Auth::user()->lokasi_samsat ?? null;
+        $userKecamatanSamsat = Auth::user()->kecamatan_samsat ?: Auth::user()->kecamatan ?: null;
+        $isKecamatanScope = Auth::user()->hasRole('kecamatan');
 
         if ($userRoleId == 1 || $userRoleId == 2) {
             if ($request->kabkota_id) {
@@ -176,8 +220,10 @@ class BackController extends Controller
             $verifikasis->where('kota', $request->lokasi_samsat);
         }
 
-        if ($request->kecamatan_samsat) {
-            $verifikasis->where('kec', $request->kecamatan_samsat);
+        if ($isKecamatanScope && !empty($userKecamatanSamsat)) {
+            $verifikasis->where('kec_dagri', $this->resolveKecamatanDagriValue((string) $userKecamatanSamsat));
+        } elseif ($request->kecamatan_samsat) {
+            $verifikasis->where('kec_dagri', $this->resolveKecamatanDagriValue((string) $request->kecamatan_samsat));
         }
         if ($request->kelurahan_samsat) {
             $verifikasis->where('desa', $request->kelurahan_samsat);

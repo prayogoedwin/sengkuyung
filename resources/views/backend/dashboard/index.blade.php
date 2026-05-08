@@ -62,12 +62,15 @@
                                         @php
                                         $userRoleId = Auth::user()->roles[0]->id ?? null;
                                         $userKotaId = Auth::user()->kota ?? null;
-                                        $userLokasiSamsat = Auth::user()->lokasi_samsat ?? null;
+                                        $userLokasiSamsat = $userLokasiSamsat ?? (Auth::user()->lokasi_samsat ?? null);
+                                        $isScopedKabkota = $isScopedKabkota ?? false;
+                                        $isKecamatanScope = $isKecamatanScope ?? false;
+                                        $userKecamatanSamsat = $userKecamatanSamsat ?? (Auth::user()->kecamatan_samsat ?? Auth::user()->kecamatan ?? null);
                                         @endphp
 
                                         <div class="col-md-2">
                                             <label for="userKabkota">Kabupaten/Kota</label>
-                                            <select class="form-control" id="userKabkota" name="kabkota_id">
+                                            <select class="form-control" id="userKabkota" name="kabkota_id" {{ $isScopedKabkota ? 'disabled' : '' }}>
                                                 <option value="">Pilih Kabkota</option>
                                                 @foreach ($kabkotas as $kbkt)
                                                     @if ($userLokasiSamsat || $userRoleId == 3 || $userRoleId == 4)
@@ -90,7 +93,7 @@
                         
                                         <div class="col-md-2">
                                             <label for="kecamatanSamsat">Kecamatan Samsat</label>
-                                            <select class="form-control" id="kecamatanSamsat" name="kecamatan_samsat">
+                                            <select class="form-control" id="kecamatanSamsat" name="kecamatan_samsat" {{ $isKecamatanScope ? 'disabled' : '' }}>
                                                 <option value="">Pilih Kecamatan Samsat</option>
                                             </select>
                                         </div>
@@ -246,9 +249,10 @@
 <script>
     $(document).ready(function() {
         var forcedLokasiSamsat = '{{ $userLokasiSamsat ?? '' }}';
+        var forcedKecamatanSamsat = '{{ $userKecamatanSamsat ?? '' }}';
         var selectedKabkota = $('#userKabkota').val();
         var selectedLokasiSamsat = '{{ request('lokasi_samsat') }}';
-        var selectedKecamatanSamsat = '{{ request('kecamatan_samsat') }}';
+        var selectedKecamatanSamsat = '{{ request('kecamatan_samsat') }}' || forcedKecamatanSamsat;
         var selectedKelurahanSamsat = '{{ request('kelurahan_samsat') }}';
 
         if (selectedKabkota) {
@@ -333,6 +337,10 @@
                         });
                     }
                     $('#kecamatanSamsat').html(options);
+
+                    if (forcedKecamatanSamsat) {
+                        $('#kecamatanSamsat').val(String(forcedKecamatanSamsat)).prop('disabled', true);
+                    }
                     $('#kecamatanSamsat').trigger('change');
                 },
                 error: function() {

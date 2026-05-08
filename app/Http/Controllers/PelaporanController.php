@@ -63,6 +63,32 @@ class PelaporanController extends Controller
         });
     }
 
+    private function resolveKecamatanDagriVariants(?string $kecamatanValue): array
+    {
+        $value = trim((string) $kecamatanValue);
+        if ($value === '') {
+            return [];
+        }
+
+        $variants = $this->codeVariants($value);
+
+        $cacheKey = 'admin:master:pelaporan:kecamatan-dagri-by-id:' . $value;
+        $kodeDagri = ApiCacheManager::remember($cacheKey, ApiCacheManager::masterTtl(), static function () use ($value) {
+            $row = DB::table('wilayah_samsat_kec')
+                ->select('kode_dagri')
+                ->where('id_kecamatan', (string) $value)
+                ->first();
+
+            return isset($row->kode_dagri) ? (string) $row->kode_dagri : null;
+        });
+
+        if (!empty($kodeDagri)) {
+            $variants = array_merge($variants, $this->codeVariants($kodeDagri));
+        }
+
+        return array_values(array_unique(array_filter($variants, static fn ($v) => $v !== '')));
+    }
+
     private function resolveWilayahContext(Request $request): array
     {
         if ($request->filled('kelurahan_samsat')) {
@@ -873,7 +899,7 @@ class PelaporanController extends Controller
 
         $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;
         if ($kecamatanFilter) {
-            $baseQuery->whereIn('kec_dagri', $this->codeVariants($kecamatanFilter));
+            $baseQuery->whereIn('kec_dagri', $this->resolveKecamatanDagriVariants((string) $kecamatanFilter));
         }
 
         if ($request->kelurahan_samsat) {

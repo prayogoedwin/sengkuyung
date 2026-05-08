@@ -55,8 +55,7 @@ class PelaporanController extends Controller
         return ApiCacheManager::remember($cacheKey, ApiCacheManager::masterTtl(), static function () use ($kelurahanId) {
             $row = DB::table('wilayah_samsat_kel')
                 ->select('kelurahan')
-                ->where('kode_dagri_kelurahan', (string) $kelurahanId)
-                ->orWhere('id_kelurahan', (string) $kelurahanId)
+                ->where('id_kelurahan', (string) $kelurahanId)
                 ->first();
 
             return isset($row->kelurahan) ? (string) $row->kelurahan : null;
@@ -159,8 +158,7 @@ class PelaporanController extends Controller
         if ($level === 'kelurahan') {
             $kel = SengWilayahKel::query()
                 ->select('kelurahan')
-                ->where('kode_dagri_kelurahan', $code)
-                ->orWhere('id_kelurahan', $code)
+                ->where('id_kelurahan', $code)
                 ->first();
             if ($kel?->kelurahan) {
                 return (string) $kel->kelurahan;

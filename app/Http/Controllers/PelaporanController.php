@@ -257,21 +257,53 @@ class PelaporanController extends Controller
         $request->merge(['tipe' => 2]);
     }
 
+    private function applyKelurahanScope(Request $request, $user): void
+    {
+        if (!$user || !$user->hasRole('kelurahan')) {
+            return;
+        }
+
+        $lokasiSamsat = (string) ($user->lokasi_samsat ?? '');
+        $kabkotaBySamsat = $this->resolveKabkotaFromLokasiSamsat($lokasiSamsat);
+        $kabkotaScoped = (string) ($user->kota ?: $kabkotaBySamsat ?: '');
+        $kecamatanScoped = (string) ($user->kecamatan_samsat ?: $user->kecamatan ?: '');
+        $kelurahanScoped = (string) ($user->kelurahan_samsat ?: $user->kelurahan ?: '');
+
+        if ($kabkotaScoped !== '') {
+            $request->merge(['kabkota_id' => $kabkotaScoped]);
+        }
+        if ($lokasiSamsat !== '') {
+            $request->merge(['lokasi_samsat' => $lokasiSamsat]);
+        }
+        if ($kecamatanScoped !== '') {
+            $request->merge(['kecamatan_samsat' => $kecamatanScoped]);
+        }
+        if ($kelurahanScoped !== '') {
+            $request->merge(['kelurahan_samsat' => $kelurahanScoped]);
+        }
+
+        // Role kelurahan hanya boleh rekap.
+        $request->merge(['tipe' => 2]);
+    }
+
     public function index(Request $request)
     {
         $user = User::findOrFail(auth()->id());
         $isKabkota = $user->hasRole('kabkota');
         $isUppd = $user->hasRole('uppd');
         $isKecamatan = $user->hasRole('kecamatan');
+        $isKelurahan = $user->hasRole('kelurahan');
         $selectedKabkotaId = null;
         $userLokasiSamsat = (string) ($user->lokasi_samsat ?? '');
         $selectedKecamatanSamsatId = (string) ($user->kecamatan_samsat ?: $user->kecamatan ?: '');
+        $selectedKelurahanSamsatId = (string) ($user->kelurahan_samsat ?: $user->kelurahan ?: '');
         $kabkotaBySamsat = $this->resolveKabkotaFromLokasiSamsat($userLokasiSamsat);
         $scopedKabkotaId = (string) ($user->kota ?: $kabkotaBySamsat ?: '');
-        $isScopedKabkota = $isKabkota || $isUppd || $isKecamatan;
-        $isLokasiSamsatLocked = $isUppd || $isKecamatan;
-        $isKecamatanSamsatLocked = $isKecamatan;
-        $isKecamatanRekapOnly = $isKecamatan;
+        $isScopedKabkota = $isKabkota || $isUppd || $isKecamatan || $isKelurahan;
+        $isLokasiSamsatLocked = $isUppd || $isKecamatan || $isKelurahan;
+        $isKecamatanSamsatLocked = $isKecamatan || $isKelurahan;
+        $isKelurahanSamsatLocked = $isKelurahan;
+        $isRekapOnlyRole = $isKecamatan || $isKelurahan;
 
         if ($isScopedKabkota && !empty($scopedKabkotaId)) {
             $selectedKabkotaId = $scopedKabkotaId;
@@ -296,9 +328,11 @@ class PelaporanController extends Controller
             'selectedKabkotaId',
             'userLokasiSamsat',
             'selectedKecamatanSamsatId',
+            'selectedKelurahanSamsatId',
             'isLokasiSamsatLocked',
             'isKecamatanSamsatLocked',
-            'isKecamatanRekapOnly'
+            'isKelurahanSamsatLocked',
+            'isRekapOnlyRole'
         ));
     }
 
@@ -306,6 +340,7 @@ class PelaporanController extends Controller
         $user = auth()->user();
         $this->applyUppdScope($request, $user);
         $this->applyKecamatanScope($request, $user);
+        $this->applyKelurahanScope($request, $user);
         if ($user && $user->hasRole('kabkota') && !empty($user->kota)) {
             $request->merge(['kabkota_id' => $user->kota]);
         }
@@ -325,6 +360,7 @@ class PelaporanController extends Controller
         $user = auth()->user();
         $this->applyUppdScope($request, $user);
         $this->applyKecamatanScope($request, $user);
+        $this->applyKelurahanScope($request, $user);
         if ($user && $user->hasRole('kabkota') && !empty($user->kota)) {
             $request->merge(['kabkota_id' => $user->kota]);
         }
@@ -666,6 +702,7 @@ class PelaporanController extends Controller
         $user = auth()->user();
         $this->applyUppdScope($request, $user);
         $this->applyKecamatanScope($request, $user);
+        $this->applyKelurahanScope($request, $user);
         if ($user && $user->hasRole('kabkota') && !empty($user->kota)) {
             $request->merge(['kabkota_id' => $user->kota]);
         }

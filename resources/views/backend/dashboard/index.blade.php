@@ -65,7 +65,9 @@
                                         $userLokasiSamsat = $userLokasiSamsat ?? (Auth::user()->lokasi_samsat ?? null);
                                         $isScopedKabkota = $isScopedKabkota ?? false;
                                         $isKecamatanScope = $isKecamatanScope ?? false;
+                                        $isKelurahanScope = $isKelurahanScope ?? false;
                                         $userKecamatanSamsat = $userKecamatanSamsat ?? (Auth::user()->kecamatan_samsat ?? Auth::user()->kecamatan ?? null);
+                                        $userKelurahanSamsat = $userKelurahanSamsat ?? (Auth::user()->kelurahan_samsat ?? Auth::user()->kelurahan ?? null);
                                         @endphp
 
                                         <div class="col-md-2">
@@ -100,7 +102,7 @@
 
                                         <div class="col-md-2">
                                             <label for="kelurahanSamsat">Kelurahan Samsat</label>
-                                            <select class="form-control" id="kelurahanSamsat" name="kelurahan_samsat">
+                                            <select class="form-control" id="kelurahanSamsat" name="kelurahan_samsat" {{ $isKelurahanScope ? 'disabled' : '' }}>
                                                 <option value="">Pilih Kelurahan Samsat</option>
                                             </select>
                                         </div>
@@ -250,10 +252,11 @@
     $(document).ready(function() {
         var forcedLokasiSamsat = '{{ $userLokasiSamsat ?? '' }}';
         var forcedKecamatanSamsat = '{{ $userKecamatanSamsat ?? '' }}';
+        var forcedKelurahanSamsat = '{{ $userKelurahanSamsat ?? '' }}';
         var selectedKabkota = $('#userKabkota').val();
         var selectedLokasiSamsat = '{{ request('lokasi_samsat') }}';
         var selectedKecamatanSamsat = '{{ request('kecamatan_samsat') }}' || forcedKecamatanSamsat;
-        var selectedKelurahanSamsat = '{{ request('kelurahan_samsat') }}';
+        var selectedKelurahanSamsat = '{{ request('kelurahan_samsat') }}' || forcedKelurahanSamsat;
 
         if (selectedKabkota) {
             loadSamsats(selectedKabkota, selectedLokasiSamsat);
@@ -368,6 +371,9 @@
                         });
                     }
                     $('#kelurahanSamsat').html(options);
+                    if (forcedKelurahanSamsat) {
+                        $('#kelurahanSamsat').val(String(forcedKelurahanSamsat)).prop('disabled', true);
+                    }
                 },
                 error: function() {
                     $('#kelurahanSamsat').html('<option value="">Gagal mengambil kelurahan samsat</option>');

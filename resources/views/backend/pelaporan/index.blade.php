@@ -49,7 +49,7 @@
 
                                             <div class="col-md-12 mb-2">
                                                 <label for="kelurahanSamsat">Kelurahan Samsat</label>
-                                                <select class="form-control" id="kelurahanSamsat" name="kelurahan_samsat">
+                                                <select class="form-control" id="kelurahanSamsat" name="kelurahan_samsat" {{ !empty($isKelurahanSamsatLocked) && $isKelurahanSamsatLocked ? 'disabled' : '' }}>
                                                     <option value="">Pilih Kelurahan Samsat</option>
                                                 </select>
                                             </div>
@@ -67,7 +67,7 @@
                                             <div class="col-md-12 mt-2 mb-2">
                                                 <label for="kecamatan">Tipe Pelaporan</label>
                                                 <select class="form-control" id="tipe" name="tipe">
-                                                    @if (!empty($isKecamatanRekapOnly) && $isKecamatanRekapOnly)
+                                                    @if (!empty($isRekapOnlyRole) && $isRekapOnlyRole)
                                                         <option value="2" selected>Rekap</option>
                                                     @else
                                                         <option value="1">Jurnal</option>
@@ -111,9 +111,10 @@
     $(document).ready(function() {
         var forcedLokasiSamsat = '{{ $userLokasiSamsat ?? '' }}';
         var forcedKecamatanSamsat = '{{ $selectedKecamatanSamsatId ?? '' }}';
+        var forcedKelurahanSamsat = '{{ $selectedKelurahanSamsatId ?? '' }}';
         var selectedLokasiSamsat = '';
         var selectedKecamatanSamsat = forcedKecamatanSamsat || '';
-        var selectedKelurahanSamsat = '';
+        var selectedKelurahanSamsat = forcedKelurahanSamsat || '';
 
         function loadSamsatsByKabkota(kabkotaId, selectedSamsat) {
             if (!kabkotaId) {
@@ -210,6 +211,9 @@
                         });
                     }
                     $('#kelurahanSamsat').html(options);
+                    if (forcedKelurahanSamsat) {
+                        $('#kelurahanSamsat').val(String(forcedKelurahanSamsat)).prop('disabled', true);
+                    }
                 },
                 error: function() {
                     $('#kelurahanSamsat').html('<option value="">Gagal mengambil kelurahan samsat</option>');
@@ -247,7 +251,7 @@
     document.addEventListener("DOMContentLoaded", function () {
         const lockedKabkotaId = @json($selectedKabkotaId ?? '');
         const isKabkotaLocked = @json((bool) ($isScopedKabkota ?? false));
-        const isKecamatanRekapOnly = @json((bool) ($isKecamatanRekapOnly ?? false));
+        const isRekapOnlyRole = @json((bool) ($isRekapOnlyRole ?? false));
 
         const buildQuery = () => {
             const kabkota = document.getElementById("userKabkota").value;
@@ -287,7 +291,7 @@
         document.getElementById("resetFilter").addEventListener("click", function (e) {
             e.preventDefault();
             document.getElementById("pelaporanFilterForm").reset();
-            if (isKecamatanRekapOnly) {
+            if (isRekapOnlyRole) {
                 document.getElementById("tipe").value = '2';
             }
             if (isKabkotaLocked && lockedKabkotaId) {

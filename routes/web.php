@@ -103,3 +103,9 @@ Route::post('/otp/resend', [AuthController::class, 'resendOtp'])->name('login.ot
 // Route::get('/', function () {
 //     return view('welcome');
 // });
+
+Route::get('/test', fn() => response()->json([
+    'uri' => request()->getRequestUri(),
+    'path' => request()->path(),
+    'url' => request()->url(),
+]));

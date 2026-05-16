@@ -10,7 +10,7 @@ class PelaporanD2dController extends PelaporanController
     {
         $this->middleware(function ($request, $next) {
             if (!RekapD2dController::userCanAccessRekapPelaporanD2d()) {
-                abort(403, 'Menu Pelaporan D2D hanya untuk akun UPPD.');
+                abort(403, 'Akses Pelaporan D2D ditolak.');
             }
 
             return $next($request);

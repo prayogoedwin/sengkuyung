@@ -18,17 +18,22 @@
         @php
             $user = Auth::user();
             $roleName = strtolower((string) optional($user->roles->first())->name);
-            $isSuperAdmin = $user->hasRole('super-admin') || $user->hasRole('superadmin');
-            $isAdminProv = $user->hasRole('admin') || $user->hasRole('adminprov');
+            $isSuperAdmin = $user->hasAnyRole(['super-admin', 'superadmin'], 'web')
+                || in_array($roleName, ['super-admin', 'superadmin'], true);
+            $isAdminProv = $user->hasAnyRole(['admin', 'adminprov'], 'web')
+                || in_array($roleName, ['admin', 'adminprov'], true);
             $isUppd = $user->hasRole('uppd');
             $isUptd = $user->hasRole('uptd') || $isUppd;
             $isKabkota = $user->hasRole('kabkota');
             $isKecamatan = $user->hasRole('kecamatan');
             $isKelurahan = $user->hasRole('kelurahan');
             $isWilayahLower = $isKecamatan || $isKelurahan;
-            $canSeeDataTertagih = $isSuperAdmin || $isAdminProv || ($isUptd && !$isUppd);
-            $canSeeVerifikasiD2d = $isSuperAdmin || $isAdminProv || $isUptd;
-            $canSeeRekapPelaporanD2d = $isUppd;
+            $isAdminScope = $isSuperAdmin || $isAdminProv;
+            $canSeeDataTertagih = $isAdminScope || ($isUptd && !$isUppd);
+            $canSeeVerifikasiD2d = $isAdminScope || $isUptd;
+            $canSeePelaporan = $isAdminScope || $isKabkota || $isUppd || $isKecamatan;
+            $canSeeRekap = $isAdminScope || ($isUptd && !$isUppd);
+            $canSeeRekapPelaporanD2d = $isAdminScope || $isUppd;
         @endphp
 
         <!-- Dashboard -->
@@ -39,7 +44,7 @@
             </a>
         </li>
 
-        @if ($isSuperAdmin || $isAdminProv)
+        @if ($isAdminScope)
             <li class="menu-item {{ request()->routeIs('user.index') ? 'active' : '' }}">
                 <a href="{{ route('user.index') }}" class="menu-link">
                     {{-- <i class="menu-icon tf-icons bx bx-home-circle"></i> --}}
@@ -107,30 +112,40 @@
             </li>
             @endif
 
-            @if ($isKabkota || $isUppd)
+            @if ($canSeePelaporan)
                 <li class="menu-item {{ request()->routeIs('pelaporan.index') ? 'active' : '' }}">
                     <a href="{{ route('pelaporan.index') }}" class="menu-link">
-                        <i class="menu-icon tf-icons bx bx-file"></i>  {{-- Ikon Pelaporan --}}
+                        <i class="menu-icon tf-icons bx bx-file"></i>
                         <div data-i18n="Analytics">Pelaporan</div>
                     </a>
                 </li>
             @endif
-            
-            <li class="menu-item {{ request()->routeIs('pelaporan.index') ? 'active' : '' }}">
-                <a href="{{ route('pelaporan.index') }}" class="menu-link">
-                    <i class="menu-icon tf-icons bx bx-file"></i>  {{-- Ikon Pelaporan --}}
-                    <div data-i18n="Analytics">Pelaporan</div>
-                </a>
-            </li>
 
-            <li class="menu-item {{ request()->routeIs('rekap.index') ? 'active' : '' }}">
-                <a href="{{ route('rekap.index') }}" class="menu-link">
-                    <i class="menu-icon tf-icons bx bx-bar-chart-alt-2"></i>  {{-- Ikon Rekap --}}
-                    <div data-i18n="Analytics">Rekap</div>
-                </a>
-            </li>
+            @if ($canSeeRekap)
+                <li class="menu-item {{ request()->routeIs('rekap.index') ? 'active' : '' }}">
+                    <a href="{{ route('rekap.index') }}" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-bar-chart-alt-2"></i>
+                        <div data-i18n="Analytics">Rekap</div>
+                    </a>
+                </li>
+            @endif
 
-            <li class="menu-item {{ request()->routeIs('perbandingan-kode-wilayah.index') ? 'active' : '' }}" hidden>
+            @if ($canSeeRekapPelaporanD2d)
+                <li class="menu-item {{ request()->routeIs('pelaporan-d2d.index') ? 'active' : '' }}">
+                    <a href="{{ route('pelaporan-d2d.index') }}" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-file"></i>
+                        <div data-i18n="Analytics">Pelaporan D2D</div>
+                    </a>
+                </li>
+                <li class="menu-item {{ request()->routeIs('rekap-d2d.index') ? 'active' : '' }}">
+                    <a href="{{ route('rekap-d2d.index') }}" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-bar-chart-alt-2"></i>
+                        <div data-i18n="Analytics">Rekap D2D</div>
+                    </a>
+                </li>
+            @endif
+
+            <li class="menu-item {{ request()->routeIs('perbandingan-kode-wilayah.index') ? 'active' : '' }}" hidden> ? 'active' : '' }}" hidden>
                 <a href="{{ route('perbandingan-kode-wilayah.index') }}" class="menu-link">
                     <i class="menu-icon tf-icons bx bx-git-compare"></i>
                     <div data-i18n="Analytics">Perbandingan Kode Wilayah</div>
@@ -181,11 +196,20 @@
                 </li>
                 @endif
 
-                @if ($isKabkota || $isUppd || $isKecamatan)
+                @if ($canSeePelaporan)
                     <li class="menu-item {{ request()->routeIs('pelaporan.index') ? 'active' : '' }}">
                         <a href="{{ route('pelaporan.index') }}" class="menu-link">
-                            <i class="menu-icon tf-icons bx bx-file"></i>  {{-- Ikon Pelaporan --}}
+                            <i class="menu-icon tf-icons bx bx-file"></i>
                             <div data-i18n="Analytics">Pelaporan</div>
+                        </a>
+                    </li>
+                @endif
+
+                @if ($canSeeRekap)
+                    <li class="menu-item {{ request()->routeIs('rekap.index') ? 'active' : '' }}">
+                        <a href="{{ route('rekap.index') }}" class="menu-link">
+                            <i class="menu-icon tf-icons bx bx-bar-chart-alt-2"></i>
+                            <div data-i18n="Analytics">Rekap</div>
                         </a>
                     </li>
                 @endif
@@ -206,10 +230,10 @@
                 @endif
             @endif
 
-            @if ($isKecamatan)
+            @if ($isKecamatan && $canSeePelaporan)
                 <li class="menu-item {{ request()->routeIs('pelaporan.index') ? 'active' : '' }}">
                     <a href="{{ route('pelaporan.index') }}" class="menu-link">
-                        <i class="menu-icon tf-icons bx bx-file"></i>  {{-- Ikon Pelaporan --}}
+                        <i class="menu-icon tf-icons bx bx-file"></i>
                         <div data-i18n="Analytics">Pelaporan</div>
                     </a>
                 </li>

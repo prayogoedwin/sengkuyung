@@ -17,7 +17,7 @@ class RekapD2dController extends RekapController
     {
         $this->middleware(function ($request, $next) {
             if (!self::userCanAccessRekapPelaporanD2d()) {
-                abort(403, 'Menu Rekap D2D hanya untuk akun UPPD.');
+                abort(403, 'Akses Rekap D2D ditolak.');
             }
 
             return $next($request);
@@ -28,7 +28,11 @@ class RekapD2dController extends RekapController
     {
         $user = Auth::user();
 
-        return $user && $user->hasRole('uppd');
+        if (!$user) {
+            return false;
+        }
+
+        return $user->hasAnyRole(['super-admin', 'superadmin', 'admin', 'adminprov', 'uppd'], 'web');
     }
 
     public function index(Request $request)
@@ -66,6 +70,10 @@ class RekapD2dController extends RekapController
 
     protected function rekapKabkotas(User $user)
     {
+        if (!$user->hasRole('uppd')) {
+            return parent::rekapKabkotas($user);
+        }
+
         $lokasiSamsat = (string) ($user->lokasi_samsat ?? '');
         $kabkotaId = (string) ($user->kota ?: $this->resolveKabkotaFromLokasiSamsat($lokasiSamsat) ?: '');
 
@@ -90,11 +98,13 @@ class RekapD2dController extends RekapController
         $lokasiSamsat = (string) ($user->lokasi_samsat ?? '');
         $kabkotaBySamsat = $this->resolveKabkotaFromLokasiSamsat($lokasiSamsat);
 
+        $isUppdScoped = $user->hasRole('uppd');
+
         return [
             'rekapPageTitle' => 'Rekap D2D',
-            'isUppdScoped' => true,
-            'selectedKabkotaId' => (string) ($user->kota ?: $kabkotaBySamsat ?: ''),
-            'userLokasiSamsat' => $lokasiSamsat,
+            'isUppdScoped' => $isUppdScoped,
+            'selectedKabkotaId' => $isUppdScoped ? (string) ($user->kota ?: $kabkotaBySamsat ?: '') : '',
+            'userLokasiSamsat' => $isUppdScoped ? $lokasiSamsat : '',
         ];
     }
 

@@ -22,19 +22,21 @@ class DataTertagihController extends Controller
         'id_kelurahan',
         'nm_kelurahan',
         'alamat',
+        'nama_pemilik',
+        'jenis_roda',
     ];
 
     private const TEMPLATE_EXAMPLE_ROWS = [
-        ['H-1048-AA', '1', 'SEMARANG I', '103', 'GENUK', '103005', 'BANJARDOWO', 'JL. BANJARDOWO RAYA NO. 12'],
-        ['H-8042-UA', '1', 'SEMARANG I', '101', 'SEMARANG TENGAH', '101012', 'KARANG KIDUL', 'JL. MENTRI SUPENO GG. 3'],
-        ['H-7054-BA', '1', 'SEMARANG I', '104', 'SEMARANG TIMUR', '104008', 'REJOSARI', 'JL. REJOSARI TENGAH NO. 8'],
-        ['H-2513-WP', '1', 'SEMARANG I', '104', 'SEMARANG TIMUR', '104006', 'BUGANGAN', 'JL. BUGANGAN BARU RT 02 RW 01'],
-        ['H-1071-SF', '1', 'SEMARANG I', '102', 'SEMARANG UTARA', '102008', 'TANJUNGMAS', 'JL. TAWANG STASIUN SELATAN'],
-        ['H-3322-PH', '1', 'SEMARANG I', '102', 'SEMARANG UTARA', '102004', 'PURWOSARI', 'JL. PURWOSARI RAYA NO. 4'],
-        ['H-8455-BL', '1', 'SEMARANG I', '106', 'BANYUMANIK', '106004', 'TLGOSARI', 'JL. TELAGASARI UTAMA BLOK C2'],
-        ['H-9012-KQ', '1', 'SEMARANG I', '105', 'GAJAHMUNGKUR', '105002', 'PETOMPON', 'JL. PETOMPON DALAM NO. 15'],
-        ['H-3345-VX', '1', 'SEMARANG I', '107', 'CANDISARI', '107006', 'KARANGANYAR GUNUNG', 'JL. KARANGANYAR GUNUNG TIMUR'],
-        ['H-6678-RN', '1', 'SEMARANG I', '108', 'MIJEN', '108003', 'JATIBARANG', 'JL. JATIBARANG RAYA KM. 3'],
+        ['H-1048-AA', '1', 'SEMARANG I', '103', 'GENUK', '103005', 'BANJARDOWO', 'JL. BANJARDOWO RAYA NO. 12', 'BUDI SANTOSO', '4'],
+        ['H-8042-UA', '1', 'SEMARANG I', '101', 'SEMARANG TENGAH', '101012', 'KARANG KIDUL', 'JL. MENTRI SUPENO GG. 3', 'SITI AMINAH', '2'],
+        ['H-7054-BA', '1', 'SEMARANG I', '104', 'SEMARANG TIMUR', '104008', 'REJOSARI', 'JL. REJOSARI TENGAH NO. 8', 'AGUS WIBOWO', '4'],
+        ['H-2513-WP', '1', 'SEMARANG I', '104', 'SEMARANG TIMUR', '104006', 'BUGANGAN', 'JL. BUGANGAN BARU RT 02 RW 01', 'DEWI LESTARI', '2'],
+        ['H-1071-SF', '1', 'SEMARANG I', '102', 'SEMARANG UTARA', '102008', 'TANJUNGMAS', 'JL. TAWANG STASIUN SELATAN', 'RUDI HARTONO', '4'],
+        ['H-3322-PH', '1', 'SEMARANG I', '102', 'SEMARANG UTARA', '102004', 'PURWOSARI', 'JL. PURWOSARI RAYA NO. 4', 'ANI PRATIWI', '2'],
+        ['H-8455-BL', '1', 'SEMARANG I', '106', 'BANYUMANIK', '106004', 'TLGOSARI', 'JL. TELAGASARI UTAMA BLOK C2', 'JOKO SUSILO', '4'],
+        ['H-9012-KQ', '1', 'SEMARANG I', '105', 'GAJAHMUNGKUR', '105002', 'PETOMPON', 'JL. PETOMPON DALAM NO. 15', 'RATNA SARI', '2'],
+        ['H-3345-VX', '1', 'SEMARANG I', '107', 'CANDISARI', '107006', 'KARANGANYAR GUNUNG', 'JL. KARANGANYAR GUNUNG TIMUR', 'BAMBANG SETIAWAN', '4'],
+        ['H-6678-RN', '1', 'SEMARANG I', '108', 'MIJEN', '108003', 'JATIBARANG', 'JL. JATIBARANG RAYA KM. 3', 'LINA MARLINA', '2'],
     ];
 
     public function index(Request $request)
@@ -66,6 +68,12 @@ class DataTertagihController extends Controller
                     ->addIndexColumn()
                     ->addColumn('alamat', function ($row) {
                         return (string) ($row->alamat ?? '');
+                    })
+                    ->addColumn('nama_pemilik', function ($row) {
+                        return (string) ($row->nama_pemilik ?? '');
+                    })
+                    ->addColumn('jenis_roda', function ($row) {
+                        return (string) ($row->jenis_roda ?? '');
                     })
                     ->addColumn('status_terdata', function ($row) {
                         return (int) $row->is_terdata === 1 ? 'Terdata' : 'Belum Terdata';
@@ -164,6 +172,8 @@ class DataTertagihController extends Controller
                 'id_kelurahan' => trim((string) ($row[5] ?? '')),
                 'nm_kelurahan' => trim((string) ($row[6] ?? '')),
                 'alamat' => trim((string) ($row[7] ?? '')),
+                'nama_pemilik' => trim((string) ($row[8] ?? '')),
+                'jenis_roda' => trim((string) ($row[9] ?? '')),
                 'is_terdata' => 0,
                 'year' => $year,
                 'created_at' => $now,

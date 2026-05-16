@@ -20,6 +20,8 @@ class DataTertagih extends Model
         'id_kelurahan',
         'nm_kelurahan',
         'alamat',
+        'nama_pemilik',
+        'jenis_roda',
         'is_terdata',
         'year',
         'created_at',

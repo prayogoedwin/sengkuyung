@@ -112,6 +112,8 @@
                                             <tr>
                                                 <th>No</th>
                                                 <th>No Polisi</th>
+                                                <th>Nama Pemilik</th>
+                                                <th>Jenis Roda</th>
                                                 <th>ID Lokasi Samsat</th>
                                                 <th>Lokasi Layanan</th>
                                                 <th>ID Kecamatan</th>
@@ -166,6 +168,12 @@
                     },
                     {
                         data: 'no_polisi'
+                    },
+                    {
+                        data: 'nama_pemilik'
+                    },
+                    {
+                        data: 'jenis_roda'
                     },
                     {
                         data: 'id_lokasi_samsat'

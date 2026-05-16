@@ -647,6 +647,74 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 12
+                                                    },
+                                                    "no_polisi": {
+                                                        "type": "string",
+                                                        "example": "H-8121-QY"
+                                                    },
+                                                    "id_lokasi_samsat": {
+                                                        "type": "string",
+                                                        "example": "1"
+                                                    },
+                                                    "lokasi_layanan": {
+                                                        "type": "string",
+                                                        "example": "SEMARANG I"
+                                                    },
+                                                    "id_kecamatan": {
+                                                        "type": "string",
+                                                        "example": "103"
+                                                    },
+                                                    "nm_kecamatan": {
+                                                        "type": "string",
+                                                        "example": "GENUK"
+                                                    },
+                                                    "id_kelurahan": {
+                                                        "type": "string",
+                                                        "example": "103005"
+                                                    },
+                                                    "nm_kelurahan": {
+                                                        "type": "string",
+                                                        "example": "BANJARDOWO"
+                                                    },
+                                                    "alamat": {
+                                                        "type": "string",
+                                                        "example": "JL. BANJARDOWO RAYA NO. 12",
+                                                        "nullable": true
+                                                    },
+                                                    "nama_pemilik": {
+                                                        "type": "string",
+                                                        "example": "BUDI SANTOSO",
+                                                        "nullable": true
+                                                    },
+                                                    "jenis_roda": {
+                                                        "description": "Jumlah roda kendaraan, mis. 2 atau 4",
+                                                        "type": "string",
+                                                        "example": "4",
+                                                        "nullable": true
+                                                    },
+                                                    "is_terdata": {
+                                                        "type": "integer",
+                                                        "example": 0
+                                                    },
+                                                    "year": {
+                                                        "type": "integer",
+                                                        "example": 2026
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "nullable": true
+                                                    },
+                                                    "updated_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "nullable": true
+                                                    }
+                                                },
                                                 "type": "object"
                                             }
                                         },
@@ -741,6 +809,54 @@
                                                 "no_polisi": {
                                                     "type": "string",
                                                     "example": "H-8121-QY"
+                                                },
+                                                "id_lokasi_samsat": {
+                                                    "type": "string",
+                                                    "example": "1"
+                                                },
+                                                "lokasi_layanan": {
+                                                    "type": "string",
+                                                    "example": "SEMARANG I"
+                                                },
+                                                "id_kecamatan": {
+                                                    "type": "string",
+                                                    "example": "103"
+                                                },
+                                                "nm_kecamatan": {
+                                                    "type": "string",
+                                                    "example": "GENUK"
+                                                },
+                                                "id_kelurahan": {
+                                                    "type": "string",
+                                                    "example": "103005"
+                                                },
+                                                "nm_kelurahan": {
+                                                    "type": "string",
+                                                    "example": "BANJARDOWO"
+                                                },
+                                                "alamat": {
+                                                    "type": "string",
+                                                    "example": "JL. BANJARDOWO RAYA NO. 12",
+                                                    "nullable": true
+                                                },
+                                                "nama_pemilik": {
+                                                    "type": "string",
+                                                    "example": "BUDI SANTOSO",
+                                                    "nullable": true
+                                                },
+                                                "jenis_roda": {
+                                                    "description": "Jumlah roda kendaraan, mis. 2 atau 4",
+                                                    "type": "string",
+                                                    "example": "4",
+                                                    "nullable": true
+                                                },
+                                                "is_terdata": {
+                                                    "type": "integer",
+                                                    "example": 0
+                                                },
+                                                "year": {
+                                                    "type": "integer",
+                                                    "example": 2026
                                                 },
                                                 "can_select": {
                                                     "type": "boolean",

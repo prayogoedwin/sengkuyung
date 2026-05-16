@@ -358,7 +358,30 @@ class ApiDocs
                     properties: [
                         new OA\Property(property: 'status', type: 'boolean', example: true),
                         new OA\Property(property: 'message', type: 'string', example: 'Data ditemukan'),
-                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object')),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(
+                                properties: [
+                                    new OA\Property(property: 'id', type: 'integer', example: 12),
+                                    new OA\Property(property: 'no_polisi', type: 'string', example: 'H-8121-QY'),
+                                    new OA\Property(property: 'id_lokasi_samsat', type: 'string', example: '1'),
+                                    new OA\Property(property: 'lokasi_layanan', type: 'string', example: 'SEMARANG I'),
+                                    new OA\Property(property: 'id_kecamatan', type: 'string', example: '103'),
+                                    new OA\Property(property: 'nm_kecamatan', type: 'string', example: 'GENUK'),
+                                    new OA\Property(property: 'id_kelurahan', type: 'string', example: '103005'),
+                                    new OA\Property(property: 'nm_kelurahan', type: 'string', example: 'BANJARDOWO'),
+                                    new OA\Property(property: 'alamat', type: 'string', nullable: true, example: 'JL. BANJARDOWO RAYA NO. 12'),
+                                    new OA\Property(property: 'nama_pemilik', type: 'string', nullable: true, example: 'BUDI SANTOSO'),
+                                    new OA\Property(property: 'jenis_roda', type: 'string', nullable: true, example: '4', description: 'Jumlah roda kendaraan, mis. 2 atau 4'),
+                                    new OA\Property(property: 'is_terdata', type: 'integer', example: 0),
+                                    new OA\Property(property: 'year', type: 'integer', example: 2026),
+                                    new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
+                                    new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', nullable: true),
+                                ],
+                                type: 'object'
+                            )
+                        ),
                         new OA\Property(
                             property: 'pagination',
                             type: 'object',
@@ -404,6 +427,17 @@ class ApiDocs
                             properties: [
                                 new OA\Property(property: 'id', type: 'integer', example: 12),
                                 new OA\Property(property: 'no_polisi', type: 'string', example: 'H-8121-QY'),
+                                new OA\Property(property: 'id_lokasi_samsat', type: 'string', example: '1'),
+                                new OA\Property(property: 'lokasi_layanan', type: 'string', example: 'SEMARANG I'),
+                                new OA\Property(property: 'id_kecamatan', type: 'string', example: '103'),
+                                new OA\Property(property: 'nm_kecamatan', type: 'string', example: 'GENUK'),
+                                new OA\Property(property: 'id_kelurahan', type: 'string', example: '103005'),
+                                new OA\Property(property: 'nm_kelurahan', type: 'string', example: 'BANJARDOWO'),
+                                new OA\Property(property: 'alamat', type: 'string', nullable: true, example: 'JL. BANJARDOWO RAYA NO. 12'),
+                                new OA\Property(property: 'nama_pemilik', type: 'string', nullable: true, example: 'BUDI SANTOSO'),
+                                new OA\Property(property: 'jenis_roda', type: 'string', nullable: true, example: '4', description: 'Jumlah roda kendaraan, mis. 2 atau 4'),
+                                new OA\Property(property: 'is_terdata', type: 'integer', example: 0),
+                                new OA\Property(property: 'year', type: 'integer', example: 2026),
                                 new OA\Property(property: 'can_select', type: 'boolean', example: false),
                                 new OA\Property(property: 'warning_message', type: 'string', nullable: true, example: 'Nopol ini tidak bisa dipilih, karena sudah didata oleh user lain.'),
                                 new OA\Property(property: 'pendataan', type: 'object', nullable: true),

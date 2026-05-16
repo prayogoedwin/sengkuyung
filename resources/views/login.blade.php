@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>LOGIN {{ config('app.name') }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="icon" type="image/png" href="{{ asset('LOGO_SENGKUYUNG/ICON_LOGO_SENGKUYUNG.png') }}">
+    <link rel="icon" type="image/png" href="{{ asset('LOGO_SENGKUYUNG/logo-sengkuyung-2026.png') }}">
     <style>
         body {
             background-image: url('/perambanan.avif');
@@ -80,7 +80,7 @@
         @endif
 
         <h2 class="text-center mb-4">LOGIN</h2>
-        <img src="{{ asset('LOGO_SENGKUYUNG/LOGO_SENGKUYUNG.png') }}" alt="Logo {{ config('app.name') }}"
+        <img src="{{ asset('LOGO_SENGKUYUNG/logo-sengkuyung-2026.png') }}" alt="Logo {{ config('app.name') }}"
             class="img-fluid mx-auto d-block">
         <br />
         <br />

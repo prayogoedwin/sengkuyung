@@ -16,7 +16,7 @@
 
 
     <!-- ========== Favicon Icon ========== -->
-    <link rel="shortcut icon" href="{{ asset('assets/nakerbisa_fe/img/self/icon-nakerbisa.png') }}" type="image/x-icon">
+    <link rel="icon" type="image/png" href="{{ asset('LOGO_SENGKUYUNG/logo-sengkuyung-2026.png') }}">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />

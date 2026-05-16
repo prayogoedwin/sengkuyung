@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Verifikasi OTP - {{ config('app.name') }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="icon" type="image/png" href="{{ asset('LOGO_SENGKUYUNG/ICON_LOGO_SENGKUYUNG.png') }}">
+    <link rel="icon" type="image/png" href="{{ asset('LOGO_SENGKUYUNG/logo-sengkuyung-2026.png') }}">
     <style>
         body {
             background-image: url('/perambanan.avif');

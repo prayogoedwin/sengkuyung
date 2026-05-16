@@ -7,7 +7,7 @@
     <title>{{ $policy['title'] }} — {{ config('app.name', 'Sengkuyung') }}</title>
     <meta name="description" content="Kebijakan privasi resmi Aplikasi Sengkuyung BAPENDA Provinsi Jawa Tengah.">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="icon" type="image/png" href="{{ asset('LOGO_SENGKUYUNG/ICON_LOGO_SENGKUYUNG.png') }}">
+    <link rel="icon" type="image/png" href="{{ asset('LOGO_SENGKUYUNG/logo-sengkuyung-2026.png') }}">
     <style>
         body {
             background: #f4f7fb;
@@ -69,7 +69,7 @@
     <div class="policy-wrap">
         <div class="policy-card">
             <div class="text-center mb-4">
-                <img src="{{ asset('LOGO_SENGKUYUNG/ICON_LOGO_SENGKUYUNG.png') }}" alt="Logo Sengkuyung" width="72"
+                <img src="{{ asset('LOGO_SENGKUYUNG/logo-sengkuyung-2026.png') }}" alt="Logo Sengkuyung" width="72"
                     class="mb-3">
                 <h1 class="h3 policy-brand">{{ $policy['title'] }}</h1>
                 <p class="policy-meta mb-1">{{ $policy['operator'] }}</p>

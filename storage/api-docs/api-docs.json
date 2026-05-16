@@ -128,6 +128,22 @@
                                         "data": {
                                             "description": "Profil user. lokasi_samsat_name, kecamatan_samsat_name, kelurahan_samsat_name diisi dari lookup (bukan kolom users).",
                                             "properties": {
+                                                "role": {
+                                                    "description": "Nama role Spatie (guard web)",
+                                                    "type": "string",
+                                                    "example": "petugas",
+                                                    "nullable": true
+                                                },
+                                                "role_id": {
+                                                    "type": "integer",
+                                                    "example": 7,
+                                                    "nullable": true
+                                                },
+                                                "role_label": {
+                                                    "type": "string",
+                                                    "example": "Petugas",
+                                                    "nullable": true
+                                                },
                                                 "lokasi_samsat_name": {
                                                     "type": "string",
                                                     "example": "SAMSAT Gayamsari",
@@ -297,6 +313,21 @@
                                         "data": {
                                             "description": "Sama seperti api/login; nama samsat/kec/kel hanya di response.",
                                             "properties": {
+                                                "role": {
+                                                    "type": "string",
+                                                    "example": "petugas-d2d",
+                                                    "nullable": true
+                                                },
+                                                "role_id": {
+                                                    "type": "integer",
+                                                    "example": 8,
+                                                    "nullable": true
+                                                },
+                                                "role_label": {
+                                                    "type": "string",
+                                                    "example": "Petugas D2D",
+                                                    "nullable": true
+                                                },
                                                 "lokasi_samsat_name": {
                                                     "type": "string",
                                                     "nullable": true

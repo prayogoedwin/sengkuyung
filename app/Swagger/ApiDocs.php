@@ -77,6 +77,9 @@ class ApiDocs
                             type: 'object',
                             description: 'Profil user. lokasi_samsat_name, kecamatan_samsat_name, kelurahan_samsat_name diisi dari lookup (bukan kolom users).',
                             properties: [
+                                new OA\Property(property: 'role', type: 'string', nullable: true, example: 'petugas', description: 'Nama role Spatie (guard web)'),
+                                new OA\Property(property: 'role_id', type: 'integer', nullable: true, example: 7),
+                                new OA\Property(property: 'role_label', type: 'string', nullable: true, example: 'Petugas'),
                                 new OA\Property(property: 'lokasi_samsat_name', type: 'string', nullable: true, example: 'SAMSAT Gayamsari'),
                                 new OA\Property(property: 'kecamatan_samsat_name', type: 'string', nullable: true, example: 'Gayamsari'),
                                 new OA\Property(property: 'kelurahan_samsat_name', type: 'string', nullable: true, example: 'Gayamsari'),
@@ -162,6 +165,9 @@ class ApiDocs
                             type: 'object',
                             description: 'Sama seperti api/login; nama samsat/kec/kel hanya di response.',
                             properties: [
+                                new OA\Property(property: 'role', type: 'string', nullable: true, example: 'petugas-d2d'),
+                                new OA\Property(property: 'role_id', type: 'integer', nullable: true, example: 8),
+                                new OA\Property(property: 'role_label', type: 'string', nullable: true, example: 'Petugas D2D'),
                                 new OA\Property(property: 'lokasi_samsat_name', type: 'string', nullable: true),
                                 new OA\Property(property: 'kecamatan_samsat_name', type: 'string', nullable: true),
                                 new OA\Property(property: 'kelurahan_samsat_name', type: 'string', nullable: true),

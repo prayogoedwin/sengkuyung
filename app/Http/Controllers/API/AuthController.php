@@ -61,7 +61,7 @@ class AuthController extends Controller
             ], 401);
         }
 
-        $user = Auth::user()->makeHidden([
+        $user = Auth::user()->load('roles')->makeHidden([
             'email_verified_at',
             'created_at',
             'created_by',
@@ -70,7 +70,7 @@ class AuthController extends Controller
             'deleted_at',
             'deleted_by'
         ]);
-        
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         // Simpan token ke dalam remember_token
@@ -102,6 +102,7 @@ class AuthController extends Controller
         }
 
         $this->appendSamsatWilayahNames($responseData, $user);
+        $this->appendRoleToResponse($responseData, $user);
 
         return response()->json([
             'status' => true,
@@ -204,7 +205,7 @@ class AuthController extends Controller
                 'otp' => 'required|string|size:6',
             ]);
 
-            $user = User::where('email', $request->email)->first();
+            $user = User::where('email', $request->email)->with('roles')->first();
 
             if (!$user) {
                 return response()->json([
@@ -292,6 +293,7 @@ class AuthController extends Controller
             }
 
             $this->appendSamsatWilayahNames($responseData, $user);
+            $this->appendRoleToResponse($responseData, $user);
 
             return response()->json([
                 'status' => true,
@@ -299,8 +301,6 @@ class AuthController extends Controller
                 'data' => $responseData,
                 'token' => $token,
             ]);
-
-            
         }
 
 
@@ -331,6 +331,29 @@ class AuthController extends Controller
                 'data' => $responseData
             ]);
         }
+
+    /**
+     * Role Spatie untuk response login (mobile membedakan petugas vs petugas-d2d).
+     *
+     * @param  array<string, mixed>  $responseData
+     */
+    private function appendRoleToResponse(array &$responseData, User $user): void
+    {
+        $role = $user->roles->first();
+        $roleName = $role ? strtolower((string) $role->name) : null;
+
+        $responseData['role'] = $roleName;
+        $responseData['role_id'] = $role?->id;
+        $responseData['role_label'] = match ($roleName) {
+            'petugas' => 'Petugas',
+            'petugas-d2d' => 'Petugas D2D',
+            default => $roleName
+                ? ucwords(str_replace(['-', '_'], ' ', $roleName))
+                : null,
+        };
+
+        unset($responseData['roles']);
+    }
 
     /**
      * Nama wilayah samsat untuk response API saja (tidak disimpan ke tabel users).

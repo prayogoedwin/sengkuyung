@@ -550,6 +550,7 @@ class ApiDocs
         path: 'api/pendataan',
         tags: ['Pendataan Kendaraan'],
         summary: 'List pendataan kendaraan milik user login',
+        description: 'Data dari tabel `seng_pendataan_kendaraan` (petugas biasa). Untuk D2D gunakan `/api/pendataan-d2d`.',
         security: [['bearerAuth' => []]],
         parameters: [
             new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 10), description: 'Jumlah data per halaman'),
@@ -596,6 +597,7 @@ class ApiDocs
         path: 'api/pendataan',
         tags: ['Pendataan Kendaraan'],
         summary: 'Tambah data pendataan kendaraan',
+        description: 'Menyimpan ke tabel `seng_pendataan_kendaraan`. Verifikasi admin di menu Verifikasi.',
         security: [['bearerAuth' => []]],
         requestBody: new OA\RequestBody(
             required: true,
@@ -634,12 +636,26 @@ class ApiDocs
         path: 'api/pendataan/{id}',
         tags: ['Pendataan Kendaraan'],
         summary: 'Detail data pendataan kendaraan',
+        description: 'Detail dari tabel `seng_pendataan_kendaraan`.',
         security: [['bearerAuth' => []]],
         parameters: [
             new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string'), description: 'Encoded ID pendataan'),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Data ditemukan'),
+            new OA\Response(
+                response: 200,
+                description: 'Data ditemukan',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'Data ditemukan'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'object',
+                        ),
+                    ]
+                )
+            ),
             new OA\Response(response: 404, description: 'Data tidak ditemukan'),
             new OA\Response(response: 401, description: 'Unauthorized'),
         ]
@@ -751,6 +767,88 @@ class ApiDocs
         ]
     )]
     public function pendataanSecureFile()
+    {
+    }
+
+    #[OA\Get(
+        path: 'api/pendataan-d2d',
+        tags: ['Pendataan Kendaraan D2D'],
+        summary: 'List pendataan D2D milik user login',
+        description: 'Data dari tabel `seng_pendataan_kendaraan_d2d`. Hanya role petugas-d2d (middleware).',
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 10)),
+            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 1)),
+            new OA\Parameter(name: 'alamat', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Berhasil'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+            new OA\Response(response: 403, description: 'Bukan role petugas-d2d'),
+        ]
+    )]
+    public function pendataanD2dIndex()
+    {
+    }
+
+    #[OA\Post(
+        path: 'api/pendataan-d2d',
+        tags: ['Pendataan Kendaraan D2D'],
+        summary: 'Tambah pendataan D2D',
+        description: 'Menyimpan ke `seng_pendataan_kendaraan_d2d`. Verifikasi admin di menu Verifikasi D2D.',
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 201, description: 'Berhasil'),
+            new OA\Response(response: 403, description: 'Bukan role petugas-d2d'),
+        ]
+    )]
+    public function pendataanD2dStore()
+    {
+    }
+
+    #[OA\Get(
+        path: 'api/pendataan-d2d/{id}',
+        tags: ['Pendataan Kendaraan D2D'],
+        summary: 'Detail pendataan D2D',
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Berhasil'),
+            new OA\Response(response: 403, description: 'Bukan role petugas-d2d'),
+            new OA\Response(response: 404, description: 'Tidak ditemukan'),
+        ]
+    )]
+    public function pendataanD2dShow()
+    {
+    }
+
+    #[OA\Post(
+        path: 'api/pendataan-d2d/{id}/upload',
+        tags: ['Pendataan Kendaraan D2D'],
+        summary: 'Upload berkas pendataan D2D',
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Berhasil'),
+            new OA\Response(response: 403, description: 'Bukan role petugas-d2d'),
+        ]
+    )]
+    public function pendataanD2dUpload()
+    {
+    }
+
+    #[OA\Get(
+        path: 'api/secure-file-d2d/{id}/{fileIndex}',
+        tags: ['Pendataan Kendaraan D2D'],
+        summary: 'Ambil file terenkripsi pendataan D2D',
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Berhasil'),
+            new OA\Response(response: 403, description: 'Bukan role petugas-d2d'),
+        ]
+    )]
+    public function pendataanD2dSecureFile()
     {
     }
 }

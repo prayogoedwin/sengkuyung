@@ -10,7 +10,6 @@ use App\Models\SengStatusVerifikasi;
 use App\Models\SengSaamsat;
 use App\Models\SengWilayahKec;
 use App\Models\DataTertagih;
-use App\Models\DataTertagihD2d;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
 use App\Helpers\Helper;
@@ -29,6 +28,27 @@ class SengPendataanKendaraanController extends Controller
 {
 
     // Definisikan aturan validasi sebagai property
+    /**
+     * @return class-string<SengPendataanKendaraan>
+     */
+    protected function pendataanModelClass(): string
+    {
+        return SengPendataanKendaraan::class;
+    }
+
+    /**
+     * @return class-string<DataTertagih>
+     */
+    protected function dataTertagihModelClass(): string
+    {
+        return DataTertagih::class;
+    }
+
+    protected function findPendataan(int $id): ?SengPendataanKendaraan
+    {
+        return $this->pendataanModelClass()::find($id);
+    }
+
     protected $rules = [
         'nohp' => 'required|digits_between:10,15|numeric',
         // 'email' => 'required|email',
@@ -66,10 +86,10 @@ class SengPendataanKendaraanController extends Controller
 
         $perPage = (int) $request->input('per_page', 10);
 
-        $query = SengPendataanKendaraan::query()
+        $query = $this->pendataanModelClass()::query()
             ->where('created_by', $user->id);
 
-        $this->applyWilayahScopeToPendataanQuery($query, $user);
+$this->applyWilayahScopeToPendataanQuery($query, $user);
 
         if ($request->filled('alamat')) {
             $term = trim((string) $request->input('alamat'));
@@ -88,8 +108,8 @@ class SengPendataanKendaraanController extends Controller
 
          // Ubah ke array sebelum mengubah ID
         $items = collect($data->items())->map(function ($item) {
-            $itemArray = $item->toArray(); // Konversi ke array
-            $itemArray['id'] = Helper::encodeId($itemArray['id']); // Encode ID
+            $itemArray = $item->toArray();
+            $itemArray['id'] = Helper::encodeId($itemArray['id']);
             $itemArray['created_at'] = Carbon::parse($itemArray['created_at'])->format('Y-m-d H:i:s');
             return $itemArray;
         });
@@ -161,7 +181,10 @@ class SengPendataanKendaraanController extends Controller
         //     }
         // }    
 
-        $pengecekan = SengPendataanKendaraan::where('nopol', $request->nopol)->latest()->first();
+        $pengecekan = $this->pendataanModelClass()::query()
+            ->where('nopol', $request->nopol)
+            ->latest()
+            ->first();
         if ($pengecekan) {
             if ($pengecekan->created_at->year == now()->year) {
                 return response()->json([
@@ -226,7 +249,6 @@ class SengPendataanKendaraanController extends Controller
                 'kota_dagri' => $kota_dagri->kabkota,
                 'kec_dagri' => $kec_dagri->kode_dagri,
                 'is_selesai' => 1,
-                // 'kode_samsat' => $request->kota,
                 'created_by' => $user->id,
                 'updated_by' => $user->id
             ]);
@@ -240,8 +262,6 @@ class SengPendataanKendaraanController extends Controller
                 'status_verifikasi_name' => $status_verifikasi->nama,
                 'kota_dagri' => $kota_dagri->kabkota,
                 'kec_dagri' => $kec_dagri->kode_dagri,
-               
-                // 'kode_samsat' => $request->kota,
                 'created_by' => $user->id,
                 'updated_by' => $user->id
             ]);
@@ -249,7 +269,7 @@ class SengPendataanKendaraanController extends Controller
         }
     
         // Simpan data
-        $data = SengPendataanKendaraan::create($requestData);
+        $data = $this->pendataanModelClass()::create($requestData);
 
         // Tandai data tertagih sudah terdata jika nopol yang sama ditemukan.
         $normalizedNopol = strtoupper(preg_replace('/\s+/', '', (string) $request->nopol));
@@ -260,13 +280,8 @@ class SengPendataanKendaraanController extends Controller
                 'updated_at' => now(),
             ];
 
-            if ($user->hasRole('petugas-d2d')) {
-                DataTertagihD2d::whereRaw("REPLACE(UPPER(no_polisi), ' ', '') = ?", [$normalizedNopol])
-                    ->update($tertagihUpdate);
-            } elseif ($user->hasRole('petugas')) {
-                DataTertagih::whereRaw("REPLACE(UPPER(no_polisi), ' ', '') = ?", [$normalizedNopol])
-                    ->update($tertagihUpdate);
-            }
+            $this->dataTertagihModelClass()::whereRaw("REPLACE(UPPER(no_polisi), ' ', '') = ?", [$normalizedNopol])
+                ->update($tertagihUpdate);
         }
 
         $encodedId = Helper::encodeId($data->id);
@@ -315,7 +330,7 @@ class SengPendataanKendaraanController extends Controller
             return response()->json(['status' => false, 'message' => $validator->errors()], Response::HTTP_BAD_REQUEST);
         }
     
-        $data = SengPendataanKendaraan::find($decodedId);
+        $data = $this->findPendataan($decodedId);
         if (!$data) {
             return response()->json(['status' => false, 'message' => 'Data tidak ditemukan'], Response::HTTP_NOT_FOUND);
         }
@@ -392,7 +407,7 @@ class SengPendataanKendaraanController extends Controller
             return response()->json(['status' => false, 'message' => $validator->errors()], Response::HTTP_BAD_REQUEST);
         }
 
-        $data = SengPendataanKendaraan::find($decodedId);
+        $data = $this->findPendataan($decodedId);
         if (!$data) {
             return response()->json(['status' => false, 'message' => 'Data tidak ditemukan'], Response::HTTP_NOT_FOUND);
         }
@@ -468,7 +483,7 @@ class SengPendataanKendaraanController extends Controller
             return response()->json(['status' => false, 'message' => $validator->errors()], Response::HTTP_BAD_REQUEST);
         }
 
-        $data = SengPendataanKendaraan::find($decodedId);
+        $data = $this->findPendataan($decodedId);
         if (!$data) {
             return response()->json(['status' => false, 'message' => 'Data tidak ditemukan'], Response::HTTP_NOT_FOUND);
         }
@@ -555,7 +570,7 @@ class SengPendataanKendaraanController extends Controller
     {
         $decodedId = Helper::decodeId($id);
         
-        $data = SengPendataanKendaraan::find($decodedId);
+        $data = $this->findPendataan($decodedId);
         if (!$data) {
             abort(404, 'Data tidak ditemukan');
         }
@@ -610,7 +625,7 @@ class SengPendataanKendaraanController extends Controller
         $decodedId = Helper::decodeId($id);
 
         // Cari data berdasarkan ID
-        $data = SengPendataanKendaraan::find($decodedId);
+        $data = $this->findPendataan($decodedId);
 
         // Jika data tidak ditemukan
         if (!$data) {
@@ -656,7 +671,7 @@ class SengPendataanKendaraanController extends Controller
         $decodedId = Helper::decodeId($id);
 
         // Cari data berdasarkan ID yang sudah didecode
-        $data = SengPendataanKendaraan::find($decodedId);
+        $data = $this->findPendataan($decodedId);
         if (!$data) {
             return response()->json([
                 'status' => false,
@@ -665,7 +680,6 @@ class SengPendataanKendaraanController extends Controller
             ], Response::HTTP_NOT_FOUND);
         }
 
-       
         if ($validator->fails()) {
             return response()->json([
                 'status' => false,
@@ -720,7 +734,7 @@ class SengPendataanKendaraanController extends Controller
         $decodedId = Helper::decodeId($id);
 
         // Cari data berdasarkan ID
-        $data = SengPendataanKendaraan::find($decodedId);
+        $data = $this->findPendataan($decodedId);
         if (!$data) {
             return response()->json([
                 'status' => false,

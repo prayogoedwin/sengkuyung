@@ -23,4 +23,9 @@ class DataTertagihD2dController extends Controller
             'kelurahan_samsat.required' => 'Kelurahan samsat tidak lengkap pada profil akun petugas D2D.',
         ];
     }
+
+    protected function pendataanModelClassForTertagihCheck(): string
+    {
+        return \App\Models\SengPendataanKendaraanD2d::class;
+    }
 }

@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\SengPendataanKendaraanController;
+use App\Http\Controllers\API\SengPendataanKendaraanD2dController;
 use App\Http\Controllers\API\SengStatusController;
 use App\Http\Controllers\API\SengStatusVerifikasiController;
 use App\Http\Controllers\API\SengWilayahController;
@@ -48,8 +49,13 @@ Route::middleware(['auth-api'])->group(function () {
     Route::middleware([LogActivity::class])->group(function () {
         // Route::apiResource('profil', [AuthController::class, 'show']);
         Route::apiResource('pendataan', SengPendataanKendaraanController::class);
-        Route::post('pendataan/{id}/upload', [SengPendataanKendaraanController::class, 'upload']); // Rute khusus upload
+        Route::post('pendataan/{id}/upload', [SengPendataanKendaraanController::class, 'upload']);
         Route::get('/secure-file/{id}/{fileIndex}', [SengPendataanKendaraanController::class, 'getSecureFile']);
+        Route::middleware('petugas-d2d.api')->group(function () {
+            Route::apiResource('pendataan-d2d', SengPendataanKendaraanD2dController::class);
+            Route::post('pendataan-d2d/{id}/upload', [SengPendataanKendaraanD2dController::class, 'upload']);
+            Route::get('/secure-file-d2d/{id}/{fileIndex}', [SengPendataanKendaraanD2dController::class, 'getSecureFile']);
+        });
         Route::apiResource('status', SengStatusController::class);
         Route::apiResource('status-verifikasi', SengStatusVerifikasiController::class);
         Route::apiResource('wilayah', SengWilayahController::class);

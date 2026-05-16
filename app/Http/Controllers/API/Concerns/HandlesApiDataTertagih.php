@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API\Concerns;
 
 use App\Models\User;
 use App\Models\SengPendataanKendaraan;
+use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,6 +21,16 @@ trait HandlesApiDataTertagih
      * @return array<string, string>
      */
     abstract protected function dataTertagihWilayahValidationMessages(): array;
+
+    /**
+     * Tabel pendataan untuk cek nopol sudah didata (show detail).
+     *
+     * @return class-string<EloquentModel>
+     */
+    protected function pendataanModelClassForTertagihCheck(): string
+    {
+        return SengPendataanKendaraan::class;
+    }
 
     public function index(Request $request)
     {
@@ -134,7 +145,7 @@ trait HandlesApiDataTertagih
 
         $pendataan = null;
         if ($normalizedNopol !== '') {
-            $pendataan = SengPendataanKendaraan::query()
+            $pendataan = $this->pendataanModelClassForTertagihCheck()::query()
                 ->whereRaw("REPLACE(UPPER(nopol), ' ', '') = ?", [$normalizedNopol])
                 ->orderByDesc('id')
                 ->first(['id', 'nopol', 'nama', 'created_by', 'created_at']);

@@ -171,7 +171,7 @@
                                                         </tr>
                                                     </table>
                                                 @else
-                                                    <form action="{{ route($verifikasiStatusRoute ?? 'verifikasi.status', ['id' => \App\Helpers\Helper::encodeId($data->id)]) }}" method="POST">
+                                                    <form action="{{ route($verifikasiStatusRoute ?? 'verifikasi-d2d.status', ['id' => \App\Helpers\Helper::encodeId($data->id)]) }}" method="POST">
                                                     @csrf
                                                         <table class="table table-bordered">
                                                             <tr>

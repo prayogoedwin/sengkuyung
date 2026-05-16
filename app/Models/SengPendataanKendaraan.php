@@ -17,6 +17,7 @@ class SengPendataanKendaraan extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
+        'is_selesai' => 'integer',
     ];
 
     protected $fillable = [

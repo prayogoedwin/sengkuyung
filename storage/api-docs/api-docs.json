@@ -1106,6 +1106,7 @@
                     "Pendataan Kendaraan"
                 ],
                 "summary": "List pendataan kendaraan milik user login",
+                "description": "Data dari tabel `seng_pendataan_kendaraan` (petugas biasa). Untuk D2D gunakan `/api/pendataan-d2d`.",
                 "operationId": "6dfb9b023c0dafc0c0a2e65d16faba6d",
                 "parameters": [
                     {
@@ -1205,6 +1206,7 @@
                     "Pendataan Kendaraan"
                 ],
                 "summary": "Tambah data pendataan kendaraan",
+                "description": "Menyimpan ke tabel `seng_pendataan_kendaraan`. Verifikasi admin di menu Verifikasi.",
                 "operationId": "e4f81b2b0430c1bff4030cddc34cac70",
                 "requestBody": {
                     "required": true,
@@ -1323,6 +1325,7 @@
                     "Pendataan Kendaraan"
                 ],
                 "summary": "Detail data pendataan kendaraan",
+                "description": "Detail dari tabel `seng_pendataan_kendaraan`.",
                 "operationId": "4f9f779a4bc2beb6f46e385aa7826ded",
                 "parameters": [
                     {
@@ -1337,7 +1340,27 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Data ditemukan"
+                        "description": "Data ditemukan",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Data ditemukan"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "404": {
                         "description": "Data tidak ditemukan"
@@ -1609,6 +1632,160 @@
                     }
                 ]
             }
+        },
+        "api/pendataan-d2d": {
+            "get": {
+                "tags": [
+                    "Pendataan Kendaraan D2D"
+                ],
+                "summary": "List pendataan D2D milik user login",
+                "description": "Data dari tabel `seng_pendataan_kendaraan_d2d`. Hanya role petugas-d2d (middleware).",
+                "operationId": "8f65f0d15f04951f239403ca213faeaf",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "alamat",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Berhasil"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Bukan role petugas-d2d"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Pendataan Kendaraan D2D"
+                ],
+                "summary": "Tambah pendataan D2D",
+                "description": "Menyimpan ke `seng_pendataan_kendaraan_d2d`. Verifikasi admin di menu Verifikasi D2D.",
+                "operationId": "1c45b56104cb59cb0a6c67ef31a9e5fc",
+                "responses": {
+                    "201": {
+                        "description": "Berhasil"
+                    },
+                    "403": {
+                        "description": "Bukan role petugas-d2d"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "api/pendataan-d2d/{id}": {
+            "get": {
+                "tags": [
+                    "Pendataan Kendaraan D2D"
+                ],
+                "summary": "Detail pendataan D2D",
+                "operationId": "f225a8607cfe01917af0e720862619d9",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Berhasil"
+                    },
+                    "403": {
+                        "description": "Bukan role petugas-d2d"
+                    },
+                    "404": {
+                        "description": "Tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "api/pendataan-d2d/{id}/upload": {
+            "post": {
+                "tags": [
+                    "Pendataan Kendaraan D2D"
+                ],
+                "summary": "Upload berkas pendataan D2D",
+                "operationId": "c5d1f2a0b3ee991ad77be102ea954312",
+                "responses": {
+                    "200": {
+                        "description": "Berhasil"
+                    },
+                    "403": {
+                        "description": "Bukan role petugas-d2d"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "api/secure-file-d2d/{id}/{fileIndex}": {
+            "get": {
+                "tags": [
+                    "Pendataan Kendaraan D2D"
+                ],
+                "summary": "Ambil file terenkripsi pendataan D2D",
+                "operationId": "c5f3ed2eda34a2e81564d3426697cc40",
+                "responses": {
+                    "200": {
+                        "description": "Berhasil"
+                    },
+                    "403": {
+                        "description": "Bukan role petugas-d2d"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -1645,6 +1822,10 @@
         {
             "name": "Pendataan Kendaraan",
             "description": "Pendataan Kendaraan"
+        },
+        {
+            "name": "Pendataan Kendaraan D2D",
+            "description": "Pendataan Kendaraan D2D"
         }
     ]
 }

@@ -96,6 +96,12 @@
                     <div data-i18n="Analytics">Verifikasi</div>
                 </a>
             </li>
+            <li class="menu-item {{ request()->routeIs('verifikasi-d2d.index') ? 'active' : '' }}">
+                <a href="{{ route('verifikasi-d2d.index') }}" class="menu-link">
+                    <i class="menu-icon tf-icons bx bx-check-shield"></i>
+                    <div data-i18n="Analytics">Verifikasi D2D</div>
+                </a>
+            </li>
 
             @if ($isKabkota || $isUppd)
                 <li class="menu-item {{ request()->routeIs('pelaporan.index') ? 'active' : '' }}">
@@ -160,6 +166,12 @@
                     <a href="{{ route('verifikasi.index') }}" class="menu-link">
                         <i class="menu-icon tf-icons bx bx-check-shield"></i>
                         <div data-i18n="Analytics">Verifikasi</div>
+                    </a>
+                </li>
+                <li class="menu-item {{ request()->routeIs('verifikasi-d2d.index') ? 'active' : '' }}">
+                    <a href="{{ route('verifikasi-d2d.index') }}" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-check-shield"></i>
+                        <div data-i18n="Analytics">Verifikasi D2D</div>
                     </a>
                 </li>
 

@@ -7,6 +7,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BackController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerifikasiController;
+use App\Http\Controllers\VerifikasiD2dController;
 use App\Http\Controllers\DownloadController;
 use App\Http\Controllers\WilayahController;
 use App\Http\Controllers\RekapController;
@@ -39,6 +40,10 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::get('/verifikasi', [VerifikasiController::class, 'index'])->name('verifikasi.index');
         Route::get('/verifikasi-detail/{id}', [VerifikasiController::class, 'show'])->name('verifikasi-detail.index');
         Route::post('/verifikasi-status/{id}', [VerifikasiController::class, 'verif'])->name('verifikasi.status');
+
+        Route::get('/verifikasi-d2d', [VerifikasiD2dController::class, 'index'])->name('verifikasi-d2d.index');
+        Route::get('/verifikasi-d2d-detail/{id}', [VerifikasiD2dController::class, 'show'])->name('verifikasi-d2d-detail.index');
+        Route::post('/verifikasi-d2d-status/{id}', [VerifikasiD2dController::class, 'verif'])->name('verifikasi-d2d.status');
 
         Route::get('/download', [DownloadController::class, 'index'])->name('download.index');
         Route::get('/download-csv', [DownloadController::class, 'downloadCsv'])->name('download.csv');

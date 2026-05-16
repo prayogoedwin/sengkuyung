@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\WilayahSamsat;
 use App\Models\SengPendataanKendaraan;
+use Illuminate\Database\Eloquent\Model;
 use App\Models\SengStatus;
 use App\Models\SengStatusVerifikasi;
 use App\Models\SengStatusFile;
@@ -24,6 +25,49 @@ use App\Support\ApiCacheManager;
 
 class VerifikasiController extends Controller
 {
+    /**
+     * @return class-string<SengPendataanKendaraan>
+     */
+    protected function pendataanModelClass(): string
+    {
+        return SengPendataanKendaraan::class;
+    }
+
+    protected function verifikasiRouteIndex(): string
+    {
+        return 'verifikasi.index';
+    }
+
+    protected function verifikasiRouteDetail(): string
+    {
+        return 'verifikasi-detail.index';
+    }
+
+    protected function verifikasiRouteStatus(): string
+    {
+        return 'verifikasi.status';
+    }
+
+    protected function verifikasiViewIndex(): string
+    {
+        return 'backend.verifikasis.index';
+    }
+
+    protected function verifikasiViewShow(): string
+    {
+        return 'backend.verifikasis.show';
+    }
+
+    protected function verifikasiPageTitle(): string
+    {
+        return 'Verifikasi';
+    }
+
+    protected function findPendataan(int $id): ?Model
+    {
+        return $this->pendataanModelClass()::find($id);
+    }
+
     public function index(Request $request)
     {
         if ($request->ajax()) {
@@ -45,7 +89,7 @@ class VerifikasiController extends Controller
             // Cari admin berdasarkan ID
             // $user = User::findOrFail(auth()->id());
             // $verifikasis = SengPendataanKendaraan::select('*')->get();
-            $verifikasis = SengPendataanKendaraan::query();
+            $verifikasis = $this->pendataanModelClass()::query();
 
             // Apply filters based on user role
             if ($isSuperAdmin || $isAdminProv) {
@@ -152,14 +196,14 @@ class VerifikasiController extends Controller
                 if ($isSuperAdmin || $isAdminProv || $isUptd) {
                     $datatable->addColumn('options', function ($verifikasi) {
                         return '
-                            <a href="' . route('verifikasi-detail.index', ['id' => Helper::encodeId($verifikasi->id)]) . '" class="btn btn-primary btn-sm">Verif</a>
+                            <a href="' . route($this->verifikasiRouteDetail(), ['id' => Helper::encodeId($verifikasi->id)]) . '" class="btn btn-primary btn-sm">Verif</a>
                             <button hidden class="btn btn-danger btn-sm" onclick="confirmDelete(' . Helper::encodeId($verifikasi->id) . ')">Delete</button>
                         ';
                     });
                 } elseif ($isKabkota) {
                     $datatable->addColumn('options', function ($verifikasi) {
                         return '
-                            <a href="' . route('verifikasi-detail.index', ['id' => Helper::encodeId($verifikasi->id)]) . '" class="btn btn-info btn-sm">Lihat</a>
+                            <a href="' . route($this->verifikasiRouteDetail(), ['id' => Helper::encodeId($verifikasi->id)]) . '" class="btn btn-info btn-sm">Lihat</a>
                         ';
                     });
                 } else {
@@ -196,13 +240,16 @@ class VerifikasiController extends Controller
             })->values();
         }
 
-        return view('backend.verifikasis.index', compact(
+        return view($this->verifikasiViewIndex(), compact(
             'kabkotas',
             'status_verifikasis',
             'selectedKabkotaId',
             'isUppd',
             'isKabkotaRole'
-        ));
+        ))->with([
+            'verifikasiIndexRoute' => $this->verifikasiRouteIndex(),
+            'verifikasiPageTitle' => $this->verifikasiPageTitle(),
+        ]);
     }
 
     private function resolveKabkotaIdFromLokasiSamsat(?string $lokasiSamsatId): ?string
@@ -274,7 +321,7 @@ class VerifikasiController extends Controller
         $verifikasiReadOnly = $user && $user->hasRole('kabkota');
 
         $decodedId = Helper::decodeId($id);
-        $data = SengPendataanKendaraan::find($decodedId);
+        $data = $this->findPendataan($decodedId);
         $status_verifikasis = SengStatusVerifikasi::select('*')->get();
 
         if (!$data) {
@@ -400,7 +447,7 @@ class VerifikasiController extends Controller
             // }
         }
 
-        return view('backend.verifikasis.show', compact(
+        return view($this->verifikasiViewShow(), compact(
             'data',
             'status_verifikasis',
             'html',
@@ -409,10 +456,13 @@ class VerifikasiController extends Controller
             'kabkotaDisplay',
             'lokasiSamsatDisplay',
             'verifikasiReadOnly'
-        ));
+        ))->with([
+            'verifikasiStatusRoute' => $this->verifikasiRouteStatus(),
+            'verifikasiPageTitle' => $this->verifikasiPageTitle(),
+        ]);
     }
 
-    private function kabkotaCanAccessPendataan(User $user, SengPendataanKendaraan $data): bool
+    private function kabkotaCanAccessPendataan(User $user, Model $data): bool
     {
         $userKotaId = $user->kota ?? null;
         $resolvedKabkotaId = $this->resolveKabkotaIdFromLokasiSamsat($user->lokasi_samsat ?? null);
@@ -450,7 +500,7 @@ class VerifikasiController extends Controller
         $decodedId = Helper::decodeId($request->id);
 
         // Find the record by the decoded ID
-        $data = SengPendataanKendaraan::find($decodedId);
+        $data = $this->findPendataan($decodedId);
         $status_verifikasi = SengStatusVerifikasi::find($request->status_verifikasi_id);
 
         // Check if the record exists
@@ -469,7 +519,7 @@ class VerifikasiController extends Controller
         // Save the changes
         if ($data->save()) {
             // Redirect to the detail page upon successful update
-            return redirect()->route('verifikasi-detail.index', ['id' => Helper::encodeId($data->id)])->with('success', 'Status updated successfully.');
+            return redirect()->route($this->verifikasiRouteDetail(), ['id' => Helper::encodeId($data->id)])->with('success', 'Status updated successfully.');
         } else {
             return back()->with('error', 'Failed to update status.');
         }
@@ -481,7 +531,7 @@ class VerifikasiController extends Controller
         $decodedId = Helper::decodeId($id);
 
         // Find data based on ID
-        $data = SengPendataanKendaraan::find($decodedId);
+        $data = $this->findPendataan($decodedId);
 
         // If data is not found
         if (!$data) {

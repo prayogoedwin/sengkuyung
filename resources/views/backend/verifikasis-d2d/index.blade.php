@@ -153,9 +153,9 @@
             let table = $('#simpletable').DataTable({
                 processing: true,
                 serverSide: true,
-                // ajax: '{{ route('verifikasi.index') }}',
+                // ajax: '{{ route($verifikasiIndexRoute ?? 'verifikasi-d2d.index') }}',
                 ajax: {
-                    url: '{{ route($verifikasiIndexRoute ?? 'verifikasi.index') }}',
+                    url: '{{ route($verifikasiIndexRoute ?? 'verifikasi-d2d.index') }}',
                     data: function(d) {
                         d.status_verifikasi_id = $('#statusVerifikasi').val();
                         d.kota = $('#userKabkota').val();

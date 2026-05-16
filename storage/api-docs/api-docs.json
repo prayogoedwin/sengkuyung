@@ -989,6 +989,16 @@
                             "type": "integer",
                             "default": 1
                         }
+                    },
+                    {
+                        "name": "alamat",
+                        "in": "query",
+                        "description": "Pencarian LIKE pada alamat, desa_name, kec_name, kota_name. Hasil dibatasi wilayah kerja user (kabkota/kecamatan/kelurahan di profil).",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Kedungwuni"
+                        }
                     }
                 ],
                 "responses": {
@@ -1041,6 +1051,9 @@
                     },
                     "401": {
                         "description": "Unauthorized"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
                     }
                 },
                 "security": [

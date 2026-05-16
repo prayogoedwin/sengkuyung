@@ -18,8 +18,10 @@ use Illuminate\Support\Facades\Storage;
 use App\Helpers\FileEncryption;
 
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 use App\Models\ActivityLog;
+use App\Models\User;
 
 
 class SengPendataanKendaraanController extends Controller
@@ -47,9 +49,38 @@ class SengPendataanKendaraanController extends Controller
             ], Response::HTTP_UNAUTHORIZED);
         }
 
-        $perPage = $request->input('per_page', 10); // Default 10 item per halaman
-        // $data = SengPendataanKendaraan::paginate($perPage);
-        $data = SengPendataanKendaraan::where('created_by', $user->id)
+        $validator = Validator::make($request->all(), [
+            'alamat' => 'nullable|string|max:255',
+            'per_page' => 'nullable|integer|min:1|max:100',
+            'page' => 'nullable|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors(),
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $perPage = (int) $request->input('per_page', 10);
+
+        $query = SengPendataanKendaraan::query()
+            ->where('created_by', $user->id);
+
+        $this->applyWilayahScopeToPendataanQuery($query, $user);
+
+        if ($request->filled('alamat')) {
+            $term = trim((string) $request->input('alamat'));
+            $query->where(function ($q) use ($term) {
+                $q->where('alamat', 'like', '%' . $term . '%')
+                    ->orWhere('desa_name', 'like', '%' . $term . '%')
+                    ->orWhere('kec_name', 'like', '%' . $term . '%')
+                    ->orWhere('kota_name', 'like', '%' . $term . '%');
+            });
+        }
+
+        $data = $query
             ->orderByRaw('CASE WHEN is_selesai = 0 THEN 0 ELSE 1 END')
             ->orderBy('id', 'desc')
             ->paginate($perPage);
@@ -698,6 +729,86 @@ class SengPendataanKendaraanController extends Controller
             'message' => 'Data berhasil dihapus',
             'data' => null
         ]);
+    }
+
+    /**
+     * Batasi query pendataan ke wilayah kerja user (kabkota / samsat / kecamatan / kelurahan).
+     * Pencarian alamat tidak bisa menemukan data di luar scope ini.
+     */
+    private function applyWilayahScopeToPendataanQuery($query, User $user): void
+    {
+        $userKotaDagri = trim((string) ($user->kota ?? ''));
+        $userLokasiSamsat = trim((string) ($user->lokasi_samsat ?? ''));
+        $userKecamatanSamsat = trim((string) ($user->kecamatan_samsat ?: $user->kecamatan ?: ''));
+        $userKelurahanSamsat = trim((string) ($user->kelurahan_samsat ?: $user->kelurahan ?: ''));
+
+        if ($userKotaDagri !== '') {
+            $query->where('kota_dagri', $userKotaDagri);
+        }
+
+        if ($userLokasiSamsat !== '') {
+            $query->whereIn('kota', $this->samsatCodeVariants($userLokasiSamsat));
+        }
+
+        if ($userKelurahanSamsat !== '') {
+            $kelVariants = $this->samsatCodeVariants($userKelurahanSamsat);
+            $query->where(function ($q) use ($kelVariants) {
+                $q->whereIn('desa', $kelVariants)
+                    ->orWhereIn('kel_dagri', $kelVariants);
+            });
+        } elseif ($userKecamatanSamsat !== '') {
+            $kecVariants = $this->samsatCodeVariants($userKecamatanSamsat);
+            $kecDagri = $this->resolveKecamatanDagriValue($userKecamatanSamsat);
+            $kecDagriVariants = $kecDagri !== null && $kecDagri !== ''
+                ? $this->samsatCodeVariants($kecDagri)
+                : [];
+
+            $query->where(function ($q) use ($kecVariants, $kecDagriVariants) {
+                $q->whereIn('kec', $kecVariants);
+                if (!empty($kecDagriVariants)) {
+                    $q->orWhereIn('kec_dagri', $kecDagriVariants);
+                }
+            });
+        }
+    }
+
+    private function resolveKecamatanDagriValue(?string $value): ?string
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        $row = DB::table('wilayah_samsat_kec')
+            ->select('kode_dagri')
+            ->where('id_kecamatan', $value)
+            ->first();
+
+        return isset($row->kode_dagri) && $row->kode_dagri !== null && $row->kode_dagri !== ''
+            ? (string) $row->kode_dagri
+            : $value;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function samsatCodeVariants(?string $value): array
+    {
+        $v = trim((string) $value);
+        if ($v === '') {
+            return [];
+        }
+
+        $out = [$v];
+
+        if (ctype_digit($v)) {
+            $stripped = ltrim($v, '0');
+            $stripped = $stripped === '' ? '0' : $stripped;
+            $out[] = $stripped;
+            $out[] = (string) (int) $v;
+        }
+
+        return array_values(array_unique($out));
     }
 }
 

@@ -497,6 +497,13 @@ class ApiDocs
         parameters: [
             new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 10), description: 'Jumlah data per halaman'),
             new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 1), description: 'Nomor halaman'),
+            new OA\Parameter(
+                name: 'alamat',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', example: 'Kedungwuni'),
+                description: 'Pencarian LIKE pada alamat, desa_name, kec_name, kota_name. Hasil dibatasi wilayah kerja user (kabkota/kecamatan/kelurahan di profil).'
+            ),
         ],
         responses: [
             new OA\Response(
@@ -521,6 +528,7 @@ class ApiDocs
                 )
             ),
             new OA\Response(response: 401, description: 'Unauthorized'),
+            new OA\Response(response: 422, description: 'Validasi gagal'),
         ]
     )]
     public function pendataanIndex()

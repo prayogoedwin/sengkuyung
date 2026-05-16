@@ -16,7 +16,7 @@
 
 
     <!-- ========== Favicon Icon ========== -->
-    <link rel="icon" type="image/png" href="{{ asset('LOGO_SENGKUYUNG/logo-sengkuyung-2026.png') }}">
+    <link rel="icon" type="image/png" href="{{ asset('LOGO_SENGKUYUNG/ICON_LOGO_SENGKUYUNG.png') }}">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />

@@ -7,7 +7,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\SengStatus;
 use App\Models\SengWilayah;
+use App\Models\DataTertagih;
 use App\Models\SengPendataanKendaraan;
+use App\Models\SengSaamsat;
 use App\Models\WilayahSamsat;
 use App\Support\ApiCacheManager;
 
@@ -35,19 +37,19 @@ class BackController extends Controller
         $cacheKey = $this->readableDashboardStatsCacheKey($request);
 
         $data = ApiCacheManager::remember($cacheKey, ApiCacheManager::dashboardTtl(), function () use ($request) {
+            $dataTertagihQuery = DataTertagih::query();
+            $this->applyDashboardFiltersToDataTertagihQuery($dataTertagihQuery, $request);
+
             $verifikasis = SengPendataanKendaraan::query();
             $this->applyDashboardFiltersToQuery($verifikasis, $request);
 
-            $total = (clone $verifikasis)->count();
-            $menunggu_verifikasi = (clone $verifikasis)->where('status_verifikasi', 1)->count();
-            $verifikasi = (clone $verifikasis)->where('status_verifikasi', 2)->count();
-            $ditolak = (clone $verifikasis)->where('status_verifikasi', 3)->count();
-
             return [
-                'total' => $total,
-                'menunggu_verifikasi' => $menunggu_verifikasi,
-                'verifikasi' => $verifikasi,
-                'ditolak' => $ditolak,
+                'jumlah_tunggakan' => (clone $dataTertagihQuery)->count(),
+                'jumlah_sudah_pendataan' => (clone $dataTertagihQuery)->where('is_terdata', 1)->count(),
+                'jumlah_belum_pendataan' => (clone $dataTertagihQuery)->where('is_terdata', 0)->count(),
+                'menunggu_verifikasi' => (clone $verifikasis)->where('status_verifikasi', 1)->count(),
+                'verifikasi' => (clone $verifikasis)->where('status_verifikasi', 2)->count(),
+                'ditolak' => (clone $verifikasis)->where('status_verifikasi', 3)->count(),
             ];
         });
     
@@ -156,6 +158,8 @@ class BackController extends Controller
                 'start' => (string) $request->tanggal_start,
                 'end' => (string) $request->tanggal_end,
             ];
+        } else {
+            $scope['year'] = (string) now()->year;
         }
 
         return $scope;
@@ -197,6 +201,9 @@ class BackController extends Controller
         if ($scope['periode'] !== null) {
             $pairs[] = 'start:' . $safe((string) $scope['periode']['start']);
             $pairs[] = 'end:' . $safe((string) $scope['periode']['end']);
+        }
+        if (isset($scope['year']) && $scope['year'] !== null && $scope['year'] !== '') {
+            $pairs[] = 'year:' . $safe((string) $scope['year']);
         }
 
         $body = count($pairs) > 0 ? implode('-', $pairs) : 'none';
@@ -252,6 +259,94 @@ class BackController extends Controller
         if ($request->tanggal_start && $request->tanggal_end) {
             $verifikasis->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
         }
+    }
+
+    private function applyDashboardFiltersToDataTertagihQuery($query, Request $request): void
+    {
+        $user = Auth::user();
+        $userKotaId = $user->kota ?? null;
+        $userLokasiSamsat = $user->lokasi_samsat ?? null;
+        $userKecamatanSamsat = $user->kecamatan_samsat ?: $user->kecamatan ?: null;
+        $userKelurahanSamsat = $user->kelurahan_samsat ?: $user->kelurahan ?: null;
+        $isKecamatanScope = $user->hasRole('kecamatan');
+        $isKelurahanScope = $user->hasRole('kelurahan');
+        $isKabkotaScope = $user->hasRole('kabkota');
+        $isUppdScope = $user->hasRole('uppd') || $user->hasRole('uptd');
+        $isAdminScope = $user->hasRole('super-admin') || $user->hasRole('superadmin') || $user->hasRole('admin') || $user->hasRole('adminprov');
+
+        if ($request->tanggal_start && $request->tanggal_end) {
+            $query->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
+        } else {
+            $query->where('year', (int) now()->year);
+        }
+
+        $kabkotaId = null;
+        if ($isAdminScope) {
+            if ($request->kabkota_id) {
+                $kabkotaId = (string) $request->kabkota_id;
+            }
+        } elseif ($isKabkotaScope || $isUppdScope || $isKecamatanScope || $isKelurahanScope) {
+            if ($userKotaId !== null && $userKotaId !== '') {
+                $kabkotaId = (string) $userKotaId;
+            }
+        }
+
+        if ($kabkotaId !== null) {
+            $lokasiKabkota = SengSaamsat::query()
+                ->where('kabkota', $kabkotaId)
+                ->pluck('id_wilayah_samsat')
+                ->filter()
+                ->flatMap(fn ($id) => $this->samsatCodeVariants((string) $id))
+                ->unique()
+                ->values()
+                ->all();
+
+            if (!empty($lokasiKabkota)) {
+                $query->whereIn('id_lokasi_samsat', $lokasiKabkota);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        if (!empty($userLokasiSamsat)) {
+            $query->whereIn('id_lokasi_samsat', $this->samsatCodeVariants((string) $userLokasiSamsat));
+        } elseif ($request->lokasi_samsat) {
+            $query->whereIn('id_lokasi_samsat', $this->samsatCodeVariants((string) $request->lokasi_samsat));
+        }
+
+        if ($isKecamatanScope && !empty($userKecamatanSamsat)) {
+            $query->whereIn('id_kecamatan', $this->samsatCodeVariants((string) $userKecamatanSamsat));
+        } elseif ($request->kecamatan_samsat) {
+            $query->whereIn('id_kecamatan', $this->samsatCodeVariants((string) $request->kecamatan_samsat));
+        }
+
+        if ($isKelurahanScope && !empty($userKelurahanSamsat)) {
+            $query->whereIn('id_kelurahan', $this->samsatCodeVariants((string) $userKelurahanSamsat));
+        } elseif ($request->kelurahan_samsat) {
+            $query->whereIn('id_kelurahan', $this->samsatCodeVariants((string) $request->kelurahan_samsat));
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function samsatCodeVariants(?string $value): array
+    {
+        $v = trim((string) $value);
+        if ($v === '') {
+            return [];
+        }
+
+        $out = [$v];
+
+        if (ctype_digit($v)) {
+            $stripped = ltrim($v, '0');
+            $stripped = $stripped === '' ? '0' : $stripped;
+            $out[] = $stripped;
+            $out[] = (string) (int) $v;
+        }
+
+        return array_values(array_unique($out));
     }
 
     public function download () {

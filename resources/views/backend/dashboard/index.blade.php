@@ -148,82 +148,35 @@
 
                           
 
-                            <div class="col-lg-12 col-md-4 order-1">
-                                <div class="row">
+                            <div class="col-lg-12 col-md-12 order-1">
+                                <div class="row g-3 mb-2">
+                                    @php
+                                        $statCards = [
+                                            ['key' => 'jumlah_tunggakan', 'label' => 'Jumlah Tunggakan', 'color' => '#0d6efd'],
+                                            ['key' => 'jumlah_sudah_pendataan', 'label' => 'Jumlah Sudah Pendataan', 'color' => '#198754'],
+                                            ['key' => 'jumlah_belum_pendataan', 'label' => 'Jumlah Belum Pendataan', 'color' => '#fd7e14'],
+                                            ['key' => 'menunggu_verifikasi', 'label' => 'Menunggu Verifikasi', 'color' => '#6f42c1'],
+                                            ['key' => 'verifikasi', 'label' => 'Terverifikasi', 'color' => '#20c997'],
+                                            ['key' => 'ditolak', 'label' => 'Verifikasi Ditolak', 'color' => '#dc3545'],
+                                        ];
+                                    @endphp
 
-                                    <div class="col-lg-3 col-md-12 col-4 mb-4">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <div class="card-title d-flex align-items-start justify-content-between">
-                                                    <div class="avatar flex-shrink-0">
-                                                        <img src="{{ asset('assets/nakerbisa_be/img/icons/unicons/chart-success.png') }}"
-                                                            alt="chart success" class="rounded" />
+                                    @foreach ($statCards as $card)
+                                        <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6 col-12">
+                                            <div class="card h-100 border-0 shadow-sm">
+                                                <div class="card-body p-3 text-center">
+                                                    <div class="text-uppercase fw-semibold mb-2"
+                                                        style="font-size: 0.72rem; line-height: 1.3; color: {{ $card['color'] }};">
+                                                        {{ $card['label'] }}
                                                     </div>
-
+                                                    <h3 class="mb-0 fw-bold" style="color: {{ $card['color'] }};">
+                                                        {{ number_format($data[$card['key']] ?? 0) }}
+                                                    </h3>
                                                 </div>
-                                                <span class="fw-semibold d-block mb-1">Jumlah Pendataan</span>
-                                                <h3 class="card-title mb-2">{{ $data['total'] }}</h3>
-                                                <!-- <small class="text-success fw-semibold"><i class="bx bx-up-arrow-alt"></i> +72.80%</small> -->
                                             </div>
                                         </div>
-                                    </div>
-
-                                    <div class="col-lg-3 col-md-12 col-4 mb-4">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <div class="card-title d-flex align-items-start justify-content-between">
-                                                    <div class="avatar flex-shrink-0">
-                                                        <img src="{{ asset('assets/nakerbisa_be/img/icons/unicons/chart-success.png') }}"
-                                                            alt="chart success" class="rounded" />
-                                                    </div>
-
-                                                </div>
-                                                <span class="fw-semibold d-block mb-1">Menunggu  Verifikasi</span>
-                                                <h3 class="card-title mb-2">{{ $data['menunggu_verifikasi'] }}</h3>
-                                                <!-- <small class="text-success fw-semibold"><i class="bx bx-up-arrow-alt"></i> +72.80%</small> -->
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-lg-3 col-md-12 col-4 mb-4">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <div class="card-title d-flex align-items-start justify-content-between">
-                                                    <div class="avatar flex-shrink-0">
-                                                        <img src="{{ asset('assets/nakerbisa_be/img/icons/unicons/chart-success.png') }}"
-                                                            alt="chart success" class="rounded" />
-                                                    </div>
-
-                                                </div>
-                                                <span class="fw-semibold d-block mb-1">Terverifikasi</span>
-                                                <h3 class="card-title mb-2">{{ $data['verifikasi'] }}</h3>
-                                                <!-- <small class="text-success fw-semibold"><i class="bx bx-up-arrow-alt"></i> +72.80%</small> -->
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-lg-3 col-md-12 col-4 mb-4">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <div class="card-title d-flex align-items-start justify-content-between">
-                                                    <div class="avatar flex-shrink-0">
-                                                        <img src="{{ asset('assets/nakerbisa_be/img/icons/unicons/chart-success.png') }}"
-                                                            alt="chart success" class="rounded" />
-                                                    </div>
-
-                                                </div>
-                                                <span class="fw-semibold d-block mb-1">Verifikasi Ditolak</span>
-                                                <h3 class="card-title mb-2">{{ $data['ditolak'] }}</h3>
-                                                <!-- <small class="text-success fw-semibold"><i class="bx bx-up-arrow-alt"></i> +72.80%</small> -->
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                   
-
+                                    @endforeach
                                 </div>
-
-                              
                             </div>
 
                    

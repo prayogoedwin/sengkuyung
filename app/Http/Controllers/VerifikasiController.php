@@ -149,11 +149,17 @@ class VerifikasiController extends Controller
                     });
 
                 // Tambahkan kolom options berdasarkan role
-                if ($isSuperAdmin || $isAdminProv || $isUptd || $isKabkota) {
+                if ($isSuperAdmin || $isAdminProv || $isUptd) {
                     $datatable->addColumn('options', function ($verifikasi) {
                         return '
                             <a href="' . route('verifikasi-detail.index', ['id' => Helper::encodeId($verifikasi->id)]) . '" class="btn btn-primary btn-sm">Verif</a>
                             <button hidden class="btn btn-danger btn-sm" onclick="confirmDelete(' . Helper::encodeId($verifikasi->id) . ')">Delete</button>
+                        ';
+                    });
+                } elseif ($isKabkota) {
+                    $datatable->addColumn('options', function ($verifikasi) {
+                        return '
+                            <a href="' . route('verifikasi-detail.index', ['id' => Helper::encodeId($verifikasi->id)]) . '" class="btn btn-info btn-sm">Lihat</a>
                         ';
                     });
                 } else {
@@ -264,6 +270,9 @@ class VerifikasiController extends Controller
 
     public function show($id)
     {
+        $user = Auth::user();
+        $verifikasiReadOnly = $user && $user->hasRole('kabkota');
+
         $decodedId = Helper::decodeId($id);
         $data = SengPendataanKendaraan::find($decodedId);
         $status_verifikasis = SengStatusVerifikasi::select('*')->get();
@@ -275,10 +284,17 @@ class VerifikasiController extends Controller
             ], Response::HTTP_NOT_FOUND);
         }
 
-        $activityLogs = ActivityLog::where('id_kode', $id)
-        ->whereIn('method', ['POST', 'PUT'])
-        ->orderBy('created_at', 'desc')
-        ->get();
+        if ($verifikasiReadOnly && !$this->kabkotaCanAccessPendataan($user, $data)) {
+            abort(403, 'Anda tidak berhak melihat data di luar wilayah kabupaten/kota Anda.');
+        }
+
+        $activityLogs = collect();
+        if (!$verifikasiReadOnly) {
+            $activityLogs = ActivityLog::where('id_kode', $id)
+                ->whereIn('method', ['POST', 'PUT'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
 
         $kabkotaDisplay = $data->kota_name;
         if (!empty($data->kota_dagri)) {
@@ -384,7 +400,29 @@ class VerifikasiController extends Controller
             // }
         }
 
-        return view('backend.verifikasis.show', compact('data', 'status_verifikasis', 'html', 'decryptedFiles', 'activityLogs', 'kabkotaDisplay', 'lokasiSamsatDisplay'));
+        return view('backend.verifikasis.show', compact(
+            'data',
+            'status_verifikasis',
+            'html',
+            'decryptedFiles',
+            'activityLogs',
+            'kabkotaDisplay',
+            'lokasiSamsatDisplay',
+            'verifikasiReadOnly'
+        ));
+    }
+
+    private function kabkotaCanAccessPendataan(User $user, SengPendataanKendaraan $data): bool
+    {
+        $userKotaId = $user->kota ?? null;
+        $resolvedKabkotaId = $this->resolveKabkotaIdFromLokasiSamsat($user->lokasi_samsat ?? null);
+        $effectiveKotaId = $userKotaId ?: $resolvedKabkotaId;
+
+        if (empty($effectiveKotaId)) {
+            return true;
+        }
+
+        return (string) $data->kota_dagri === (string) $effectiveKotaId;
     }
 
     // Helper method untuk get mime type
@@ -404,6 +442,10 @@ class VerifikasiController extends Controller
 
     public function verif(Request $request, $id)
     {
+        if (Auth::user()?->hasRole('kabkota')) {
+            abort(403, 'Akun kabkota hanya dapat melihat data verifikasi.');
+        }
+
         // Decode ID from request
         $decodedId = Helper::decodeId($request->id);
 

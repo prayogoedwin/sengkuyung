@@ -139,57 +139,79 @@
                                                 @endif
 
                                                 <h5 class="fw-bold mt-4">VERIFIKASI STATUS KENDARAAN</h5>
-                                                
-                                                <form action="{{ route('verifikasi.status', ['id' => \App\Helpers\Helper::encodeId($data->id)]) }}" method="POST">
-                                                @csrf
+
+                                                @php
+                                                    $verifikasiBadgeStyle = '';
+                                                    if ((int) $data->status_verifikasi === 1) {
+                                                        $verifikasiBadgeStyle = 'background-color: #ffc107; color: #000;';
+                                                    } elseif ((int) $data->status_verifikasi === 2) {
+                                                        $verifikasiBadgeStyle = 'background-color: #198754; color: #fff;';
+                                                    } elseif ((int) $data->status_verifikasi === 3) {
+                                                        $verifikasiBadgeStyle = 'background-color: #dc3545; color: #fff;';
+                                                    }
+                                                @endphp
+
+                                                @if (!empty($verifikasiReadOnly))
                                                     <table class="table table-bordered">
                                                         <tr>
                                                             <th width="30%">STATUS</th>
-                                                            <td>{{ $data->status_name }}</td>
+                                                            <td>{{ $data->status_name ?? '-' }}</td>
                                                         </tr>
                                                         <tr>
                                                             <th width="30%">VERIFIKASI</th>
                                                             <td>
-                                                                <input type="hidden" name="id" value="{{ \App\Helpers\Helper::encodeId($data->id) }}">
-
-                                                                @php
-                                                                    $backgroundColor = '';
-                                                                    if ($data->status_verifikasi == 1) {
-                                                                        $backgroundColor = 'background-color: yellow; color: black;';
-                                                                    } elseif ($data->status_verifikasi == 2) {
-                                                                        $backgroundColor = 'background-color: green; color: white;';
-                                                                    } elseif ($data->status_verifikasi == 3) {
-                                                                        $backgroundColor = 'background-color: red; color: white;';
-                                                                    }
-                                                                @endphp
-
-                                                                <select class="form-control" id="statusVerifikasi" name="status_verifikasi_id" required style="{{ $backgroundColor }}">
-                                                                    <option value="">PILIH STATUS</option>
-                                                                    @foreach ($status_verifikasis as $status)
-                                                                        <option value="{{ $status->id }}" 
-                                                                            {{ $data->status_verifikasi == $status->id ? 'selected' : '' }}>
-                                                                            {{ $status->nama }}
-                                                                        </option>
-                                                                    @endforeach
-                                                                </select>
+                                                                <span class="badge px-3 py-2" style="{{ $verifikasiBadgeStyle }}">
+                                                                    {{ $data->status_verifikasi_name ?? '-' }}
+                                                                </span>
                                                             </td>
                                                         </tr>
                                                         <tr>
                                                             <th>Keterangan</th>
-                                                            <td>
-                                                                <textarea name="keterangan" style="width:100%">{{ $data->file9_ket }}</textarea>
-                                                            </td>
-                                                        </tr>
-                                                        <tr>
-                                                            <th colspan=2 style="text-align:right">
-                                                                <button type="submit" class="btn btn-primary">Update Status</button>
-                                                            </th>
+                                                            <td>{{ $data->file9_ket ?: '-' }}</td>
                                                         </tr>
                                                     </table>
-                                                </form>
+                                                @else
+                                                    <form action="{{ route('verifikasi.status', ['id' => \App\Helpers\Helper::encodeId($data->id)]) }}" method="POST">
+                                                    @csrf
+                                                        <table class="table table-bordered">
+                                                            <tr>
+                                                                <th width="30%">STATUS</th>
+                                                                <td>{{ $data->status_name }}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th width="30%">VERIFIKASI</th>
+                                                                <td>
+                                                                    <input type="hidden" name="id" value="{{ \App\Helpers\Helper::encodeId($data->id) }}">
+
+                                                                    <select class="form-control" id="statusVerifikasi" name="status_verifikasi_id" required style="{{ $verifikasiBadgeStyle }}">
+                                                                        <option value="">PILIH STATUS</option>
+                                                                        @foreach ($status_verifikasis as $status)
+                                                                            <option value="{{ $status->id }}"
+                                                                                {{ $data->status_verifikasi == $status->id ? 'selected' : '' }}>
+                                                                                {{ $status->nama }}
+                                                                            </option>
+                                                                        @endforeach
+                                                                    </select>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th>Keterangan</th>
+                                                                <td>
+                                                                    <textarea name="keterangan" style="width:100%">{{ $data->file9_ket }}</textarea>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th colspan="2" style="text-align:right">
+                                                                    <button type="submit" class="btn btn-primary">Update Status</button>
+                                                                </th>
+                                                            </tr>
+                                                        </table>
+                                                    </form>
+                                                @endif
                                             </div>
                                         </div>
 
+                                        @if (empty($verifikasiReadOnly))
                                         {{-- ACTIVITY LOGS SECTION - TOGGLE --}}
                                         <div class="row mt-4">
                                             <div class="col-12">
@@ -320,6 +342,7 @@
                                             </div>
                                         </div>
                                         {{-- END ACTIVITY LOGS --}}
+                                        @endif
 
                                         <!-- Tombol Aksi -->
                                         <div class="d-flex justify-content-end mt-4">
@@ -343,20 +366,22 @@
 @endsection
 
 @push('js')
+@if (empty($verifikasiReadOnly))
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const collapseEl = document.getElementById('activityLogsCollapse');
         const icon = document.getElementById('collapseIcon');
-        
+
         if (collapseEl && icon) {
             collapseEl.addEventListener('shown.bs.collapse', function () {
                 icon.style.transform = 'rotate(90deg)';
             });
-            
+
             collapseEl.addEventListener('hidden.bs.collapse', function () {
                 icon.style.transform = 'rotate(0deg)';
             });
         }
     });
 </script>
+@endif
 @endpush

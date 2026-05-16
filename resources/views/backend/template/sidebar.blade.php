@@ -309,12 +309,12 @@
             </ul>
         </li>
 
-        <li class="menu-item mt-auto">
+        {{-- <li class="menu-item mt-auto">
             <a href="javascript:void(0);" class="menu-link" data-bs-toggle="modal" data-bs-target="#comingSoonModal">
                 <i class="menu-icon tf-icons bx bx-time-five"></i>
                 <div data-i18n="Analytics">Fitur Baru</div>
             </a>
-        </li>
+        </li> --}}
 
     </ul>
 </aside>

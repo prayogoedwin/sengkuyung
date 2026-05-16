@@ -14,6 +14,10 @@ use App\Http\Controllers\PelaporanController;
 use App\Http\Controllers\PerbandinganKodeWilayahController;
 use App\Http\Controllers\DataTertagihController;
 use App\Http\Controllers\CacheManagementController;
+use App\Http\Controllers\KebijakanPrivasiController;
+
+Route::get('/kebijakan-privasi', [KebijakanPrivasiController::class, 'show'])->name('kebijakan-privasi');
+
 Route::middleware([LogActivity::class])->group(function () {
     Route::prefix('dapur')->middleware(['auth', 'deny.petugas.web'])->group(function () {
         Route::get('/dashboard', [BackController::class, 'index'])->name('dashboard');

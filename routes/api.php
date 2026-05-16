@@ -10,9 +10,12 @@ use App\Http\Controllers\API\SengWilayahController;
 use App\Http\Controllers\API\SengStatusFileController;
 use App\Http\Controllers\API\RekapController;
 use App\Http\Controllers\API\DataTertagihController;
+use App\Http\Controllers\KebijakanPrivasiController;
 use Illuminate\Support\Facades\Auth;
 
 use App\Http\Middleware\LogActivity;
+
+Route::get('/kebijakan-privasi', [KebijakanPrivasiController::class, 'api']);
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/login_with_otp', [AuthController::class, 'login_otp']);

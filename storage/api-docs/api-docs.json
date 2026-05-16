@@ -6,6 +6,74 @@
         "version": "1.0.0"
     },
     "paths": {
+        "api/kebijakan-privasi": {
+            "get": {
+                "tags": [
+                    "Kebijakan Privasi"
+                ],
+                "summary": "Kebijakan privasi aplikasi (publik, tanpa autentikasi)",
+                "description": "Mengembalikan konten kebijakan privasi terstruktur untuk ditampilkan di aplikasi mobile. URL halaman web: /kebijakan-privasi",
+                "operationId": "ae57a2934334ec7cb9f3435b900dd89b",
+                "responses": {
+                    "200": {
+                        "description": "Berhasil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Kebijakan privasi berhasil dimuat"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "title": {
+                                                    "type": "string",
+                                                    "example": "Kebijakan Privasi Aplikasi Sengkuyung"
+                                                },
+                                                "app_name": {
+                                                    "type": "string",
+                                                    "example": "Sengkuyung"
+                                                },
+                                                "operator": {
+                                                    "type": "string"
+                                                },
+                                                "effective_date": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2026-05-16"
+                                                },
+                                                "last_updated": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2026-05-16"
+                                                },
+                                                "url": {
+                                                    "type": "string",
+                                                    "example": "https://domain/kebijakan-privasi"
+                                                },
+                                                "sections": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "api/login": {
             "post": {
                 "tags": [
@@ -1403,6 +1471,10 @@
         }
     },
     "tags": [
+        {
+            "name": "Kebijakan Privasi",
+            "description": "Kebijakan Privasi"
+        },
         {
             "name": "Auth",
             "description": "Auth"

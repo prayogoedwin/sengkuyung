@@ -14,6 +14,41 @@ use OpenApi\Attributes as OA;
 )]
 class ApiDocs
 {
+    #[OA\Get(
+        path: 'api/kebijakan-privasi',
+        tags: ['Kebijakan Privasi'],
+        summary: 'Kebijakan privasi aplikasi (publik, tanpa autentikasi)',
+        description: 'Mengembalikan konten kebijakan privasi terstruktur untuk ditampilkan di aplikasi mobile. URL halaman web: /kebijakan-privasi',
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Berhasil',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'Kebijakan privasi berhasil dimuat'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'title', type: 'string', example: 'Kebijakan Privasi Aplikasi Sengkuyung'),
+                                new OA\Property(property: 'app_name', type: 'string', example: 'Sengkuyung'),
+                                new OA\Property(property: 'operator', type: 'string'),
+                                new OA\Property(property: 'effective_date', type: 'string', format: 'date', example: '2026-05-16'),
+                                new OA\Property(property: 'last_updated', type: 'string', format: 'date', example: '2026-05-16'),
+                                new OA\Property(property: 'url', type: 'string', example: 'https://domain/kebijakan-privasi'),
+                                new OA\Property(property: 'sections', type: 'array', items: new OA\Items(type: 'object')),
+                            ]
+                        ),
+                    ]
+                )
+            ),
+        ]
+    )]
+    public function kebijakanPrivasi()
+    {
+    }
+
     #[OA\Post(
         path: 'api/login',
         tags: ['Auth'],

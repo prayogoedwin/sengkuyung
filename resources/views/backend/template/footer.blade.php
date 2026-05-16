@@ -20,6 +20,24 @@
     </footer>
     <!-- / Footer -->
 
+    <div class="modal fade" id="comingSoonModal" tabindex="-1" aria-labelledby="comingSoonModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="comingSoonModalLabel">Coming Soon</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <i class="bx bx-time-five display-4 text-muted mb-3 d-block"></i>
+                    <p class="mb-0 text-muted">Fitur ini sedang dalam pengembangan.<br>Segera hadir.</p>
+                </div>
+                <div class="modal-footer justify-content-center border-0 pt-0">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Core JS -->
     <!-- build:js assets/vendor/js/core.js -->
     <script src="{{ asset('assets/nakerbisa_be/vendor/libs/jquery/jquery.js') }}"></script>

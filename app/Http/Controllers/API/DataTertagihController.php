@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\DataTertagih;
 use App\Models\SengPendataanKendaraan;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -14,12 +15,24 @@ class DataTertagihController extends Controller
     /**
      * Daftar data tertagih (belum terdata) dengan filter wilayah samsat + tahun + nopol, ber-pagination.
      *
-     * Payload wajib: lokasi_samsat, kecamatan_samsat, kelurahan_samsat (sesuai field user login).
-     * Dipetakan ke kolom: id_lokasi_samsat, id_kecamatan, id_kelurahan.
+     * Wilayah diambil dari profil user login; field lokasi/kec/kel samsat di body opsional (override).
+     * Hanya role petugas — dicek middleware petugas.api.
      */
     public function index(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        $user = Auth::user();
+
+        $wilayahInput = [
+            'lokasi_samsat' => $request->input('lokasi_samsat', $user?->lokasi_samsat),
+            'kecamatan_samsat' => $request->input('kecamatan_samsat', $user?->kecamatan_samsat),
+            'kelurahan_samsat' => $request->input('kelurahan_samsat', $user?->kelurahan_samsat),
+            'year' => $request->input('year'),
+            'no_polisi' => $request->input('no_polisi'),
+            'page' => $request->input('page'),
+            'per_page' => $request->input('per_page'),
+        ];
+
+        $validator = Validator::make($wilayahInput, [
             'lokasi_samsat' => 'required|string|max:100',
             'kecamatan_samsat' => 'required|string|max:100',
             'kelurahan_samsat' => 'required|string|max:100',
@@ -27,6 +40,10 @@ class DataTertagihController extends Controller
             'no_polisi' => 'nullable|string|max:50',
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1|max:100',
+        ], [
+            'lokasi_samsat.required' => 'Wilayah samsat tidak lengkap pada profil akun petugas.',
+            'kecamatan_samsat.required' => 'Kecamatan samsat tidak lengkap pada profil akun petugas.',
+            'kelurahan_samsat.required' => 'Kelurahan samsat tidak lengkap pada profil akun petugas.',
         ]);
 
         if ($validator->fails()) {
@@ -37,12 +54,12 @@ class DataTertagihController extends Controller
             ], 422);
         }
 
-        $year = (int) $request->input('year', (int) date('Y'));
-        $perPage = (int) $request->input('per_page', 15);
+        $year = (int) ($wilayahInput['year'] ?? date('Y'));
+        $perPage = (int) ($wilayahInput['per_page'] ?? 15);
 
-        $lokasiVariants = $this->samsatCodeVariants($request->input('lokasi_samsat'));
-        $kecVariants = $this->samsatCodeVariants($request->input('kecamatan_samsat'));
-        $kelVariants = $this->samsatCodeVariants($request->input('kelurahan_samsat'));
+        $lokasiVariants = $this->samsatCodeVariants($wilayahInput['lokasi_samsat']);
+        $kecVariants = $this->samsatCodeVariants($wilayahInput['kecamatan_samsat']);
+        $kelVariants = $this->samsatCodeVariants($wilayahInput['kelurahan_samsat']);
 
         $query = DataTertagih::query()
             ->whereIn('id_lokasi_samsat', $lokasiVariants)
@@ -51,8 +68,8 @@ class DataTertagihController extends Controller
             ->where('is_terdata', 0)
             ->where('year', $year);
 
-        if ($request->filled('no_polisi')) {
-            $query->where('no_polisi', 'like', '%' . $request->input('no_polisi') . '%');
+        if (!empty($wilayahInput['no_polisi'])) {
+            $query->where('no_polisi', 'like', '%' . $wilayahInput['no_polisi'] . '%');
         }
 
         $paginator = $query->orderBy('id', 'desc')->paginate($perPage);
@@ -103,6 +120,14 @@ class DataTertagihController extends Controller
             ], 404);
         }
 
+        $user = Auth::user();
+        if (!$this->itemMatchesUserWilayah($item, $user)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Data tidak ditemukan',
+            ], 404);
+        }
+
         $currentUserId = Auth::id();
         $normalizedNopol = strtoupper(preg_replace('/[^A-Z0-9]/i', '', (string) $item->no_polisi) ?? '');
 
@@ -144,6 +169,25 @@ class DataTertagihController extends Controller
                 ] : null,
             ],
         ]);
+    }
+
+    private function itemMatchesUserWilayah(DataTertagih $item, ?User $user): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        $lokasiVariants = $this->samsatCodeVariants($user->lokasi_samsat);
+        $kecVariants = $this->samsatCodeVariants($user->kecamatan_samsat);
+        $kelVariants = $this->samsatCodeVariants($user->kelurahan_samsat);
+
+        if ($lokasiVariants === [] || $kecVariants === [] || $kelVariants === []) {
+            return false;
+        }
+
+        return in_array((string) $item->id_lokasi_samsat, $lokasiVariants, true)
+            && in_array((string) $item->id_kecamatan, $kecVariants, true)
+            && in_array((string) $item->id_kelurahan, $kelVariants, true);
     }
 
     /**

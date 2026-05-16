@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'auth-api' => \App\Http\Middleware\SanctumRememberToken::class,
             'deny.petugas.web' => \App\Http\Middleware\DenyPetugasWeb::class,
+            'petugas.api' => \App\Http\Middleware\EnsurePetugasApi::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

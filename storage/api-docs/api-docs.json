@@ -676,31 +676,27 @@
                 "tags": [
                     "Data Tertagih"
                 ],
-                "summary": "Daftar data tertagih (is_terdata=0) dengan filter wilayah samsat + tahun + nopol",
+                "summary": "Daftar data tertagih (is_terdata=0) — hanya role petugas",
+                "description": "Wilayah samsat diambil dari profil user login jika tidak dikirim di body. Role dicek dari token (bukan payload).",
                 "operationId": "e76a50a2d0e4d28883640c2c0cac086e",
                 "requestBody": {
-                    "required": true,
+                    "required": false,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "lokasi_samsat",
-                                    "kecamatan_samsat",
-                                    "kelurahan_samsat"
-                                ],
                                 "properties": {
                                     "lokasi_samsat": {
-                                        "description": "Wajib. Dicocokkan ke id_lokasi_samsat (nilai asli + tanpa leading zero, mis. 01 dan 1).",
+                                        "description": "Opsional. Default dari profil user (lokasi_samsat).",
                                         "type": "string",
                                         "example": "01"
                                     },
                                     "kecamatan_samsat": {
-                                        "description": "Wajib. Dicocokkan ke id_kecamatan (mis. 0105 dan 105).",
+                                        "description": "Opsional. Default dari profil user (kecamatan_samsat).",
                                         "type": "string",
                                         "example": "0105"
                                     },
                                     "kelurahan_samsat": {
-                                        "description": "Wajib. Dicocokkan ke id_kelurahan (mis. 0105007 dan 105007).",
+                                        "description": "Opsional. Default dari profil user (kelurahan_samsat).",
                                         "type": "string",
                                         "example": "0105007"
                                     },
@@ -855,6 +851,9 @@
                     "401": {
                         "description": "Unauthorized"
                     },
+                    "403": {
+                        "description": "Bukan role petugas"
+                    },
                     "422": {
                         "description": "Validasi gagal"
                     }
@@ -871,7 +870,7 @@
                 "tags": [
                     "Data Tertagih"
                 ],
-                "summary": "Detail data tertagih by id + cek apakah nopol sudah didata user lain",
+                "summary": "Detail data tertagih by id — hanya role petugas, wilayah sesuai profil user",
                 "operationId": "70c97b4bb4642b779b0fa9469efa925c",
                 "parameters": [
                     {

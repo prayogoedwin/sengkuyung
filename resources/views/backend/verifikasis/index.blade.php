@@ -43,13 +43,15 @@
                                                 $isScopedKabkota = Auth::user()->hasRole('kabkota') || Auth::user()->hasRole('uptd') || Auth::user()->hasRole('uppd');
                                                 $userKotaId = $selectedKabkotaId ?? (Auth::user()->kota ?? null);
                                                 $isUppd = $isUppd ?? Auth::user()->hasRole('uppd');
+                                                $isKabkotaRole = $isKabkotaRole ?? Auth::user()->hasRole('kabkota');
+                                                $lockKabkotaFilter = ($isUppd || $isKabkotaRole) && !empty($userKotaId);
                                             @endphp
 
                                             {{-- {{ $userRoleId }} --}}
 
                                             <div class="col-md-3">
                                                 <label for="userKabkota">Kabupaten/Kota</label>
-                                                <select class="form-control" id="userKabkota" name="kota" {{ $isUppd && !empty($userKotaId) ? 'disabled' : '' }}>
+                                                <select class="form-control" id="userKabkota" name="kota" {{ $lockKabkotaFilter ? 'disabled' : '' }}>
                                                     <option value="">Pilih Kabkota</option>
                                                     @foreach ($kabkotas as $kbkt)
                                                         @if ($isScopedKabkota)
@@ -144,7 +146,7 @@
     <script>
         $(document).ready(function() {
             // $('#simpletable').DataTable({
-            @if ($isUppd && !empty($userKotaId))
+            @if ($lockKabkotaFilter ?? false)
                 $('#userKabkota').val('{{ $userKotaId }}');
             @endif
 
@@ -203,7 +205,11 @@
 
             $('#resetFilter').click(function() {
                 $('#statusVerifikasi').val('');
-                $('#userKabkota').val('');
+                @if ($lockKabkotaFilter ?? false)
+                    $('#userKabkota').val('{{ $userKotaId }}');
+                @else
+                    $('#userKabkota').val('');
+                @endif
                 $('#lokasiSamsat').html('<option value="">Pilih Lokasi Samsat</option>');
                 $('#kecamatanSamsat').html('<option value="">Pilih Kecamatan Samsat</option>');
                 $('#kelurahanSamsat').html('<option value="">Pilih Kelurahan Samsat</option>');

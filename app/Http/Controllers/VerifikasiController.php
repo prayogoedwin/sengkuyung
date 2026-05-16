@@ -149,7 +149,7 @@ class VerifikasiController extends Controller
                     });
 
                 // Tambahkan kolom options berdasarkan role
-                if ($isSuperAdmin || $isAdminProv || $isUptd) {
+                if ($isSuperAdmin || $isAdminProv || $isUptd || $isKabkota) {
                     $datatable->addColumn('options', function ($verifikasi) {
                         return '
                             <a href="' . route('verifikasi-detail.index', ['id' => Helper::encodeId($verifikasi->id)]) . '" class="btn btn-primary btn-sm">Verif</a>
@@ -180,16 +180,23 @@ class VerifikasiController extends Controller
 
         $user = Auth::user();
         $isUppd = $user && $user->hasRole('uppd');
+        $isKabkotaRole = $user && $user->hasRole('kabkota');
         $resolvedKabkotaId = $this->resolveKabkotaIdFromLokasiSamsat($user->lokasi_samsat ?? null);
         $selectedKabkotaId = $user->kota ?? $resolvedKabkotaId;
 
-        if ($isUppd && !empty($selectedKabkotaId)) {
+        if (($isUppd || $isKabkotaRole) && !empty($selectedKabkotaId)) {
             $kabkotas = $kabkotas->filter(function ($kbkt) use ($selectedKabkotaId) {
                 return (string) $kbkt->id === (string) $selectedKabkotaId;
             })->values();
         }
 
-        return view('backend.verifikasis.index',  compact('kabkotas', 'status_verifikasis', 'selectedKabkotaId', 'isUppd'));
+        return view('backend.verifikasis.index', compact(
+            'kabkotas',
+            'status_verifikasis',
+            'selectedKabkotaId',
+            'isUppd',
+            'isKabkotaRole'
+        ));
     }
 
     private function resolveKabkotaIdFromLokasiSamsat(?string $lokasiSamsatId): ?string

@@ -89,10 +89,14 @@
                 </a>
             </li>
             <li class="menu-item {{ request()->routeIs('data-tertagih-d2d.index') ? 'active' : '' }}">
-                <a href="{{ route('data-tertagih-d2d.index') }}" class="menu-link">
+                {{-- <a href="{{ route('data-tertagih-d2d.index') }}" class="menu-link">
                     <i class="menu-icon tf-icons bx bx-grid-alt"></i>
                     <div data-i18n="Analytics">Data Tertagih D2D</div>
-                </a>
+                </a> --}}
+                 <a href="javascript:void(0);" class="menu-link" data-bs-toggle="modal" data-bs-target="#comingSoonModal">
+                            <i class="menu-icon tf-icons bx bx-time-five"></i>
+                            <div data-i18n="Analytics">Data Tertagih D2D</div>
+                    </a>
             </li>
 
             @endif
@@ -105,10 +109,15 @@
             </li>
             @if ($canSeeVerifikasiD2d)
             <li class="menu-item {{ request()->routeIs('verifikasi-d2d.index') ? 'active' : '' }}">
-                <a href="{{ route('verifikasi-d2d.index') }}" class="menu-link">
+                {{-- <a href="{{ route('verifikasi-d2d.index') }}" class="menu-link">
                     <i class="menu-icon tf-icons bx bx-check-shield"></i>
                     <div data-i18n="Analytics">Verifikasi D2D</div>
-                </a>
+                </a> --}}
+
+                <a href="javascript:void(0);" class="menu-link" data-bs-toggle="modal" data-bs-target="#comingSoonModal">
+                            <i class="menu-icon tf-icons bx bx-time-five"></i>
+                            <div data-i18n="Analytics">Verifikasi D2D</div>
+                    </a>
             </li>
             @endif
 
@@ -132,16 +141,26 @@
 
             @if ($canSeeRekapPelaporanD2d)
                 <li class="menu-item {{ request()->routeIs('pelaporan-d2d.index') ? 'active' : '' }}">
-                    <a href="{{ route('pelaporan-d2d.index') }}" class="menu-link">
+                    {{-- <a href="{{ route('pelaporan-d2d.index') }}" class="menu-link">
                         <i class="menu-icon tf-icons bx bx-file"></i>
                         <div data-i18n="Analytics">Pelaporan D2D</div>
-                    </a>
+                    </a> --}}
+
+                    <a href="javascript:void(0);" class="menu-link" data-bs-toggle="modal" data-bs-target="#comingSoonModal">
+                            <i class="menu-icon tf-icons bx bx-time-five"></i>
+                            <div data-i18n="Analytics">Pelaporan D2D</div>
+                        </a>
                 </li>
                 <li class="menu-item {{ request()->routeIs('rekap-d2d.index') ? 'active' : '' }}">
-                    <a href="{{ route('rekap-d2d.index') }}" class="menu-link">
+                    {{-- <a href="{{ route('rekap-d2d.index') }}" class="menu-link">
                         <i class="menu-icon tf-icons bx bx-bar-chart-alt-2"></i>
                         <div data-i18n="Analytics">Rekap D2D</div>
-                    </a>
+                    </a> --}}
+
+                    <a href="javascript:void(0);" class="menu-link" data-bs-toggle="modal" data-bs-target="#comingSoonModal">
+                            <i class="menu-icon tf-icons bx bx-time-five"></i>
+                            <div data-i18n="Analytics">Rekap D2D</div>
+                        </a>
                 </li>
             @endif
 

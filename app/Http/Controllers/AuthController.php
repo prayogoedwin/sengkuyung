@@ -27,7 +27,7 @@ class AuthController extends Controller
 
         // Jika validasi captcha dan kredensial login berhasil
         if (Auth::attempt(['email' => $request->username, 'password' => $request->password])) {
-            if (Auth::user()->hasRole('petugas')) {
+            if (Auth::user()->hasAnyRole(['petugas', 'petugas-d2d'])) {
                 Auth::logout();
 
                 return back()->withErrors(['login_error' => DenyPetugasWeb::MESSAGE]);
@@ -60,7 +60,7 @@ class AuthController extends Controller
             return back()->withErrors(['login_error' => 'Email atau password salah']);
         }
 
-        if ($user->hasRole('petugas')) {
+        if ($user->hasAnyRole(['petugas', 'petugas-d2d'])) {
             return back()
                 ->withErrors(['login_error' => DenyPetugasWeb::MESSAGE])
                 ->withInput($request->only('email'));
@@ -145,7 +145,7 @@ class AuthController extends Controller
                 ->withErrors(['login_error' => 'Silakan login terlebih dahulu']);
         }
 
-        if ($user->hasRole('petugas')) {
+        if ($user->hasAnyRole(['petugas', 'petugas-d2d'])) {
             $user->update([
                 'otp' => null,
                 'otp_expired_at' => null,
@@ -196,7 +196,7 @@ class AuthController extends Controller
                 ->withErrors(['login_error' => 'Data OTP tidak ditemukan. Silakan login ulang.']);
         }
 
-        if ($user->hasRole('petugas')) {
+        if ($user->hasAnyRole(['petugas', 'petugas-d2d'])) {
             $user->update([
                 'otp' => null,
                 'otp_expired_at' => null,
@@ -258,7 +258,7 @@ class AuthController extends Controller
                 ->withErrors(['login_error' => 'User tidak ditemukan']);
         }
 
-        if ($user->hasRole('petugas')) {
+        if ($user->hasAnyRole(['petugas', 'petugas-d2d'])) {
             $user->update([
                 'otp' => null,
                 'otp_expired_at' => null,

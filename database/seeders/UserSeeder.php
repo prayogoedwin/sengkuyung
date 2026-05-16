@@ -15,7 +15,6 @@ class UserSeeder extends Seeder
         // Membuat Role Super Admin jika belum ada
         $superAdminRole = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
         $petugasWebRole = Role::firstOrCreate(['name' => 'petugas', 'guard_name' => 'web']);
-        $petugasApiRole = Role::firstOrCreate(['name' => 'petugas', 'guard_name' => 'api']);
 
         // Membuat User Super Admin
         $superAdmin = User::create([
@@ -31,7 +30,7 @@ class UserSeeder extends Seeder
             'email' => 'petugas@example.com',
             'password' => bcrypt('password123'), // Ganti dengan password yang lebih aman
         ]);
-        $petugas->assignRole($petugasWebRole, $petugasApiRole);
+        $petugas->assignRole($petugasWebRole);
     }
 }
 

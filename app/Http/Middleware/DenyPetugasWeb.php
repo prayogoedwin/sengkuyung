@@ -17,7 +17,7 @@ class DenyPetugasWeb
     {
         $user = $request->user();
 
-        if ($user && $user->hasRole('petugas')) {
+        if ($user && $user->hasAnyRole(['petugas', 'petugas-d2d'])) {
             auth()->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

@@ -27,6 +27,7 @@
                                                         @endif
                                                         @if (in_array($userRoleName ?? '', ['super-admin', 'superadmin', 'admin', 'uptd', 'uppd', 'kabkota', 'kecamatan', 'kelurahan'], true))
                                                             <option value="petugas">Petugas</option>
+                                                            <option value="petugas-d2d">Petugas D2D</option>
                                                         @endif
                                                     </select>
                                                 </div>
@@ -110,7 +111,7 @@
                                         <select class="form-control" id="userRole" name="role_id" required>
                                             <option value="">Pilih Role</option>
                                             @foreach ($roles as $role)
-                                                <option value="{{ $role->id }}">{{ $role->name }}</option>
+                                                <option value="{{ $role->id }}" data-role-name="{{ $role->name }}">{{ $role->display_name ?? $role->name }}</option>
                                             @endforeach
                                         </select>
                                     </div>
@@ -346,9 +347,17 @@
 
     <script>
         $(document).ready(function() {
+            function selectedRoleName() {
+                return ($('#userRole option:selected').data('role-name') || '').toString().toLowerCase();
+            }
+
+            function isFieldOfficerRole() {
+                const name = selectedRoleName();
+                return name === 'petugas' || name === 'petugas-d2d';
+            }
+
             function isPetugasRole() {
-                const selectedText = ($('#userRole option:selected').text() || '').toLowerCase();
-                return selectedText === 'petugas';
+                return isFieldOfficerRole();
             }
 
             function isKecamatanRole() {
@@ -428,13 +437,6 @@
                     $('#samsatContainer').show().find('select, input').attr('required', 'required');
                     $('#kecamatanSamsatContainer').show().find('select, input').attr('required', 'required');
                     $('#kelurahanSamsatContainer').show().find('select, input').attr('required', 'required');
-                } else if (selectedRole == 7) {
-                    $('#kabkotaContainer').show().find('select, input').attr('required', 'required');
-                    $('#districtContainer').show().find('select, input').attr('required', 'required');
-                    $('#kelurahanContainer').show().find('input').attr('required', 'required');
-                    $('#rwContainer').show().find('input').attr('required', 'required');
-                    $('#rtContainer').show().find('input').attr('required', 'required');
-                    $('#alamatContainer').show().find('input').attr('required', 'required');
                 }
             });
 
@@ -727,8 +729,8 @@
         $(document).ready(function() {
             $('#userKabkota').on('change', function() {
                 var kabkotaId = $(this).val();
-                var selectedRoleName = ($('#userRole option:selected').text() || '').toLowerCase();
-                var samsatBasedRole = ['kecamatan', 'kelurahan', 'petugas'].includes(selectedRoleName);
+                var selectedRoleName = ($('#userRole option:selected').data('role-name') || '').toString().toLowerCase();
+                var samsatBasedRole = ['kecamatan', 'kelurahan', 'petugas', 'petugas-d2d'].includes(selectedRoleName);
         
                 if (kabkotaId) {
                     if (samsatBasedRole) {

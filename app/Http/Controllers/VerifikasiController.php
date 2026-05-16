@@ -58,7 +58,7 @@ class VerifikasiController extends Controller
                 } elseif ($request->kota) {
                     $verifikasis->where('kota_dagri', $request->kota);
                 }
-            } elseif ($user && $user->hasRole('petugas')) {
+            } elseif ($user && $user->hasAnyRole(['petugas', 'petugas-d2d'])) {
                 $verifikasis->where('created_by', $userId);
             }
 

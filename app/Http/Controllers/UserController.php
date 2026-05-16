@@ -18,8 +18,15 @@ use Illuminate\Support\Facades\Hash;
 use App\Support\ApiCacheManager;
 
 // class UserController extends Controller implements HasMiddleware
-class UserController extends Controller 
+class UserController extends Controller
 {
+    private const PETUGAS_ROLE = 'petugas';
+
+    private const PETUGAS_D2D_ROLE = 'petugas-d2d';
+
+    /** Role petugas lapangan (mobile); hanya guard web — API memakai token, bukan role guard api. */
+    private const FIELD_OFFICER_ROLES = [self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE];
+
     private function resolveSamsatContext(?string $selectedSamsatId): array
     {
         if (empty($selectedSamsatId)) {
@@ -64,9 +71,37 @@ class UserController extends Controller
 
         return Role::query()
             ->whereIn('name', $names)
+            ->where('guard_name', 'web')
             ->pluck('id')
             ->map(static fn ($id) => (int) $id)
             ->all();
+    }
+
+    private function roleLabel(string $roleName): string
+    {
+        return match (strtolower($roleName)) {
+            self::PETUGAS_ROLE => 'Petugas',
+            self::PETUGAS_D2D_ROLE => 'Petugas D2D',
+            default => ucwords(str_replace(['-', '_'], ' ', $roleName)),
+        };
+    }
+
+    private function isFieldOfficerRoleName(string $roleName): bool
+    {
+        return in_array(strtolower($roleName), self::FIELD_OFFICER_ROLES, true);
+    }
+
+    private function assignSelectedRole(User $user, Role $selectedRole): void
+    {
+        $roleName = strtolower((string) $selectedRole->name);
+
+        if ($roleName === self::PETUGAS_ROLE) {
+            $user->syncRoles([Role::findByName(self::PETUGAS_ROLE, 'web')]);
+
+            return;
+        }
+
+        $user->syncRoles([Role::findByName($roleName, 'web')]);
     }
 
     private function getCurrentUserRoleId(): ?int
@@ -77,11 +112,11 @@ class UserController extends Controller
     private function getAllowedRoleIdsByCreator(string $creatorRoleName): array
     {
         return match ($creatorRoleName) {
-            'uptd', 'uppd' => $this->roleIdsByNames(['kabkota', 'kecamatan', 'kelurahan', 'petugas']),
-            'kabkota' => $this->roleIdsByNames(['kecamatan', 'kelurahan', 'petugas']),
-            'kecamatan' => $this->roleIdsByNames(['kelurahan', 'petugas']),
-            'kelurahan' => $this->roleIdsByNames(['petugas']),
-            default => $this->roleIdsByNames(['admin', 'uptd', 'uppd', 'kabkota', 'kecamatan', 'kelurahan', 'petugas']),
+            'uptd', 'uppd' => $this->roleIdsByNames(['kabkota', 'kecamatan', 'kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE]),
+            'kabkota' => $this->roleIdsByNames(['kecamatan', 'kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE]),
+            'kecamatan' => $this->roleIdsByNames(['kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE]),
+            'kelurahan' => $this->roleIdsByNames([self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE]),
+            default => $this->roleIdsByNames(['admin', 'uptd', 'uppd', 'kabkota', 'kecamatan', 'kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE]),
         };
     }
 
@@ -117,8 +152,8 @@ class UserController extends Controller
                 'ucitech13@gmail.com'
             ]);
 
-            // Role petugas hanya boleh melihat akun dirinya sendiri.
-            if ($userRoleId == 7) {
+            // Petugas / petugas D2D hanya boleh melihat akun dirinya sendiri.
+            if ($user->hasAnyRole(self::FIELD_OFFICER_ROLES)) {
                 $usersQuery->where('id', $userId);
             }
 
@@ -126,7 +161,7 @@ class UserController extends Controller
             if ($isUptdScope) {
                 $usersQuery->where('kota', $userKotaId);
                 $usersQuery->whereHas('roles', function ($q) {
-                    $q->whereIn('name', ['kabkota', 'kecamatan', 'kelurahan', 'petugas']);
+                    $q->whereIn('name', ['kabkota', 'kecamatan', 'kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE]);
                 });
             }
 
@@ -134,7 +169,7 @@ class UserController extends Controller
             if ($isKabkotaScope) {
                 $usersQuery->where('kota', $userKotaId);
                 $usersQuery->whereHas('roles', function ($q) {
-                    $q->whereIn('name', ['kecamatan', 'kelurahan', 'petugas']);
+                    $q->whereIn('name', ['kecamatan', 'kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE]);
                 });
             }
 
@@ -164,7 +199,7 @@ class UserController extends Controller
                         }
                     })->orWhere(function ($sub) use ($kelurahanIdsInKecamatan) {
                         $sub->whereHas('roles', function ($roleQuery) {
-                            $roleQuery->where('name', 'petugas');
+                            $roleQuery->whereIn('name', self::FIELD_OFFICER_ROLES);
                         });
 
                         if (!empty($kelurahanIdsInKecamatan)) {
@@ -181,7 +216,7 @@ class UserController extends Controller
                 $currentKelurahanSamsat = $user->kelurahan_samsat ?: $user->kelurahan;
                 $usersQuery->where('kota', $userKotaId);
                 $usersQuery->whereHas('roles', function ($q) {
-                    $q->where('name', 'petugas');
+                    $q->whereIn('name', self::FIELD_OFFICER_ROLES);
                 });
 
                 if (!empty($currentKelurahanSamsat)) {
@@ -199,7 +234,15 @@ class UserController extends Controller
             }
 
             // Untuk role tidak dikenali, sembunyikan data.
-            if (!$isUptdScope && !$isKabkotaScope && !$isKecamatanScope && !$isKelurahanScope && $userRoleId != 1 && $userRoleId != 2 && $userRoleId != 7) {
+            if (
+                !$isUptdScope
+                && !$isKabkotaScope
+                && !$isKecamatanScope
+                && !$isKelurahanScope
+                && !$user->hasAnyRole(self::FIELD_OFFICER_ROLES)
+                && $userRoleId != 1
+                && $userRoleId != 2
+            ) {
                 $usersQuery->where('kota', 'KuotaMaya');
             }
 
@@ -237,9 +280,16 @@ class UserController extends Controller
         }
 
         $allowedRoleIds = $this->getAllowedRoleIdsByCreator($userRoleName);
-        $roles = Role::select('id', 'name')
+        $roles = Role::select('id', 'name', 'guard_name')
             ->whereIn('id', $allowedRoleIds)
-            ->get();
+            ->where('guard_name', 'web')
+            ->orderBy('name')
+            ->get()
+            ->map(function (Role $role) {
+                $role->display_name = $this->roleLabel((string) $role->name);
+
+                return $role;
+            });
 
         if ($isUptdScope || $isKabkotaScope || $isKecamatanScope || $isKelurahanScope) {
             $kabkotas = ApiCacheManager::remember('admin:master:kabkota:role-scope:' . (string) $userKotaId, ApiCacheManager::masterTtl(), static function () use ($userKotaId) {
@@ -331,9 +381,9 @@ class UserController extends Controller
         $selectedRole = Role::find((int) $request->role_id);
         $selectedRoleName = strtolower($selectedRole->name ?? '');
         $isUptdRole = in_array($selectedRoleName, ['uptd', 'uppd'], true);
-        $isPetugasRole = $selectedRoleName === 'petugas';
-        $isSamsatBasedRole = in_array($selectedRoleName, ['kecamatan', 'kelurahan', 'petugas'], true);
-        $isKelurahanOrPetugasRole = in_array($selectedRoleName, ['kelurahan', 'petugas'], true);
+        $isFieldOfficerRole = $this->isFieldOfficerRoleName($selectedRoleName);
+        $isSamsatBasedRole = in_array($selectedRoleName, ['kecamatan', 'kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE], true);
+        $isKelurahanOrPetugasRole = in_array($selectedRoleName, ['kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE], true);
         $lokasiSamsat = $request->lokasi_samsat;
 
         if ($isUptdRole) {
@@ -374,7 +424,7 @@ class UserController extends Controller
                 $rules['kelurahan_samsat'] = 'required|string';
             }
 
-            if ($isPetugasRole) {
+            if ($isFieldOfficerRole) {
                 $rules['rw'] = 'required|string';
                 $rules['rt'] = 'required|string';
                 $rules['alamat_lengkap'] = 'required|string';
@@ -408,11 +458,11 @@ class UserController extends Controller
             $kota = $creator->kota;
         }
 
-        if (($isKecamatanCreator || $isKelurahanCreator) && !$isPetugasRole) {
+        if (($isKecamatanCreator || $isKelurahanCreator) && !$isFieldOfficerRole) {
             $kecamatanKemendagri = $creator->kecamatan;
         }
 
-        if ($isKelurahanCreator && !$isPetugasRole) {
+        if ($isKelurahanCreator && !$isFieldOfficerRole) {
             $kelurahanKemendagri = $creator->kelurahan;
         }
 
@@ -435,9 +485,8 @@ class UserController extends Controller
             'alamat_lengkap' =>  $request->alamat_lengkap
         ]);
 
-        // Menambahkan role ke user
         if ($selectedRole) {
-            $user->assignRole($selectedRole);
+            $this->assignSelectedRole($user, $selectedRole);
         }
 
 

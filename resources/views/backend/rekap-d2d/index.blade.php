@@ -10,17 +10,21 @@
                 <div class="content-wrapper">
                     <!-- Content -->
                     <div class="container-xxl flex-grow-1 container-p-y">
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h4 class="mb-0">{{ $rekapPageTitle ?? 'Rekap D2D' }}</h4>
+                            </div>
+                        </div>
                         <div class="row mb-5">
-                       
 
-                            <form method="GET" action="{{ route($rekapRouteIndex ?? 'rekap.index') }}">
+                            <form method="GET" action="{{ route($rekapRouteIndex ?? 'rekap-d2d.index') }}">
                                 <div class="row">
                                     <div class="col-md-2">
                                         <label for="kabupaten1">Kabupaten</label>
-                                        <select class="form-control" id="userKabkota" name="kabkota_id">
+                                        <select class="form-control" id="userKabkota" name="kabkota_id" {{ !empty($isUppdScoped) ? 'disabled' : '' }}>
                                             <option value="">Semua Kabkota</option>
                                             @foreach ($kabkotas as $kbkt)
-                                                <option value="{{ $kbkt->id }}" {{ request('kabkota_id') == $kbkt->id ? 'selected' : '' }}>
+                                                <option value="{{ $kbkt->id }}" {{ (string) (request('kabkota_id') ?: ($selectedKabkotaId ?? '')) === (string) $kbkt->id ? 'selected' : '' }}>
                                                     {{ $kbkt->nama }}
                                                 </option>
                                             @endforeach
@@ -29,9 +33,15 @@
 
                                     <div class="col-md-2">
                                         <label for="lokasiSamsat">Lokasi Samsat</label>
-                                        <select class="form-control" id="lokasiSamsat" name="lokasi_samsat">
+                                        <select class="form-control" id="lokasiSamsat" name="lokasi_samsat" {{ !empty($isUppdScoped) ? 'disabled' : '' }}>
                                             <option value="">Semua Lokasi Samsat</option>
                                         </select>
+                                        @if (!empty($isUppdScoped) && !empty($userLokasiSamsat))
+                                            <input type="hidden" name="lokasi_samsat" value="{{ $userLokasiSamsat }}">
+                                        @endif
+                                        @if (!empty($isUppdScoped) && !empty($selectedKabkotaId))
+                                            <input type="hidden" name="kabkota_id" value="{{ $selectedKabkotaId }}">
+                                        @endif
                                     </div>
 
                                     <div class="col-md-2">
@@ -254,8 +264,16 @@
 
 <script>
     $(document).ready(function() {
-        var selectedKabkota = $('#userKabkota').val();
-        var selectedLokasiSamsat = '{{ request('lokasi_samsat') }}';
+        var forcedKabkota = @json($selectedKabkotaId ?? '');
+        var forcedLokasiSamsat = @json($userLokasiSamsat ?? '');
+        var isUppdScoped = @json((bool) ($isUppdScoped ?? false));
+
+        if (isUppdScoped && forcedKabkota) {
+            $('#userKabkota').val(String(forcedKabkota));
+        }
+
+        var selectedKabkota = $('#userKabkota').val() || forcedKabkota;
+        var selectedLokasiSamsat = '{{ request('lokasi_samsat') }}' || forcedLokasiSamsat;
         var selectedKecamatanSamsat = '{{ request('kecamatan_samsat') }}';
         var selectedKelurahanSamsat = '{{ request('kelurahan_samsat') }}';
 

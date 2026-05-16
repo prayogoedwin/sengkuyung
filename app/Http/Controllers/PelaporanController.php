@@ -26,6 +26,36 @@ use Illuminate\Http\Request;
 
 class PelaporanController extends Controller
 {
+    protected function pendataanModelClass(): string
+    {
+        return SengPendataanKendaraan::class;
+    }
+
+    protected function pelaporanViewName(): string
+    {
+        return 'backend.pelaporan.index';
+    }
+
+    protected function pelaporanRouteCsv(): string
+    {
+        return 'pelaporan.csv';
+    }
+
+    protected function pelaporanRouteExcel(): string
+    {
+        return 'pelaporan.excel';
+    }
+
+    protected function pelaporanRoutePdf(): string
+    {
+        return 'pelaporan.pdf';
+    }
+
+    protected function exportFilenamePrefix(): string
+    {
+        return '';
+    }
+
     private function codeVariants($value): array
     {
         $v = trim((string) $value);
@@ -141,7 +171,7 @@ class PelaporanController extends Controller
                 return (string) $kec->kecamatan;
             }
 
-            $kecFromPendataan = SengPendataanKendaraan::query()
+            $kecFromPendataan = $this->pendataanModelClass()::query()
                 ->select('kec_name')
                 ->where(function ($q) use ($code) {
                     $q->where('kec', $code)
@@ -164,7 +194,7 @@ class PelaporanController extends Controller
                 return (string) $kel->kelurahan;
             }
 
-            $kelFromPendataan = SengPendataanKendaraan::query()
+            $kelFromPendataan = $this->pendataanModelClass()::query()
                 ->select('desa_name')
                 ->where(function ($q) use ($code) {
                     $q->where('desa', $code)
@@ -214,7 +244,7 @@ class PelaporanController extends Controller
         });
     }
 
-    private function applyUppdScope(Request $request, $user): void
+    protected function applyUppdScope(Request $request, $user): void
     {
         if (!$user || !$user->hasRole('uppd')) {
             return;
@@ -321,7 +351,7 @@ class PelaporanController extends Controller
             });
         }
 
-        return view('backend.pelaporan.index', compact(
+        return view($this->pelaporanViewName(), compact(
             'kabkotas',
             'isKabkota',
             'isScopedKabkota',
@@ -333,7 +363,11 @@ class PelaporanController extends Controller
             'isKecamatanSamsatLocked',
             'isKelurahanSamsatLocked',
             'isRekapOnlyRole'
-        ));
+        ) + [
+            'pelaporanRouteCsv' => $this->pelaporanRouteCsv(),
+            'pelaporanRouteExcel' => $this->pelaporanRouteExcel(),
+            'pelaporanRoutePdf' => $this->pelaporanRoutePdf(),
+        ]);
     }
 
     public function pelaporanCsv(Request $request){
@@ -379,7 +413,7 @@ class PelaporanController extends Controller
     {
         $userRole = auth()->user()->role;
         $user = User::findOrFail(auth()->id());
-        $verifikasis = SengPendataanKendaraan::query();
+        $verifikasis = $this->pendataanModelClass()::query();
 
         // Apply filters based on user role
         if ($userRole == 1 || $userRole == 2) {
@@ -442,7 +476,7 @@ class PelaporanController extends Controller
             $periode = " Periode: $tanggalStart s.d. $tanggalEnd";
         }
 
-        $filename = "jurnal_pelaporan_" . date('YmdHis') . ".csv";
+        $filename = $this->exportFilenamePrefix() . "jurnal_pelaporan_" . date('YmdHis') . ".csv";
         $headers = [
             "Content-Type" => "text/csv",
             "Content-Disposition" => "attachment; filename=$filename",
@@ -521,7 +555,7 @@ class PelaporanController extends Controller
         
         $judul = mb_strtoupper('REKAP PELAPORAN ' . $kotajudul . ' ' . $kecjudul . ' ' . $periode, 'UTF-8');
 
-        $fileName = "rekap_pelaporan_" . date('YmdHis') . ".csv";
+        $fileName = $this->exportFilenamePrefix() . "rekap_pelaporan_" . date('YmdHis') . ".csv";
         $filePath = storage_path('app/' . $fileName);
         $file = fopen($filePath, 'w');
 
@@ -570,7 +604,7 @@ class PelaporanController extends Controller
     {
         $userRole = auth()->user()->role;
         $user = User::findOrFail(auth()->id());
-        $verifikasis = SengPendataanKendaraan::query();
+        $verifikasis = $this->pendataanModelClass()::query();
 
         if ($userRole == 4) {
             $verifikasis->where(function ($query) use ($user) {
@@ -640,7 +674,7 @@ class PelaporanController extends Controller
             $rowNumber++;
         }
 
-        $filename = "jurnal_pelaporan_" . date('YmdHis') . ".xlsx";
+        $filename = $this->exportFilenamePrefix() . "jurnal_pelaporan_" . date('YmdHis') . ".xlsx";
         return response()->streamDownload(function () use ($spreadsheet) {
             $writer = new XlsxWriter($spreadsheet);
             $writer->save('php://output');
@@ -686,7 +720,7 @@ class PelaporanController extends Controller
             $rowNumber++;
         }
 
-        $filename = "rekap_pelaporan_" . date('YmdHis') . ".xlsx";
+        $filename = $this->exportFilenamePrefix() . "rekap_pelaporan_" . date('YmdHis') . ".xlsx";
         return response()->streamDownload(function () use ($spreadsheet) {
             $writer = new XlsxWriter($spreadsheet);
             $writer->save('php://output');
@@ -721,7 +755,7 @@ class PelaporanController extends Controller
     {
         $userRole = auth()->user()->role;
         $user = User::findOrFail(auth()->id());
-        $verifikasis = SengPendataanKendaraan::query();
+        $verifikasis = $this->pendataanModelClass()::query();
 
         if ($userRole == 1 || $userRole == 2) {
             // admin pusat / admin prov
@@ -827,7 +861,7 @@ class PelaporanController extends Controller
 
         $html .= "</tbody></table></body></html>";
 
-        $filename = "jurnal_pelaporan_" . date('YmdHis') . ".pdf";
+        $filename = $this->exportFilenamePrefix() . "jurnal_pelaporan_" . date('YmdHis') . ".pdf";
 
         $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'landscape');
@@ -922,7 +956,7 @@ class PelaporanController extends Controller
         $dompdf->render();
 
         // Download langsung PDF
-        $fileName = 'rekap_pelaporan_' . date('YmdHis') . '.pdf';
+        $fileName = $this->exportFilenamePrefix() . 'rekap_pelaporan_' . date('YmdHis') . '.pdf';
         return response($dompdf->output(), 200)
             ->header('Content-Type', 'application/pdf')
             ->header('Content-Disposition', "attachment; filename=\"$fileName\"");
@@ -930,7 +964,7 @@ class PelaporanController extends Controller
 
     private function getRekapData(Request $request): array
     {
-        $baseQuery = SengPendataanKendaraan::query();
+        $baseQuery = $this->pendataanModelClass()::query();
 
         if ($request->status_verifikasi_id) {
             $baseQuery->where('status_verifikasi', $request->status_verifikasi_id);

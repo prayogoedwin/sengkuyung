@@ -11,7 +11,9 @@ use App\Http\Controllers\VerifikasiD2dController;
 use App\Http\Controllers\DownloadController;
 use App\Http\Controllers\WilayahController;
 use App\Http\Controllers\RekapController;
+use App\Http\Controllers\RekapD2dController;
 use App\Http\Controllers\PelaporanController;
+use App\Http\Controllers\PelaporanD2dController;
 use App\Http\Controllers\PerbandinganKodeWilayahController;
 use App\Http\Controllers\DataTertagihController;
 use App\Http\Controllers\DataTertagihD2dController;
@@ -24,6 +26,7 @@ Route::middleware([LogActivity::class])->group(function () {
     Route::prefix('dapur')->middleware(['auth', 'deny.petugas.web'])->group(function () {
         Route::get('/dashboard', [BackController::class, 'index'])->name('dashboard');
         Route::get('/rekap', [RekapController::class, 'index'])->name('rekap.index');
+        Route::get('/rekap-d2d', [RekapD2dController::class, 'index'])->name('rekap-d2d.index');
 
         Route::get('/users', [UserController::class, 'index'])->name('user.index');
         Route::get('/user/ganti', [UserController::class, 'ganti_password'])->name('user.ganti');
@@ -53,6 +56,11 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::get('/pelaporan-csv', [PelaporanController::class, 'pelaporanCsv'])->name('pelaporan.csv');
         Route::get('/pelaporan-excel', [PelaporanController::class, 'pelaporanExcel'])->name('pelaporan.excel');
         Route::get('/pelaporan-pdf', [PelaporanController::class, 'pelaporanPdf'])->name('pelaporan.pdf');
+
+        Route::get('/pelaporan-d2d', [PelaporanD2dController::class, 'index'])->name('pelaporan-d2d.index');
+        Route::get('/pelaporan-d2d-csv', [PelaporanD2dController::class, 'pelaporanCsv'])->name('pelaporan-d2d.csv');
+        Route::get('/pelaporan-d2d-excel', [PelaporanD2dController::class, 'pelaporanExcel'])->name('pelaporan-d2d.excel');
+        Route::get('/pelaporan-d2d-pdf', [PelaporanD2dController::class, 'pelaporanPdf'])->name('pelaporan-d2d.pdf');
 
 
 

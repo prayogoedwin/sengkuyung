@@ -17,6 +17,31 @@ use App\Support\ApiCacheManager;
 
 class RekapController extends Controller
 {
+    protected function pendataanModelClass(): string
+    {
+        return SengPendataanKendaraan::class;
+    }
+
+    protected function dataTertagihModelClass(): string
+    {
+        return DataTertagih::class;
+    }
+
+    protected function rekapViewName(): string
+    {
+        return 'backend.rekap.index';
+    }
+
+    protected function rekapRouteIndex(): string
+    {
+        return 'rekap.index';
+    }
+
+    protected function rekapCacheKeyPrefix(): string
+    {
+        return 'admin:rekap:page:';
+    }
+
     public function index_(Request $request)
     {
 
@@ -55,14 +80,12 @@ class RekapController extends Controller
         $statuss = ApiCacheManager::remember('admin:master:status:all', ApiCacheManager::masterTtl(), static function () {
             return SengStatus::all();
         });
-        $kabkotas = ApiCacheManager::remember('admin:master:kabkota:all', ApiCacheManager::masterTtl(), static function () {
-            return SengWilayah::where('id_up', 33)->get();
-        });
+        $kabkotas = $this->rekapKabkotas($user);
         $status_verifikasis = ApiCacheManager::remember('admin:master:status-verifikasi:all', ApiCacheManager::masterTtl(), static function () {
             return SengStatusVerifikasi::select('*')->get();
         });
 
-        return view('backend.rekap.index', compact(
+        return view($this->rekapViewName(), compact(
             'kabkotas',
             'statuss',
             'status_verifikasis',
@@ -73,7 +96,24 @@ class RekapController extends Controller
             'topKota',
             'topKecamatan',
             'topKelurahan'
-        ));
+        ) + [
+            'rekapRouteIndex' => $this->rekapRouteIndex(),
+        ] + $this->rekapExtraViewData($request, $user));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function rekapExtraViewData(Request $request, User $user): array
+    {
+        return [];
+    }
+
+    protected function rekapKabkotas(User $user)
+    {
+        return ApiCacheManager::remember('admin:master:kabkota:all', ApiCacheManager::masterTtl(), static function () {
+            return SengWilayah::where('id_up', 33)->get();
+        });
     }
 
     /**
@@ -89,7 +129,7 @@ class RekapController extends Controller
         $kelurahanSamsatId = $request->input('kelurahan_samsat');
 
         // Query pendataan untuk statistik PKB dan Top 5.
-        $pendataanQuery = SengPendataanKendaraan::query();
+        $pendataanQuery = $this->pendataanModelClass()::query();
         if ($userRoleId === 4) {
             $pendataanQuery->where('kota', $user->uptd_id);
         }
@@ -125,7 +165,7 @@ class RekapController extends Controller
         }
 
         // Query data tertagih untuk potensi dan terdata.
-        $dataTertagihQuery = DataTertagih::query();
+        $dataTertagihQuery = $this->dataTertagihModelClass()::query();
         if (!$request->tanggal_start && !$request->tanggal_end) {
             $dataTertagihQuery->where('year', now()->year);
         }
@@ -370,7 +410,7 @@ class RekapController extends Controller
         }
 
         $body = count($pairs) > 0 ? implode('-', $pairs) : 'none';
-        $prefix = 'admin:rekap:page:';
+        $prefix = $this->rekapCacheKeyPrefix();
         $full = $prefix . $body;
 
         if (strlen($full) > 260) {

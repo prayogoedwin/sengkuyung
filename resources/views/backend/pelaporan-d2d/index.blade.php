@@ -9,6 +9,11 @@
                 <div class="content-wrapper">
                     <!-- Content -->
                     <div class="container-xxl flex-grow-1 container-p-y">
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h4 class="mb-0">Pelaporan D2D</h4>
+                            </div>
+                        </div>
                         <div class="row">
                             <div class="col-xl-6">
                                 <div class="card">
@@ -275,17 +280,17 @@
 
         document.getElementById("submitFilter").addEventListener("click", function (e) {
             e.preventDefault();
-            window.location.href = `{{ route($pelaporanRouteCsv ?? 'pelaporan.csv') }}?${buildQuery()}`;
+            window.location.href = `{{ route($pelaporanRouteCsv ?? 'pelaporan-d2d.csv') }}?${buildQuery()}`;
         });
 
         document.getElementById("submitFilterExcel").addEventListener("click", function (e) {
             e.preventDefault();
-            window.location.href = `{{ route($pelaporanRouteExcel ?? 'pelaporan.excel') }}?${buildQuery()}`;
+            window.location.href = `{{ route($pelaporanRouteExcel ?? 'pelaporan-d2d.excel') }}?${buildQuery()}`;
         });
 
         document.getElementById("submitFilterPdf").addEventListener("click", function (e) {
             e.preventDefault();
-            window.location.href = `{{ route($pelaporanRoutePdf ?? 'pelaporan.pdf') }}?${buildQuery()}`;
+            window.location.href = `{{ route($pelaporanRoutePdf ?? 'pelaporan-d2d.pdf') }}?${buildQuery()}`;
         });
 
         document.getElementById("resetFilter").addEventListener("click", function (e) {

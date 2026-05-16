@@ -21,6 +21,7 @@ class CacheManagementController extends Controller
         'admin:dashboard:' => 'Admin Dashboard (statistik kartu)',
         'admin:rekap:' => 'Admin Rekap (grafik & ringkasan)',
         'admin:data-tertagih:' => 'Admin Data Tertagih',
+        'admin:data-tertagih-d2d:' => 'Admin Data Tertagih D2D',
         'admin:master:' => 'Admin Master Data',
     ];
 

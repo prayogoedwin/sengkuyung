@@ -992,6 +992,114 @@
                 ]
             }
         },
+        "api/data-tertagih-d2d/list": {
+            "post": {
+                "tags": [
+                    "Data Tertagih D2D"
+                ],
+                "summary": "Daftar data tertagih D2D (is_terdata=0) — hanya role petugas-d2d",
+                "description": "Wilayah samsat diambil dari profil user login jika tidak dikirim di body. Role dicek dari token (bukan payload).",
+                "operationId": "c6d7208419df3482a20c0e6e7cf51012",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "lokasi_samsat": {
+                                        "description": "Opsional. Default dari profil user.",
+                                        "type": "string",
+                                        "example": "01"
+                                    },
+                                    "kecamatan_samsat": {
+                                        "type": "string",
+                                        "example": "0105"
+                                    },
+                                    "kelurahan_samsat": {
+                                        "type": "string",
+                                        "example": "0105007"
+                                    },
+                                    "year": {
+                                        "type": "integer",
+                                        "example": 2026
+                                    },
+                                    "no_polisi": {
+                                        "type": "string",
+                                        "example": "H8121QY"
+                                    },
+                                    "page": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "per_page": {
+                                        "type": "integer",
+                                        "example": 15
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Berhasil"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Bukan role petugas-d2d"
+                    },
+                    "422": {
+                        "description": "Validasi gagal"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "api/data-tertagih-d2d/{id}": {
+            "get": {
+                "tags": [
+                    "Data Tertagih D2D"
+                ],
+                "summary": "Detail data tertagih D2D by id — hanya role petugas-d2d",
+                "operationId": "03a5edaac9f5bc2831fa9f6a2b497063",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Berhasil"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Bukan role petugas-d2d"
+                    },
+                    "404": {
+                        "description": "Data tidak ditemukan"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "api/pendataan": {
             "get": {
                 "tags": [
@@ -1529,6 +1637,10 @@
         {
             "name": "Data Tertagih",
             "description": "Data Tertagih"
+        },
+        {
+            "name": "Data Tertagih D2D",
+            "description": "Data Tertagih D2D"
         },
         {
             "name": "Pendataan Kendaraan",

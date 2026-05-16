@@ -81,6 +81,13 @@
                     <div data-i18n="Analytics">Data Tertagih</div>
                 </a>
             </li>
+            <li class="menu-item {{ request()->routeIs('data-tertagih-d2d.index') ? 'active' : '' }}">
+                <a href="{{ route('data-tertagih-d2d.index') }}" class="menu-link">
+                    <i class="menu-icon tf-icons bx bx-grid-alt"></i>
+                    <div data-i18n="Analytics">Data Tertagih D2D</div>
+                </a>
+            </li>
+
             @endif
 
             <li class="menu-item {{ request()->routeIs('verifikasi.index') ? 'active' : '' }}">
@@ -140,6 +147,13 @@
                         <div data-i18n="Analytics">Data Tertagih</div>
                     </a>
                 </li>
+                <li class="menu-item {{ request()->routeIs('data-tertagih-d2d.index') ? 'active' : '' }}">
+                    <a href="{{ route('data-tertagih-d2d.index') }}" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-grid-alt"></i>
+                        <div data-i18n="Analytics">Data Tertagih D2D</div>
+                    </a>
+                </li>
+
                 @endif
 
                 <li class="menu-item {{ request()->routeIs('verifikasi.index') ? 'active' : '' }}">

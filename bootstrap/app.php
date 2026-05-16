@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth-api' => \App\Http\Middleware\SanctumRememberToken::class,
             'deny.petugas.web' => \App\Http\Middleware\DenyPetugasWeb::class,
             'petugas.api' => \App\Http\Middleware\EnsurePetugasApi::class,
+            'petugas-d2d.api' => \App\Http\Middleware\EnsurePetugasD2dApi::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

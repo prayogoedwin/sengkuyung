@@ -10,6 +10,7 @@ use App\Models\SengStatusVerifikasi;
 use App\Models\SengSaamsat;
 use App\Models\SengWilayahKec;
 use App\Models\DataTertagih;
+use App\Models\DataTertagihD2d;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Response;
 use App\Helpers\Helper;
@@ -253,12 +254,19 @@ class SengPendataanKendaraanController extends Controller
         // Tandai data tertagih sudah terdata jika nopol yang sama ditemukan.
         $normalizedNopol = strtoupper(preg_replace('/\s+/', '', (string) $request->nopol));
         if ($normalizedNopol !== '') {
-            DataTertagih::whereRaw("REPLACE(UPPER(no_polisi), ' ', '') = ?", [$normalizedNopol])
-                ->update([
-                    'is_terdata' => 1,
-                    'updated_by' => $user->id,
-                    'updated_at' => now(),
-                ]);
+            $tertagihUpdate = [
+                'is_terdata' => 1,
+                'updated_by' => $user->id,
+                'updated_at' => now(),
+            ];
+
+            if ($user->hasRole('petugas-d2d')) {
+                DataTertagihD2d::whereRaw("REPLACE(UPPER(no_polisi), ' ', '') = ?", [$normalizedNopol])
+                    ->update($tertagihUpdate);
+            } elseif ($user->hasRole('petugas')) {
+                DataTertagih::whereRaw("REPLACE(UPPER(no_polisi), ' ', '') = ?", [$normalizedNopol])
+                    ->update($tertagihUpdate);
+            }
         }
 
         $encodedId = Helper::encodeId($data->id);

@@ -496,6 +496,56 @@ class ApiDocs
     {
     }
 
+    #[OA\Post(
+        path: 'api/data-tertagih-d2d/list',
+        tags: ['Data Tertagih D2D'],
+        summary: 'Daftar data tertagih D2D (is_terdata=0) — hanya role petugas-d2d',
+        description: 'Wilayah samsat diambil dari profil user login jika tidak dikirim di body. Role dicek dari token (bukan payload).',
+        security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'lokasi_samsat', type: 'string', example: '01', description: 'Opsional. Default dari profil user.'),
+                    new OA\Property(property: 'kecamatan_samsat', type: 'string', example: '0105'),
+                    new OA\Property(property: 'kelurahan_samsat', type: 'string', example: '0105007'),
+                    new OA\Property(property: 'year', type: 'integer', example: 2026),
+                    new OA\Property(property: 'no_polisi', type: 'string', example: 'H8121QY'),
+                    new OA\Property(property: 'page', type: 'integer', example: 1),
+                    new OA\Property(property: 'per_page', type: 'integer', example: 15),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Berhasil'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+            new OA\Response(response: 403, description: 'Bukan role petugas-d2d'),
+            new OA\Response(response: 422, description: 'Validasi gagal'),
+        ]
+    )]
+    public function dataTertagihD2dList()
+    {
+    }
+
+    #[OA\Get(
+        path: 'api/data-tertagih-d2d/{id}',
+        tags: ['Data Tertagih D2D'],
+        summary: 'Detail data tertagih D2D by id — hanya role petugas-d2d',
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Berhasil'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+            new OA\Response(response: 403, description: 'Bukan role petugas-d2d'),
+            new OA\Response(response: 404, description: 'Data tidak ditemukan'),
+        ]
+    )]
+    public function dataTertagihD2dShow()
+    {
+    }
+
     #[OA\Get(
         path: 'api/pendataan',
         tags: ['Pendataan Kendaraan'],

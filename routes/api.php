@@ -10,6 +10,7 @@ use App\Http\Controllers\API\SengWilayahController;
 use App\Http\Controllers\API\SengStatusFileController;
 use App\Http\Controllers\API\RekapController;
 use App\Http\Controllers\API\DataTertagihController;
+use App\Http\Controllers\API\DataTertagihD2dController;
 use App\Http\Controllers\KebijakanPrivasiController;
 use Illuminate\Support\Facades\Auth;
 
@@ -58,6 +59,10 @@ Route::middleware(['auth-api'])->group(function () {
         Route::middleware('petugas.api')->group(function () {
             Route::post('data-tertagih/list', [DataTertagihController::class, 'index']);
             Route::get('data-tertagih/{id}', [DataTertagihController::class, 'show']);
+        });
+        Route::middleware('petugas-d2d.api')->group(function () {
+            Route::post('data-tertagih-d2d/list', [DataTertagihD2dController::class, 'index']);
+            Route::get('data-tertagih-d2d/{id}', [DataTertagihD2dController::class, 'show']);
         });
         
     });

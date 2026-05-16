@@ -13,6 +13,7 @@ use App\Http\Controllers\RekapController;
 use App\Http\Controllers\PelaporanController;
 use App\Http\Controllers\PerbandinganKodeWilayahController;
 use App\Http\Controllers\DataTertagihController;
+use App\Http\Controllers\DataTertagihD2dController;
 use App\Http\Controllers\CacheManagementController;
 use App\Http\Controllers\KebijakanPrivasiController;
 
@@ -76,6 +77,15 @@ Route::middleware([LogActivity::class])->group(function () {
             ->name('data-tertagih.template');
         Route::post('/data-tertagih/{id}/status', [DataTertagihController::class, 'updateStatus'])->name('data-tertagih.update-status');
         Route::delete('/data-tertagih/{id}', [DataTertagihController::class, 'destroy'])->name('data-tertagih.destroy');
+
+        Route::get('/data-tertagih-d2d', [DataTertagihD2dController::class, 'index'])->name('data-tertagih-d2d.index');
+        Route::post('/data-tertagih-d2d/import', [DataTertagihD2dController::class, 'import'])->name('data-tertagih-d2d.import');
+        Route::get('/data-tertagih-d2d/template/{format}/{type}', [DataTertagihD2dController::class, 'downloadTemplate'])
+            ->whereIn('format', ['csv', 'xlsx'])
+            ->whereIn('type', ['format', 'contoh'])
+            ->name('data-tertagih-d2d.template');
+        Route::post('/data-tertagih-d2d/{id}/status', [DataTertagihD2dController::class, 'updateStatus'])->name('data-tertagih-d2d.update-status');
+        Route::delete('/data-tertagih-d2d/{id}', [DataTertagihD2dController::class, 'destroy'])->name('data-tertagih-d2d.destroy');
 
         Route::get('/cache-management', [CacheManagementController::class, 'index'])->name('cache-management.index');
         Route::get('/cache-management/{scope}', [CacheManagementController::class, 'scope'])

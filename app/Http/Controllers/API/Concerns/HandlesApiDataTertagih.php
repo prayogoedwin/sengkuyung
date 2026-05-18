@@ -43,6 +43,7 @@ trait HandlesApiDataTertagih
             'kelurahan_samsat' => $request->input('kelurahan_samsat', $user?->kelurahan_samsat),
             'year' => $request->input('year'),
             'no_polisi' => $request->input('no_polisi'),
+            'alamat' => $request->input('alamat'),
             'page' => $request->input('page'),
             'per_page' => $request->input('per_page'),
         ];
@@ -53,6 +54,7 @@ trait HandlesApiDataTertagih
             'kelurahan_samsat' => 'required|string|max:100',
             'year' => 'nullable|integer|min:2000|max:2100',
             'no_polisi' => 'nullable|string|max:50',
+            'alamat' => 'nullable|string|max:255',
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1|max:100',
         ], $this->dataTertagihWilayahValidationMessages());
@@ -81,6 +83,18 @@ trait HandlesApiDataTertagih
 
         if (!empty($wilayahInput['no_polisi'])) {
             $query->where('no_polisi', 'like', '%' . $wilayahInput['no_polisi'] . '%');
+        }
+
+        if (!empty($wilayahInput['alamat'])) {
+            $term = trim((string) $wilayahInput['alamat']);
+            if ($term !== '') {
+                $query->where(function ($q) use ($term) {
+                    $q->where('alamat', 'like', '%' . $term . '%')
+                        ->orWhere('nm_kelurahan', 'like', '%' . $term . '%')
+                        ->orWhere('nm_kecamatan', 'like', '%' . $term . '%')
+                        ->orWhere('lokasi_layanan', 'like', '%' . $term . '%');
+                });
+            }
         }
 
         $paginator = $query->orderBy('id', 'desc')->paginate($perPage);

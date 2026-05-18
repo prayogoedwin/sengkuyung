@@ -710,6 +710,11 @@
                                         "type": "string",
                                         "example": "H8121QY"
                                     },
+                                    "alamat": {
+                                        "description": "Opsional. Pencarian LIKE pada alamat, nm_kelurahan, nm_kecamatan, lokasi_layanan.",
+                                        "type": "string",
+                                        "example": "Kedungwuni"
+                                    },
                                     "page": {
                                         "type": "integer",
                                         "example": 1
@@ -720,6 +725,16 @@
                                     }
                                 },
                                 "type": "object"
+                            },
+                            "example": {
+                                "lokasi_samsat": "01",
+                                "kecamatan_samsat": "0105",
+                                "kelurahan_samsat": "0105007",
+                                "year": 2026,
+                                "no_polisi": "H8121QY",
+                                "alamat": "Kedungwuni",
+                                "page": 1,
+                                "per_page": 15
                             }
                         }
                     }
@@ -1027,6 +1042,11 @@
                                         "type": "string",
                                         "example": "H8121QY"
                                     },
+                                    "alamat": {
+                                        "description": "Opsional. Pencarian LIKE pada alamat, nm_kelurahan, nm_kecamatan, lokasi_layanan.",
+                                        "type": "string",
+                                        "example": "Kedungwuni"
+                                    },
                                     "page": {
                                         "type": "integer",
                                         "example": 1
@@ -1037,6 +1057,16 @@
                                     }
                                 },
                                 "type": "object"
+                            },
+                            "example": {
+                                "lokasi_samsat": "01",
+                                "kecamatan_samsat": "0105",
+                                "kelurahan_samsat": "0105007",
+                                "year": 2026,
+                                "no_polisi": "H8121QY",
+                                "alamat": "Kedungwuni",
+                                "page": 1,
+                                "per_page": 15
                             }
                         }
                     }

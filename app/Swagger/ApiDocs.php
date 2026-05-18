@@ -380,12 +380,28 @@ class ApiDocs
         requestBody: new OA\RequestBody(
             required: false,
             content: new OA\JsonContent(
+                example: [
+                    'lokasi_samsat' => '01',
+                    'kecamatan_samsat' => '0105',
+                    'kelurahan_samsat' => '0105007',
+                    'year' => 2026,
+                    'no_polisi' => 'H8121QY',
+                    'alamat' => 'Kedungwuni',
+                    'page' => 1,
+                    'per_page' => 15,
+                ],
                 properties: [
                     new OA\Property(property: 'lokasi_samsat', type: 'string', example: '01', description: 'Opsional. Default dari profil user (lokasi_samsat).'),
                     new OA\Property(property: 'kecamatan_samsat', type: 'string', example: '0105', description: 'Opsional. Default dari profil user (kecamatan_samsat).'),
                     new OA\Property(property: 'kelurahan_samsat', type: 'string', example: '0105007', description: 'Opsional. Default dari profil user (kelurahan_samsat).'),
                     new OA\Property(property: 'year', type: 'integer', example: 2026, description: 'Opsional. Default tahun berjalan.'),
                     new OA\Property(property: 'no_polisi', type: 'string', example: 'H8121QY', description: 'Opsional. Pencarian LIKE pada no_polisi.'),
+                    new OA\Property(
+                        property: 'alamat',
+                        type: 'string',
+                        example: 'Kedungwuni',
+                        description: 'Opsional. Pencarian LIKE pada alamat, nm_kelurahan, nm_kecamatan, lokasi_layanan.'
+                    ),
                     new OA\Property(property: 'page', type: 'integer', example: 1),
                     new OA\Property(property: 'per_page', type: 'integer', example: 15),
                 ]
@@ -505,12 +521,28 @@ class ApiDocs
         requestBody: new OA\RequestBody(
             required: false,
             content: new OA\JsonContent(
+                example: [
+                    'lokasi_samsat' => '01',
+                    'kecamatan_samsat' => '0105',
+                    'kelurahan_samsat' => '0105007',
+                    'year' => 2026,
+                    'no_polisi' => 'H8121QY',
+                    'alamat' => 'Kedungwuni',
+                    'page' => 1,
+                    'per_page' => 15,
+                ],
                 properties: [
                     new OA\Property(property: 'lokasi_samsat', type: 'string', example: '01', description: 'Opsional. Default dari profil user.'),
                     new OA\Property(property: 'kecamatan_samsat', type: 'string', example: '0105'),
                     new OA\Property(property: 'kelurahan_samsat', type: 'string', example: '0105007'),
                     new OA\Property(property: 'year', type: 'integer', example: 2026),
                     new OA\Property(property: 'no_polisi', type: 'string', example: 'H8121QY'),
+                    new OA\Property(
+                        property: 'alamat',
+                        type: 'string',
+                        example: 'Kedungwuni',
+                        description: 'Opsional. Pencarian LIKE pada alamat, nm_kelurahan, nm_kecamatan, lokasi_layanan.'
+                    ),
                     new OA\Property(property: 'page', type: 'integer', example: 1),
                     new OA\Property(property: 'per_page', type: 'integer', example: 15),
                 ]

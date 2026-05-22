@@ -93,7 +93,8 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::delete('/data-tertagih/{id}', [DataTertagihController::class, 'destroy'])->name('data-tertagih.destroy');
 
         Route::get('/data-tertagih-d2d', [DataTertagihD2dController::class, 'index'])->name('data-tertagih-d2d.index');
-        Route::post('/data-tertagih-d2d/import', [DataTertagihD2dController::class, 'import'])->name('data-tertagih-d2d.import');
+        Route::post('/data-tertagih-d2d/import/upload', [DataTertagihD2dController::class, 'importUpload'])->name('data-tertagih-d2d.import.upload');
+        Route::post('/data-tertagih-d2d/import/chunk', [DataTertagihD2dController::class, 'importChunk'])->name('data-tertagih-d2d.import.chunk');
         Route::get('/data-tertagih-d2d/template/{format}/{type}', [DataTertagihD2dController::class, 'downloadTemplate'])
             ->whereIn('format', ['csv', 'xlsx'])
             ->whereIn('type', ['format', 'contoh'])

@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\DataTertagih;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
 class DataTertagihCsvImporter
@@ -11,6 +11,14 @@ class DataTertagihCsvImporter
     public const CHUNK_SIZE = 2500;
 
     public const BATCH_SIZE = 1000;
+
+    /**
+     * @param  class-string<Model>  $modelClass
+     */
+    public function __construct(
+        private readonly string $modelClass,
+    ) {
+    }
 
     public static function emptyStats(): array
     {
@@ -178,8 +186,10 @@ class DataTertagihCsvImporter
      */
     private function insertBatch(array $batch): void
     {
-        DB::transaction(static function () use ($batch) {
-            DataTertagih::insert($batch);
+        $modelClass = $this->modelClass;
+
+        DB::transaction(static function () use ($batch, $modelClass) {
+            $modelClass::insert($batch);
         });
     }
 
@@ -190,7 +200,7 @@ class DataTertagihCsvImporter
     {
         $keys = [];
 
-        DataTertagih::query()
+        $this->modelClass::query()
             ->where('year', $year)
             ->select('no_polisi')
             ->orderBy('id')

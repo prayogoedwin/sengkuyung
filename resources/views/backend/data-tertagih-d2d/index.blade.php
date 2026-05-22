@@ -29,8 +29,7 @@
                                 <h5 class="mb-0">Import CSV Data Tertagih D2D</h5>
                             </div>
                             <div class="card-body">
-                                <form method="POST" action="{{ route('data-tertagih-d2d.import') }}"
-                                    enctype="multipart/form-data" id="importForm">
+                                <form method="POST" action="#" enctype="multipart/form-data" id="importForm">
                                     @csrf
                                     <div class="row">
                                         <div class="col-md-3">
@@ -141,7 +140,7 @@
     <div id="importLoadingOverlay"
         style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; color:#fff; text-align:center; padding-top:20%;">
         <h5>Proses import sedang berjalan...</h5>
-        <p>Mohon tunggu sampai selesai.</p>
+        <p id="importProgressText">Mohon tunggu sampai selesai. Jangan tutup halaman ini.</p>
     </div>
 @endsection
 
@@ -224,8 +223,84 @@
                 table.ajax.reload();
             });
 
-            $('#importForm').on('submit', function() {
-                $('#importLoadingOverlay').show();
+            const importUploadUrl = @json(route('data-tertagih-d2d.import.upload'));
+            const importChunkUrl = @json(route('data-tertagih-d2d.import.chunk'));
+            const csrfToken = @json(csrf_token());
+
+            $('#importForm').on('submit', async function(e) {
+                e.preventDefault();
+
+                const fileInput = this.querySelector('input[name="csv_file"]');
+                if (!fileInput.files.length) {
+                    alert('Pilih file CSV terlebih dahulu.');
+                    return;
+                }
+
+                const formData = new FormData(this);
+                const $overlay = $('#importLoadingOverlay');
+                const $progress = $('#importProgressText');
+                const $submitBtn = $(this).find('button[type="submit"]');
+
+                $overlay.show();
+                $submitBtn.prop('disabled', true);
+                $progress.text('Mengunggah file CSV...');
+
+                try {
+                    const uploadResponse = await fetch(importUploadUrl, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json',
+                        },
+                    });
+
+                    const uploadData = await uploadResponse.json();
+                    if (!uploadResponse.ok || !uploadData.success) {
+                        throw new Error(uploadData.message || 'Gagal mengunggah file CSV.');
+                    }
+
+                    let done = false;
+                    while (!done) {
+                        const chunkResponse = await fetch(importChunkUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                import_id: uploadData.import_id,
+                            }),
+                        });
+
+                        const chunkData = await chunkResponse.json();
+                        if (!chunkResponse.ok || !chunkData.success) {
+                            throw new Error(chunkData.message || 'Gagal memproses chunk import.');
+                        }
+
+                        const stats = chunkData.stats || {};
+                        $progress.text(
+                            'Memproses baris: ' + (stats.total_rows || 0) +
+                            ' | Masuk: ' + (stats.inserted || 0)
+                        );
+
+                        done = !!chunkData.done;
+                        if (done) {
+                            $('#importForm').closest('.card-body').prepend(
+                                $('<div class="alert alert-success"></div>').text(chunkData.message)
+                            );
+                            table.ajax.reload();
+                        }
+                    }
+                } catch (error) {
+                    $('#importForm').closest('.card-body').prepend(
+                        $('<div class="alert alert-danger"></div>').text(error.message || 'Import gagal.')
+                    );
+                } finally {
+                    $overlay.hide();
+                    $submitBtn.prop('disabled', false);
+                }
             });
         });
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesChunkedTertagihImport;
 use App\Models\DataTertagihD2d;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -13,6 +14,8 @@ use Yajra\DataTables\Facades\DataTables;
 
 class DataTertagihD2dController extends Controller
 {
+    use HandlesChunkedTertagihImport;
+
     private const TEMPLATE_HEADERS = [
         'no_polisi',
         'id_lokasi_samsat',
@@ -114,84 +117,24 @@ class DataTertagihD2dController extends Controller
         return view('backend.data-tertagih-d2d.index', compact('defaultYear', 'years'));
     }
 
-    public function import(Request $request)
+    protected function importStorageDir(): string
     {
-        $request->validate([
-            'year' => 'required|integer|min:2000|max:2100',
-            'csv_file' => 'required|file|mimes:csv,txt',
-        ]);
+        return 'imports/tertagih-d2d';
+    }
 
-        $file = $request->file('csv_file');
-        $handle = fopen($file->getRealPath(), 'r');
+    protected function importCachePrefix(): string
+    {
+        return 'data-tertagih-d2d-import:';
+    }
 
-        if (!$handle) {
-            return redirect()->route('data-tertagih-d2d.index')->with('error', 'File CSV tidak dapat dibaca.');
-        }
+    protected function importApiCachePrefix(): string
+    {
+        return 'admin:data-tertagih-d2d:';
+    }
 
-        $year = (int) $request->year;
-        $userId = Auth::id();
-        $now = Carbon::now();
-
-        // Skip header row
-        fgetcsv($handle, 0, ',');
-
-        $inserted = 0;
-        $skippedDuplicate = 0;
-        while (($row = fgetcsv($handle, 0, ',')) !== false) {
-            // Fallback for CSV that uses semicolon delimiter.
-            if (count($row) === 1 && isset($row[0]) && str_contains((string) $row[0], ';')) {
-                $row = str_getcsv((string) $row[0], ';');
-            }
-
-            if (count($row) < 7) {
-                continue;
-            }
-
-            if (trim((string) ($row[0] ?? '')) === '') {
-                continue;
-            }
-
-            $formattedNoPolisi = $this->normalizeNoPolisi((string) ($row[0] ?? ''));
-
-            $alreadyExists = DataTertagihD2d::query()
-                ->where('year', $year)
-                ->where('no_polisi', $formattedNoPolisi)
-                ->exists();
-
-            if ($alreadyExists) {
-                $skippedDuplicate++;
-                continue;
-            }
-
-            DataTertagihD2d::create([
-                'no_polisi' => $formattedNoPolisi,
-                'id_lokasi_samsat' => trim((string) ($row[1] ?? '')),
-                'lokasi_layanan' => trim((string) ($row[2] ?? '')),
-                'id_kecamatan' => trim((string) ($row[3] ?? '')),
-                'nm_kecamatan' => trim((string) ($row[4] ?? '')),
-                'id_kelurahan' => trim((string) ($row[5] ?? '')),
-                'nm_kelurahan' => trim((string) ($row[6] ?? '')),
-                'alamat' => trim((string) ($row[7] ?? '')),
-                'nama_pemilik' => trim((string) ($row[8] ?? '')),
-                'jenis_roda' => trim((string) ($row[9] ?? '')),
-                'is_terdata' => 0,
-                'year' => $year,
-                'created_at' => $now,
-                'created_by' => $userId,
-                'updated_at' => $now,
-                'updated_by' => $userId,
-            ]);
-
-            $inserted++;
-        }
-
-        fclose($handle);
-
-        ApiCacheManager::forgetByPrefix('admin:data-tertagih-d2d:');
-
-        return redirect()
-            ->route('data-tertagih-d2d.index')
-            ->with('success', 'Import CSV selesai. Data masuk: ' . $inserted . '. Duplikat (nopol+tahun sama) dilewati: ' . $skippedDuplicate);
+    protected function importCsvModelClass(): string
+    {
+        return DataTertagihD2d::class;
     }
 
     public function downloadTemplate(string $format, string $type)
@@ -281,20 +224,4 @@ class DataTertagihD2dController extends Controller
         ]);
     }
 
-    private function normalizeNoPolisi(string $rawValue): string
-    {
-        $cleaned = strtoupper(preg_replace('/[^A-Z0-9]/i', '', trim($rawValue)) ?? '');
-
-        if ($cleaned === '') {
-            return '';
-        }
-
-        // Format plate that matches 1-2 letters, 1-4 digits, and 2-3 suffix letters.
-        if (preg_match('/^([A-Z]{1,2})(\d{1,4})([A-Z]{2,3})$/', $cleaned, $matches) === 1) {
-            return $matches[1] . '-' . $matches[2] . '-' . $matches[3];
-        }
-
-        // Keep original cleaned value if pattern does not match expected combination.
-        return $cleaned;
-    }
 }

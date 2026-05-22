@@ -83,7 +83,8 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::get('/perbandingan-kode-wilayah/kelurahan-detail', [PerbandinganKodeWilayahController::class, 'getKelurahanDetail'])->name('perbandingan-kode-wilayah.kelurahan-detail');
 
         Route::get('/data-tertagih', [DataTertagihController::class, 'index'])->name('data-tertagih.index');
-        Route::post('/data-tertagih/import', [DataTertagihController::class, 'import'])->name('data-tertagih.import');
+        Route::post('/data-tertagih/import/upload', [DataTertagihController::class, 'importUpload'])->name('data-tertagih.import.upload');
+        Route::post('/data-tertagih/import/chunk', [DataTertagihController::class, 'importChunk'])->name('data-tertagih.import.chunk');
         Route::get('/data-tertagih/template/{format}/{type}', [DataTertagihController::class, 'downloadTemplate'])
             ->whereIn('format', ['csv', 'xlsx'])
             ->whereIn('type', ['format', 'contoh'])

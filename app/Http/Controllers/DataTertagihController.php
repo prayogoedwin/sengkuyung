@@ -3,9 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\DataTertagih;
+use App\Services\DataTertagihCsvImporter;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use App\Support\ApiCacheManager;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx as XlsxWriter;
@@ -114,84 +119,130 @@ class DataTertagihController extends Controller
         return view('backend.data-tertagih.index', compact('defaultYear', 'years'));
     }
 
-    public function import(Request $request)
+    public function importUpload(Request $request, DataTertagihCsvImporter $importer): JsonResponse
     {
         $request->validate([
             'year' => 'required|integer|min:2000|max:2100',
-            'csv_file' => 'required|file|mimes:csv,txt',
+            'csv_file' => 'required|file|mimes:csv,txt|max:51200',
         ]);
 
         $file = $request->file('csv_file');
-        $handle = fopen($file->getRealPath(), 'r');
+        $realPath = $file->getRealPath();
+        if ($realPath === false) {
+            return response()->json(['success' => false, 'message' => 'File CSV tidak dapat dibaca.'], 422);
+        }
 
-        if (!$handle) {
-            return redirect()->route('data-tertagih.index')->with('error', 'File CSV tidak dapat dibaca.');
+        $headerHandle = fopen($realPath, 'r');
+        $headerLine = $headerHandle !== false ? (fgets($headerHandle) ?: '') : '';
+        if (is_resource($headerHandle)) {
+            fclose($headerHandle);
+        }
+
+        if ($headerLine === '') {
+            return response()->json(['success' => false, 'message' => 'File CSV kosong.'], 422);
         }
 
         $year = (int) $request->year;
-        $userId = Auth::id();
-        $now = Carbon::now();
+        $importId = (string) Str::uuid();
+        $storedPath = $file->storeAs('imports/tertagih', $importId . '.csv', 'local');
 
-        // Skip header row
-        fgetcsv($handle, 0, ',');
+        Cache::put($this->importCacheKey($importId), [
+            'path' => $storedPath,
+            'year' => $year,
+            'user_id' => Auth::id(),
+            'delimiter' => $importer->detectCsvDelimiter($headerLine),
+            'next_row' => 0,
+            'seen_keys' => $importer->loadExistingNoPolisiKeys($year),
+            'stats' => DataTertagihCsvImporter::emptyStats(),
+            'created_at' => Carbon::now()->toIso8601String(),
+        ], now()->addHours(3));
 
-        $inserted = 0;
-        $skippedDuplicate = 0;
-        while (($row = fgetcsv($handle, 0, ',')) !== false) {
-            // Fallback for CSV that uses semicolon delimiter.
-            if (count($row) === 1 && isset($row[0]) && str_contains((string) $row[0], ';')) {
-                $row = str_getcsv((string) $row[0], ';');
-            }
+        return response()->json([
+            'success' => true,
+            'import_id' => $importId,
+            'message' => 'File berhasil diunggah. Memulai proses import...',
+        ]);
+    }
 
-            if (count($row) < 7) {
-                continue;
-            }
+    public function importChunk(Request $request, DataTertagihCsvImporter $importer): JsonResponse
+    {
+        $request->validate([
+            'import_id' => 'required|uuid',
+        ]);
 
-            if (trim((string) ($row[0] ?? '')) === '') {
-                continue;
-            }
+        $importId = (string) $request->import_id;
+        $cacheKey = $this->importCacheKey($importId);
+        $state = Cache::get($cacheKey);
 
-            $formattedNoPolisi = $this->normalizeNoPolisi((string) ($row[0] ?? ''));
-
-            $alreadyExists = DataTertagih::query()
-                ->where('year', $year)
-                ->where('no_polisi', $formattedNoPolisi)
-                ->exists();
-
-            if ($alreadyExists) {
-                $skippedDuplicate++;
-                continue;
-            }
-
-            DataTertagih::create([
-                'no_polisi' => $formattedNoPolisi,
-                'id_lokasi_samsat' => trim((string) ($row[1] ?? '')),
-                'lokasi_layanan' => trim((string) ($row[2] ?? '')),
-                'id_kecamatan' => trim((string) ($row[3] ?? '')),
-                'nm_kecamatan' => trim((string) ($row[4] ?? '')),
-                'id_kelurahan' => trim((string) ($row[5] ?? '')),
-                'nm_kelurahan' => trim((string) ($row[6] ?? '')),
-                'alamat' => trim((string) ($row[7] ?? '')),
-                'nama_pemilik' => trim((string) ($row[8] ?? '')),
-                'jenis_roda' => trim((string) ($row[9] ?? '')),
-                'is_terdata' => 0,
-                'year' => $year,
-                'created_at' => $now,
-                'created_by' => $userId,
-                'updated_at' => $now,
-                'updated_by' => $userId,
-            ]);
-
-            $inserted++;
+        if (!is_array($state) || !isset($state['path'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sesi import tidak ditemukan atau sudah kedaluwarsa. Silakan unggah ulang file CSV.',
+            ], 404);
         }
 
-        fclose($handle);
+        if ((int) ($state['user_id'] ?? 0) !== (int) Auth::id()) {
+            return response()->json(['success' => false, 'message' => 'Sesi import tidak valid.'], 403);
+        }
 
-        ApiCacheManager::forgetByPrefix('admin:data-tertagih:');
+        $fullPath = Storage::disk('local')->path($state['path']);
+        if (!is_file($fullPath)) {
+            Cache::forget($cacheKey);
 
-        return redirect()
-            ->route('data-tertagih.index')
-            ->with('success', 'Import CSV selesai. Data masuk: ' . $inserted . '. Duplikat (nopol+tahun sama) dilewati: ' . $skippedDuplicate);
+            return response()->json([
+                'success' => false,
+                'message' => 'File import tidak ditemukan. Silakan unggah ulang file CSV.',
+            ], 404);
+        }
+
+        set_time_limit(120);
+
+        $now = Carbon::parse($state['created_at'] ?? Carbon::now());
+
+        $result = $importer->processChunk(
+            $fullPath,
+            (string) $state['delimiter'],
+            (int) $state['year'],
+            (int) $state['user_id'],
+            $now,
+            (int) $state['next_row'],
+            $state['seen_keys'] ?? [],
+            $state['stats'] ?? DataTertagihCsvImporter::emptyStats(),
+        );
+
+        $state['next_row'] = $result['next_row'];
+        $state['seen_keys'] = $result['seen_keys'];
+        $state['stats'] = $result['stats'];
+
+        if ($result['done']) {
+            Storage::disk('local')->delete($state['path']);
+            Cache::forget($cacheKey);
+            ApiCacheManager::forgetByPrefix('admin:data-tertagih:');
+
+            return response()->json([
+                'success' => true,
+                'done' => true,
+                'stats' => $result['stats'],
+                'message' => $importer->buildSummaryMessage($result['stats']),
+            ]);
+        }
+
+        Cache::put($cacheKey, $state, now()->addHours(3));
+
+        return response()->json([
+            'success' => true,
+            'done' => false,
+            'stats' => $result['stats'],
+            'progress' => [
+                'processed_rows' => $result['stats']['total_rows'],
+                'inserted' => $result['stats']['inserted'],
+            ],
+        ]);
+    }
+
+    private function importCacheKey(string $importId): string
+    {
+        return 'data-tertagih-import:' . $importId;
     }
 
     public function downloadTemplate(string $format, string $type)
@@ -281,20 +332,4 @@ class DataTertagihController extends Controller
         ]);
     }
 
-    private function normalizeNoPolisi(string $rawValue): string
-    {
-        $cleaned = strtoupper(preg_replace('/[^A-Z0-9]/i', '', trim($rawValue)) ?? '');
-
-        if ($cleaned === '') {
-            return '';
-        }
-
-        // Format plate that matches 1-2 letters, 1-4 digits, and 2-3 suffix letters.
-        if (preg_match('/^([A-Z]{1,2})(\d{1,4})([A-Z]{2,3})$/', $cleaned, $matches) === 1) {
-            return $matches[1] . '-' . $matches[2] . '-' . $matches[3];
-        }
-
-        // Keep original cleaned value if pattern does not match expected combination.
-        return $cleaned;
-    }
 }

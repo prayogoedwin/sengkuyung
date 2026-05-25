@@ -10,6 +10,7 @@ use App\Http\Controllers\API\SengStatusVerifikasiController;
 use App\Http\Controllers\API\SengWilayahController;
 use App\Http\Controllers\API\SengStatusFileController;
 use App\Http\Controllers\API\RekapController;
+use App\Http\Controllers\API\RekapD2dController;
 use App\Http\Controllers\API\DataTertagihController;
 use App\Http\Controllers\API\DataTertagihD2dController;
 use App\Http\Controllers\API\AlasanTidakBayarPajakController;
@@ -63,6 +64,9 @@ Route::middleware(['auth-api'])->group(function () {
         Route::apiResource('status-file', SengStatusFileController::class);
         Route::get('alasan-tidak-bayar-pajak', [AlasanTidakBayarPajakController::class, 'index']);
         Route::get('rekap', [RekapController::class, 'index']);
+        Route::middleware('petugas-d2d.api')->group(function () {
+            Route::get('rekap-d2d', [RekapD2dController::class, 'index']);
+        });
         Route::post('update_password', [AuthController::class, 'resetPassword']);
         Route::middleware('petugas.api')->group(function () {
             Route::post('data-tertagih/list', [DataTertagihController::class, 'index']);
@@ -79,6 +83,8 @@ Route::middleware(['auth-api'])->group(function () {
 
    Route::get('rekap_download', [RekapController::class, 'rekapPreview']);
    Route::get('jurnal_download', [RekapController::class, 'jurnalPreview']);
+   Route::get('rekap_download_d2d', [RekapD2dController::class, 'rekapPreview']);
+   Route::get('jurnal_download_d2d', [RekapD2dController::class, 'jurnalPreview']);
    
    
 

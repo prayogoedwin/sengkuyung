@@ -10,13 +10,39 @@ use App\Helpers\Helper;
 
 class RekapController extends Controller
 {
+    /**
+     * Model pendataan yang digunakan rekap ini. Override di subclass untuk D2D.
+     *
+     * @return class-string<\Illuminate\Database\Eloquent\Model>
+     */
+    protected function pendataanModelClass(): string
+    {
+        return SengPendataanKendaraan::class;
+    }
+
+    /**
+     * Nama view untuk preview rekap. Override di subclass kalau perlu view khusus.
+     */
+    protected function rekapPreviewView(): string
+    {
+        return 'backend.rekap.rekap_mobile';
+    }
+
+    /**
+     * Nama view untuk preview jurnal. Override di subclass kalau perlu view khusus.
+     */
+    protected function jurnalPreviewView(): string
+    {
+        return 'backend.rekap.jurnal_mobile';
+    }
+
     public function index(Request $request)
     {
 
         $user = Auth::user();
 
         // Query awal
-        $verifikasis = SengPendataanKendaraan::query();
+        $verifikasis = $this->pendataanModelClass()::query();
     
         // Apply filters based on user role
         $verifikasis->where('created_by',  $user->id);
@@ -72,7 +98,7 @@ class RekapController extends Controller
         // $user = Auth::user();
         $user = Helper::decodeId($request->petugas);
 
-        $verifikasis = SengPendataanKendaraan::query();
+        $verifikasis = $this->pendataanModelClass()::query();
 
         // Apply filters based on user role
         $verifikasis->where('created_by',  $user);
@@ -96,14 +122,14 @@ class RekapController extends Controller
 
         $data = $verifikasis->get();
 
-        return view('backend.rekap.jurnal_mobile', compact('data', 'request'));
+        return view($this->jurnalPreviewView(), compact('data', 'request'));
     }
 
     public function rekapPreview(Request $request)
     {
         $user = Helper::decodeId($request->petugas);
 
-        $verifikasis = SengPendataanKendaraan::query();
+        $verifikasis = $this->pendataanModelClass()::query();
 
         // Apply filters based on user role
         $verifikasis->where('created_by',  $user);
@@ -130,7 +156,7 @@ class RekapController extends Controller
         $verifikasi = (clone $verifikasis)->where('status_verifikasi', 2)->count();
         $ditolak = (clone $verifikasis)->where('status_verifikasi', 3)->count();
 
-        return view('backend.rekap.rekap_mobile', compact('total', 'menunggu_verifikasi', 'verifikasi', 'ditolak', 'request'));
+        return view($this->rekapPreviewView(), compact('total', 'menunggu_verifikasi', 'verifikasi', 'ditolak', 'request'));
     }
     
 }

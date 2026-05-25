@@ -36,9 +36,13 @@ class BackController extends Controller
         $userKecamatanSamsat = (string) ($user->kecamatan_samsat ?: $user->kecamatan ?: '');
         $userKelurahanSamsat = (string) ($user->kelurahan_samsat ?: $user->kelurahan ?: '');
 
-        $cacheKey = $this->readableDashboardStatsCacheKey($request);
+        // Counter D2D hanya ditampilkan untuk role di atas kabkota (admin/UPTD/UPPD/dll).
+        // kabkota/kecamatan/kelurahan tidak menangani D2D, jadi tidak perlu dihitung & disembunyikan dari view.
+        $showD2dStats = ! ($isKabkotaScope || $isKecamatanScope || $isKelurahanScope);
 
-        $data = ApiCacheManager::remember($cacheKey, ApiCacheManager::dashboardTtl(), function () use ($request) {
+        $cacheKey = $this->readableDashboardStatsCacheKey($request, $showD2dStats);
+
+        $data = ApiCacheManager::remember($cacheKey, ApiCacheManager::dashboardTtl(), function () use ($request, $showD2dStats) {
             // ===== Regular (data_tertagih + seng_pendataan_kendaraan) =====
             $dataTertagihQuery = DataTertagih::query();
             $this->applyDashboardFiltersToDataTertagihQuery($dataTertagihQuery, $request);
@@ -46,30 +50,35 @@ class BackController extends Controller
             $verifikasis = SengPendataanKendaraan::query();
             $this->applyDashboardFiltersToQuery($verifikasis, $request);
 
-            // ===== D2D (data_tertagih_d2d + seng_pendataan_kendaraan_d2d) =====
-            // Skema kolom identik dengan tabel regular, jadi filter helper yang sama bisa dipakai ulang.
-            $dataTertagihD2dQuery = DataTertagihD2d::query();
-            $this->applyDashboardFiltersToDataTertagihQuery($dataTertagihD2dQuery, $request);
-
-            $verifikasisD2d = SengPendataanKendaraanD2d::query();
-            $this->applyDashboardFiltersToQuery($verifikasisD2d, $request);
-
-            return [
+            $result = [
                 'jumlah_tunggakan' => (clone $dataTertagihQuery)->count(),
                 'jumlah_sudah_pendataan' => (clone $dataTertagihQuery)->where('is_terdata', 1)->count(),
                 'jumlah_belum_pendataan' => (clone $dataTertagihQuery)->where('is_terdata', 0)->count(),
                 'menunggu_verifikasi' => (clone $verifikasis)->where('status_verifikasi', 1)->count(),
                 'verifikasi' => (clone $verifikasis)->where('status_verifikasi', 2)->count(),
                 'ditolak' => (clone $verifikasis)->where('status_verifikasi', 3)->count(),
-
-                // D2D counters
-                'jumlah_tunggakan_d2d' => (clone $dataTertagihD2dQuery)->count(),
-                'jumlah_sudah_pendataan_d2d' => (clone $dataTertagihD2dQuery)->where('is_terdata', 1)->count(),
-                'jumlah_belum_pendataan_d2d' => (clone $dataTertagihD2dQuery)->where('is_terdata', 0)->count(),
-                'menunggu_verifikasi_d2d' => (clone $verifikasisD2d)->where('status_verifikasi', 1)->count(),
-                'verifikasi_d2d' => (clone $verifikasisD2d)->where('status_verifikasi', 2)->count(),
-                'ditolak_d2d' => (clone $verifikasisD2d)->where('status_verifikasi', 3)->count(),
             ];
+
+            if ($showD2dStats) {
+                // ===== D2D (data_tertagih_d2d + seng_pendataan_kendaraan_d2d) =====
+                // Skema kolom identik dengan tabel regular, jadi filter helper yang sama bisa dipakai ulang.
+                $dataTertagihD2dQuery = DataTertagihD2d::query();
+                $this->applyDashboardFiltersToDataTertagihQuery($dataTertagihD2dQuery, $request);
+
+                $verifikasisD2d = SengPendataanKendaraanD2d::query();
+                $this->applyDashboardFiltersToQuery($verifikasisD2d, $request);
+
+                $result += [
+                    'jumlah_tunggakan_d2d' => (clone $dataTertagihD2dQuery)->count(),
+                    'jumlah_sudah_pendataan_d2d' => (clone $dataTertagihD2dQuery)->where('is_terdata', 1)->count(),
+                    'jumlah_belum_pendataan_d2d' => (clone $dataTertagihD2dQuery)->where('is_terdata', 0)->count(),
+                    'menunggu_verifikasi_d2d' => (clone $verifikasisD2d)->where('status_verifikasi', 1)->count(),
+                    'verifikasi_d2d' => (clone $verifikasisD2d)->where('status_verifikasi', 2)->count(),
+                    'ditolak_d2d' => (clone $verifikasisD2d)->where('status_verifikasi', 3)->count(),
+                ];
+            }
+
+            return $result;
         });
     
         // Ambil data status verifikasi dan wilayah
@@ -91,6 +100,7 @@ class BackController extends Controller
             'isKecamatanScope',
             'isKelurahanScope',
             'isScopedKabkota',
+            'showD2dStats',
             'userLokasiSamsat',
             'userKecamatanSamsat',
             'userKelurahanSamsat'
@@ -189,7 +199,7 @@ class BackController extends Controller
      * admin:dashboard:stats:kabkota:3375-lokasisamsat:21-kec:2102-kel:2102006-statusverifikasi:1-start:2025-01-01-end:2025-12-31
      * Jika terlalu panjang, ditambah sufiks -h-{md5}.
      */
-    private function readableDashboardStatsCacheKey(Request $request): string
+    private function readableDashboardStatsCacheKey(Request $request, bool $includeD2d = true): string
     {
         $scope = $this->canonicalDashboardStatsScope($request);
 
@@ -202,6 +212,8 @@ class BackController extends Controller
         };
 
         $pairs = [];
+        // Pisahkan cache antara payload tanpa D2D (kabkota/kecamatan/kelurahan) dan dengan D2D.
+        $pairs[] = 'd2d:' . ($includeD2d ? '1' : '0');
         if ($scope['kota_dagri'] !== null && $scope['kota_dagri'] !== '') {
             $pairs[] = 'kabkota:' . $safe((string) $scope['kota_dagri']);
         }

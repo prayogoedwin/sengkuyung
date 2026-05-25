@@ -150,6 +150,10 @@
 
                             <div class="col-lg-12 col-md-12 order-1">
                                 @php
+                                    // Counter D2D hanya tampil untuk role di atas kabkota.
+                                    // BackController sudah mengirim flag $showD2dStats; fallback dihitung dari role login.
+                                    $showD2dStats = $showD2dStats ?? (Auth::check() && ! Auth::user()->hasAnyRole(['kabkota', 'kecamatan', 'kelurahan']));
+
                                     $statRows = [
                                         [
                                             'title' => 'Pendataan Reguler',
@@ -162,7 +166,10 @@
                                                 ['key' => 'ditolak', 'label' => 'Verifikasi Ditolak', 'color' => '#dc3545'],
                                             ],
                                         ],
-                                        [
+                                    ];
+
+                                    if ($showD2dStats) {
+                                        $statRows[] = [
                                             'title' => 'Pendataan D2D',
                                             'cards' => [
                                                 ['key' => 'jumlah_tunggakan_d2d', 'label' => 'Jumlah Tunggakan D2D', 'color' => '#0d6efd'],
@@ -172,8 +179,8 @@
                                                 ['key' => 'verifikasi_d2d', 'label' => 'Terverifikasi D2D', 'color' => '#20c997'],
                                                 ['key' => 'ditolak_d2d', 'label' => 'Verifikasi Ditolak D2D', 'color' => '#dc3545'],
                                             ],
-                                        ],
-                                    ];
+                                        ];
+                                    }
                                 @endphp
 
                                 @foreach ($statRows as $row)

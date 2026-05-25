@@ -134,10 +134,18 @@ trait HandlesApiDataTertagih
         ]);
     }
 
-    public function show(int $id)
+    public function show($id)
     {
+        // Route param selalu string; pendataan/data-tertagih pakai integer ID di DB.
+        if (!is_numeric($id)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Data tidak ditemukan',
+            ], 404);
+        }
+
         $modelClass = $this->dataTertagihModelClass();
-        $item = $modelClass::find($id);
+        $item = $modelClass::find((int) $id);
 
         if (!$item) {
             return response()->json([

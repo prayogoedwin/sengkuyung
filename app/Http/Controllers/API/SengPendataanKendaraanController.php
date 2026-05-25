@@ -57,6 +57,15 @@ class SengPendataanKendaraanController extends Controller
         return '/api/secure-file';
     }
 
+    /**
+     * Base path untuk mencetak surat pernyataan. Override di subclass D2D supaya
+     * mengarah ke route surat khusus tabel D2D.
+     */
+    protected function suratPernyataanBasePath(): string
+    {
+        return '/surat_pernyataan';
+    }
+
     protected $rules = [
         'nohp' => 'required|digits_between:10,15|numeric',
         // 'email' => 'required|email',
@@ -706,8 +715,8 @@ class SengPendataanKendaraanController extends Controller
             }
         }
 
-         // Tambahkan URL surat pernyataan
-        $responseData['surat_pernyataan'] = $baseUrl . '/surat_pernyataan/' . Helper::encodeId($data->id);
+         // Tambahkan URL surat pernyataan (D2D pakai base path berbeda lewat override).
+        $responseData['surat_pernyataan'] = $baseUrl . $this->suratPernyataanBasePath() . '/' . Helper::encodeId($data->id);
 
         return response()->json([
             'status' => true,

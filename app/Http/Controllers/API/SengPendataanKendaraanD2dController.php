@@ -26,4 +26,9 @@ class SengPendataanKendaraanD2dController extends SengPendataanKendaraanControll
     {
         return '/api/secure-file-d2d';
     }
+
+    protected function suratPernyataanBasePath(): string
+    {
+        return '/surat_pernyataan_d2d';
+    }
 }

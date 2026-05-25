@@ -119,6 +119,7 @@ Route::middleware([LogActivity::class])->group(function () {
 });
 
 Route::get('/surat_pernyataan/{id}', [VerifikasiController::class, 'suratPernyataan'])->name('surat.pernyataan');
+Route::get('/surat_pernyataan_d2d/{id}', [VerifikasiD2dController::class, 'suratPernyataan'])->name('surat.pernyataan.d2d');
 
 Route::get('/', [AuthController::class, 'showLoginForm'])->name('login');
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login.form');

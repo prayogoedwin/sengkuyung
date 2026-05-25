@@ -9,13 +9,14 @@ class VerifikasiD2dController extends VerifikasiController
 {
     public function __construct()
     {
+        // Surat pernyataan adalah route publik (dibuka via link cetak), tidak boleh kena guard role D2D.
         $this->middleware(function ($request, $next) {
             if (!self::userCanAccessVerifikasiD2d()) {
                 abort(403, 'Menu Verifikasi D2D hanya untuk UPPD/UPTD ke atas.');
             }
 
             return $next($request);
-        });
+        })->except(['suratPernyataan']);
     }
 
     public static function userCanAccessVerifikasiD2d(): bool

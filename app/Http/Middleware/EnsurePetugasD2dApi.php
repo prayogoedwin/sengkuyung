@@ -21,6 +21,12 @@ class EnsurePetugasD2dApi
             return response()->json([
                 'status' => false,
                 'message' => self::MESSAGE,
+                'debug' => [
+                    'authenticated' => (bool) $user,
+                    'user_id' => $user?->id,
+                    'roles' => $user ? $user->roles()->get(['name', 'guard_name'])->toArray() : [],
+                    'expected_role' => 'petugas-d2d',
+                ],
             ], 403);
         }
 

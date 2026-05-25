@@ -504,7 +504,7 @@ class ApiDocs
         summary: 'Detail data tertagih by id — hanya role petugas, wilayah sesuai profil user',
         security: [['bearerAuth' => []]],
         parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'), description: 'ID data_tertagih'),
+            new OA\Parameter(name: 'id', in: 'path', required: true, example: 12, schema: new OA\Schema(type: 'integer', example: 12), description: 'ID data_tertagih (kolom integer dari tabel `data_tertagih`).'),
         ],
         responses: [
             new OA\Response(
@@ -600,7 +600,7 @@ class ApiDocs
         summary: 'Detail data tertagih D2D by id — hanya role petugas-d2d',
         security: [['bearerAuth' => []]],
         parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'id', in: 'path', required: true, example: 12, schema: new OA\Schema(type: 'integer', example: 12), description: 'ID data_tertagih_d2d (kolom integer dari tabel `data_tertagih_d2d`).'),
         ],
         responses: [
             new OA\Response(response: 200, description: 'Berhasil'),

@@ -89,7 +89,7 @@ class SengPendataanKendaraanController extends Controller
         $query = $this->pendataanModelClass()::query()
             ->where('created_by', $user->id);
 
-$this->applyWilayahScopeToPendataanQuery($query, $user);
+        $this->applyWilayahScopeToPendataanQuery($query, $user);
 
         if ($request->filled('alamat')) {
             $term = trim((string) $request->input('alamat'));
@@ -531,12 +531,23 @@ $this->applyWilayahScopeToPendataanQuery($query, $user);
 
         // Proses file
         if ($isKTP) {
-            // Encrypt file untuk KTP
-            $fileContent = file_get_contents($file->getRealPath());
-            $encryptedContent = FileEncryption::encryptFile($fileContent);
-            
-            // Simpan encrypted file
-            Storage::disk('public')->put("uploads/$tahun/$bulan/$nama_file", $encryptedContent);
+            // Streaming encryption agar memory tidak meledak untuk file besar.
+            // php://temp menahan data di memory hingga 2 MB, kelebihannya spill ke disk.
+            $in = fopen($file->getRealPath(), 'rb');
+            $tempEncrypted = fopen('php://temp/maxmemory:' . (2 * 1024 * 1024), 'w+b');
+
+            try {
+                FileEncryption::encryptToStream($in, $tempEncrypted);
+                rewind($tempEncrypted);
+                Storage::disk('public')->writeStream("uploads/$tahun/$bulan/$nama_file", $tempEncrypted);
+            } finally {
+                if (is_resource($in)) {
+                    fclose($in);
+                }
+                if (is_resource($tempEncrypted)) {
+                    fclose($tempEncrypted);
+                }
+            }
         } else {
             // Simpan file biasa
             $file->storeAs("uploads/$tahun/$bulan", $nama_file, 'public');
@@ -610,13 +621,6 @@ $this->applyWilayahScopeToPendataanQuery($query, $user);
             abort(404, 'File tidak ada di storage');
         }
 
-        // Baca encrypted file
-        $encryptedContent = Storage::disk('public')->get($filePath);
-        
-        // Decrypt file
-        $decryptedContent = FileEncryption::decryptFile($encryptedContent);
-        
-        // Tentukan mime type berdasarkan extension asli
         $mimeTypes = [
             'jpg' => 'image/jpeg',
             'jpeg' => 'image/jpeg',
@@ -624,13 +628,27 @@ $this->applyWilayahScopeToPendataanQuery($query, $user);
             'gif' => 'image/gif',
             'pdf' => 'application/pdf',
         ];
-        
         $mimeType = $mimeTypes[$originalExt] ?? 'application/octet-stream';
-        
-        // Return decrypted file
-        return response($decryptedContent)
-            ->header('Content-Type', $mimeType)
-            ->header('Content-Disposition', 'inline');
+
+        // Stream decryption langsung ke output HTTP. Tidak memuat file ke memory.
+        return response()->stream(function () use ($filePath) {
+            $in = Storage::disk('public')->readStream($filePath);
+            $out = fopen('php://output', 'wb');
+
+            try {
+                FileEncryption::decryptToStream($in, $out);
+            } finally {
+                if (is_resource($in)) {
+                    fclose($in);
+                }
+                if (is_resource($out)) {
+                    fclose($out);
+                }
+            }
+        }, 200, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'inline',
+        ]);
     }
 
     // Show a single record

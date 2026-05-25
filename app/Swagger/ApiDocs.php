@@ -297,7 +297,7 @@ class ApiDocs
                             type: 'array',
                             items: new OA\Items(
                                 properties: [
-                                    new OA\Property(property: 'id', type: 'string', description: 'ID terenkode (Helper::encodeId).'),
+                                    new OA\Property(property: 'id', type: 'string', example: 'MVAzWjBR', description: 'ID terenkode (Helper::encodeId).'),
                                     new OA\Property(property: 'nama', type: 'string', example: 'LUPA'),
                                 ],
                                 type: 'object'

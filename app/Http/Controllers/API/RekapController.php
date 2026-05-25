@@ -3,51 +3,71 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Models\SengPendataanKendaraan;
 use Illuminate\Support\Facades\Auth;
 use App\Helpers\Helper;
+use App\Support\VerifikasiStatusGroups;
 
+/**
+ * Rekap khusus data reguler (seng_pendataan_kendaraan).
+ *
+ * Versi D2D ada di RekapD2dController dan dijaga TERPISAH (tidak inheritance)
+ * supaya alur reguler vs D2D bisa berkembang sendiri-sendiri tanpa saling
+ * mengganggu. Logika "bucket" status verifikasi tetap dibagi via
+ * App\Support\VerifikasiStatusGroups supaya dashboard, halaman verifikasi,
+ * dan rekap punya satu sumber kebenaran.
+ */
 class RekapController extends Controller
 {
-    /**
-     * Model pendataan yang digunakan rekap ini. Override di subclass untuk D2D.
-     *
-     * @return class-string<\Illuminate\Database\Eloquent\Model>
-     */
-    protected function pendataanModelClass(): string
-    {
-        return SengPendataanKendaraan::class;
-    }
-
-    /**
-     * Nama view untuk preview rekap. Override di subclass kalau perlu view khusus.
-     */
     protected function rekapPreviewView(): string
     {
         return 'backend.rekap.rekap_mobile';
     }
 
-    /**
-     * Nama view untuk preview jurnal. Override di subclass kalau perlu view khusus.
-     */
     protected function jurnalPreviewView(): string
     {
         return 'backend.rekap.jurnal_mobile';
     }
 
+    /**
+     * Terapkan filter rentang tanggal pada `created_at` dengan benar.
+     *
+     * Catatan: `whereBetween('created_at', ['2026-05-25', '2026-05-25'])` di MySQL
+     * setara dengan `BETWEEN '2026-05-25 00:00:00' AND '2026-05-25 00:00:00'`,
+     * sehingga hanya cocok untuk record yang dibuat tepat pukul 00:00:00.
+     * Untuk mencakup seluruh hari, kita normalisasi ke `startOfDay`–`endOfDay`.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     */
+    protected function applyTanggalFilter($query, Request $request): void
+    {
+        $start = $request->tanggal_start;
+        $end = $request->tanggal_end;
+
+        if (!$start && !$end) {
+            return;
+        }
+
+        try {
+            $startAt = Carbon::parse($start ?: $end)->startOfDay();
+            $endAt = Carbon::parse($end ?: $start)->endOfDay();
+        } catch (\Throwable $e) {
+            return;
+        }
+
+        $query->whereBetween('created_at', [$startAt, $endAt]);
+    }
+
     public function index(Request $request)
     {
-
         $user = Auth::user();
 
-        // Query awal
-        $verifikasis = $this->pendataanModelClass()::query();
-    
-        // Apply filters based on user role
-        $verifikasis->where('created_by',  $user->id);
+        $verifikasis = SengPendataanKendaraan::query();
 
-        // Filter berdasarkan input dari request
+        $verifikasis->where('created_by', $user->id);
+
         if ($request->kabkota_id) {
             $verifikasis->where('kota', $request->kabkota_id);
         }
@@ -56,36 +76,25 @@ class RekapController extends Controller
             $verifikasis->where('kec', $request->district_id);
         }
 
-        if ($request->tanggal_start && $request->tanggal_end) {
-            $verifikasis->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
-        }
-    
-        // Hitung jumlah total data dan berdasarkan status_verifikasi
-        $total = (clone $verifikasis)->count();
-        $menunggu_verifikasi = (clone $verifikasis)->where('status_verifikasi', 1)->count();
-        $verifikasi = (clone $verifikasis)->where('status_verifikasi', 2)->count();
-        $ditolak = (clone $verifikasis)->where('status_verifikasi', 3)->count();
+        $this->applyTanggalFilter($verifikasis, $request);
 
-        $pkb= (clone $verifikasis)->sum('pkb_pokok');
-        // $pkb_denda= (clone $verifikasis)->sum('pkb_denda');
-        // $pnbp = (clone $verifikasis)->sum('pnbp');
-        // // $pnbp_denda = (clone $verifikasis)->sum('pnbp_denda');
-        // $jr = (clone $verifikasis)->sum('jr');
-        // $jr_denda = (clone $verifikasis)->sum('jr_denda');
-    
-        // Simpan data statistik
+        // Bucket disamakan dengan dashboard: menunggu = MENUNGGU + SUDAH DIPERBAIKI; ditolak = DITOLAK + REVISI.
+        $groups = VerifikasiStatusGroups::all();
+        $total = (clone $verifikasis)->count();
+        $menunggu_verifikasi = (clone $verifikasis)->whereIn('status_verifikasi', $groups['menunggu'])->count();
+        $verifikasi = (clone $verifikasis)->whereIn('status_verifikasi', $groups['verifikasi'])->count();
+        $ditolak = (clone $verifikasis)->whereIn('status_verifikasi', $groups['ditolak'])->count();
+
+        $pkb = (clone $verifikasis)->sum('pkb_pokok');
+
         $data = [
             'total' => $total,
             'menunggu_verifikasi' => $menunggu_verifikasi,
             'verifikasi' => $verifikasi,
             'ditolak' => $ditolak,
             'pkb' => $pkb,
-            // 'pkb_denda'=>$pkb_denda,
-            // 'pnbp' => $pnbp,
-            // 'jr' => $jr,
-            // 'jr_denda' => $jr_denda,
         ];
-    
+
         return response()->json([
             'status' => true,
             'message' => 'Data ditemukan',
@@ -95,13 +104,11 @@ class RekapController extends Controller
 
     public function jurnalPreview(Request $request)
     {
-        // $user = Auth::user();
         $user = Helper::decodeId($request->petugas);
 
-        $verifikasis = $this->pendataanModelClass()::query();
+        $verifikasis = SengPendataanKendaraan::query();
 
-        // Apply filters based on user role
-        $verifikasis->where('created_by',  $user);
+        $verifikasis->where('created_by', $user);
 
         if ($request->status_verifikasi_id) {
             $verifikasis->where('status_verifikasi', $request->status_verifikasi_id);
@@ -115,10 +122,7 @@ class RekapController extends Controller
             $verifikasis->where('kec', $request->district_id);
         }
 
-        if ($request->tanggal_start && $request->tanggal_end) {
-            $verifikasis->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
-        }
-        
+        $this->applyTanggalFilter($verifikasis, $request);
 
         $data = $verifikasis->get();
 
@@ -129,10 +133,9 @@ class RekapController extends Controller
     {
         $user = Helper::decodeId($request->petugas);
 
-        $verifikasis = $this->pendataanModelClass()::query();
+        $verifikasis = SengPendataanKendaraan::query();
 
-        // Apply filters based on user role
-        $verifikasis->where('created_by',  $user);
+        $verifikasis->where('created_by', $user);
 
         if ($request->status_verifikasi_id) {
             $verifikasis->where('status_verifikasi', $request->status_verifikasi_id);
@@ -146,17 +149,15 @@ class RekapController extends Controller
             $verifikasis->where('kec', $request->district_id);
         }
 
-        if ($request->tanggal_start && $request->tanggal_end) {
-            $verifikasis->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
-        }
+        $this->applyTanggalFilter($verifikasis, $request);
 
-        // Hitung jumlah total data dan berdasarkan status_verifikasi
+        // Bucket disamakan dengan dashboard: menunggu = MENUNGGU + SUDAH DIPERBAIKI; ditolak = DITOLAK + REVISI.
+        $groups = VerifikasiStatusGroups::all();
         $total = (clone $verifikasis)->count();
-        $menunggu_verifikasi = (clone $verifikasis)->where('status_verifikasi', 1)->count();
-        $verifikasi = (clone $verifikasis)->where('status_verifikasi', 2)->count();
-        $ditolak = (clone $verifikasis)->where('status_verifikasi', 3)->count();
+        $menunggu_verifikasi = (clone $verifikasis)->whereIn('status_verifikasi', $groups['menunggu'])->count();
+        $verifikasi = (clone $verifikasis)->whereIn('status_verifikasi', $groups['verifikasi'])->count();
+        $ditolak = (clone $verifikasis)->whereIn('status_verifikasi', $groups['ditolak'])->count();
 
         return view($this->rekapPreviewView(), compact('total', 'menunggu_verifikasi', 'verifikasi', 'ditolak', 'request'));
     }
-    
 }

@@ -12,6 +12,7 @@ use App\Http\Controllers\API\SengStatusFileController;
 use App\Http\Controllers\API\RekapController;
 use App\Http\Controllers\API\DataTertagihController;
 use App\Http\Controllers\API\DataTertagihD2dController;
+use App\Http\Controllers\API\AlasanTidakBayarPajakController;
 use App\Http\Controllers\KebijakanPrivasiController;
 use Illuminate\Support\Facades\Auth;
 
@@ -60,6 +61,7 @@ Route::middleware(['auth-api'])->group(function () {
         Route::apiResource('status-verifikasi', SengStatusVerifikasiController::class);
         Route::apiResource('wilayah', SengWilayahController::class);
         Route::apiResource('status-file', SengStatusFileController::class);
+        Route::get('alasan-tidak-bayar-pajak', [AlasanTidakBayarPajakController::class, 'index']);
         Route::get('rekap', [RekapController::class, 'index']);
         Route::post('update_password', [AuthController::class, 'resetPassword']);
         Route::middleware('petugas.api')->group(function () {

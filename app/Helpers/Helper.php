@@ -204,6 +204,30 @@ class Helper
             default => '-',
         };
     }
+
+    /**
+     * Daftar master alasan tidak membayar pajak.
+     *
+     * @return array<int, string>
+     */
+    public static function getAlasanTidakBayarPajak(): array
+    {
+        return [
+            1 => 'LUPA',
+            2 => 'TIDAK MAU',
+            3 => 'TIDAK PUNYA UANG',
+        ];
+    }
+
+    public static function getAlasanTidakBayarPajakLabel(int $id): string
+    {
+        return self::getAlasanTidakBayarPajak()[$id] ?? '-';
+    }
+
+    public static function isValidAlasanTidakBayarPajak(int $id): bool
+    {
+        return array_key_exists($id, self::getAlasanTidakBayarPajak());
+    }
     // $safeRequestData = $request->except(['password', 'password_confirmation', '_token']);
     // Helper::logActivityCustom($request, $id, 'POST', $safeRequestData, $response);
 

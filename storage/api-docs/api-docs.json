@@ -519,6 +519,62 @@
                 ]
             }
         },
+        "api/alasan-tidak-bayar-pajak": {
+            "get": {
+                "tags": [
+                    "API Master"
+                ],
+                "summary": "Master: daftar alasan tidak membayar pajak (untuk verifikasi)",
+                "description": "Data referensi alasan tidak membayar pajak. Di server di-cache (grup `api:master:alasan-tidak-bayar-pajak:`, TTL default 24 jam). ID di response di-encode.",
+                "operationId": "27b0a9d1302774e70bdc0fb5227e3375",
+                "responses": {
+                    "200": {
+                        "description": "Berhasil",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "List data ditemukan"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "description": "ID terenkode (Helper::encodeId).",
+                                                        "type": "string"
+                                                    },
+                                                    "nama": {
+                                                        "type": "string",
+                                                        "example": "LUPA"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "api/wilayah": {
             "get": {
                 "tags": [

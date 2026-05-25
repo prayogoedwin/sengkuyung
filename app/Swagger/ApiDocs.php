@@ -279,6 +279,41 @@ class ApiDocs
     }
 
     #[OA\Get(
+        path: 'api/alasan-tidak-bayar-pajak',
+        tags: ['API Master'],
+        summary: 'Master: daftar alasan tidak membayar pajak (untuk verifikasi)',
+        description: 'Data referensi alasan tidak membayar pajak. Di server di-cache (grup `api:master:alasan-tidak-bayar-pajak:`, TTL default 24 jam). ID di response di-encode.',
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Berhasil',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'List data ditemukan'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(
+                                properties: [
+                                    new OA\Property(property: 'id', type: 'string', description: 'ID terenkode (Helper::encodeId).'),
+                                    new OA\Property(property: 'nama', type: 'string', example: 'LUPA'),
+                                ],
+                                type: 'object'
+                            )
+                        ),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+        ]
+    )]
+    public function apiMasterAlasanTidakBayarPajak()
+    {
+    }
+
+    #[OA\Get(
         path: 'api/wilayah',
         tags: ['API Master'],
         summary: 'Master: hierarki wilayah',

@@ -15,7 +15,7 @@ use OpenApi\Attributes as OA;
 class ApiDocs
 {
     #[OA\Get(
-        path: 'api/kebijakan-privasi',
+        path: '/api/kebijakan-privasi',
         tags: ['Kebijakan Privasi'],
         summary: 'Kebijakan privasi aplikasi (publik, tanpa autentikasi)',
         description: 'Mengembalikan konten kebijakan privasi terstruktur untuk ditampilkan di aplikasi mobile. URL halaman web: /kebijakan-privasi',
@@ -50,7 +50,7 @@ class ApiDocs
     }
 
     #[OA\Post(
-        path: 'api/login',
+        path: '/api/login',
         tags: ['Auth'],
         summary: 'Login menggunakan email dan password',
         requestBody: new OA\RequestBody(
@@ -105,7 +105,7 @@ class ApiDocs
     }
 
     #[OA\Post(
-        path: 'api/login_with_otp',
+        path: '/api/login_with_otp',
         tags: ['Auth'],
         summary: 'Login dan generate OTP',
         requestBody: new OA\RequestBody(
@@ -138,7 +138,7 @@ class ApiDocs
     }
 
     #[OA\Post(
-        path: 'api/verifikasi_otp',
+        path: '/api/verifikasi_otp',
         tags: ['Auth'],
         summary: 'Verifikasi OTP untuk login',
         requestBody: new OA\RequestBody(
@@ -184,7 +184,7 @@ class ApiDocs
     }
 
     #[OA\Post(
-        path: 'api/update_password',
+        path: '/api/update_password',
         tags: ['Auth'],
         summary: 'Ubah password user',
         security: [['bearerAuth' => []]],
@@ -209,7 +209,7 @@ class ApiDocs
     }
 
     #[OA\Get(
-        path: 'api/status',
+        path: '/api/status',
         tags: ['API Master'],
         summary: 'Master: daftar status pendataan (kendaraan)',
         description: 'Data referensi status. Di server di-cache (grup `api:master:`, TTL default 24 jam; atur lewat `CACHE_TTL_MASTER_SECONDS`). ID di response di-encode.',
@@ -244,7 +244,7 @@ class ApiDocs
     }
 
     #[OA\Get(
-        path: 'api/status-verifikasi',
+        path: '/api/status-verifikasi',
         tags: ['API Master'],
         summary: 'Master: daftar status verifikasi',
         description: 'Data referensi status verifikasi. Di server di-cache (grup `api:master:`, TTL default 24 jam).',
@@ -279,7 +279,7 @@ class ApiDocs
     }
 
     #[OA\Get(
-        path: 'api/alasan-tidak-bayar-pajak',
+        path: '/api/alasan-tidak-bayar-pajak',
         tags: ['API Master'],
         summary: 'Master: daftar alasan tidak membayar pajak (untuk verifikasi)',
         description: 'Data referensi alasan tidak membayar pajak. Di server di-cache (grup `api:master:alasan-tidak-bayar-pajak:`, TTL default 24 jam). ID di response di-encode.',
@@ -314,7 +314,7 @@ class ApiDocs
     }
 
     #[OA\Get(
-        path: 'api/wilayah',
+        path: '/api/wilayah',
         tags: ['API Master'],
         summary: 'Master: hierarki wilayah',
         description: 'Tanpa query `kode`: daftar root (biasanya provinsi/konteks aplikasi). Dengan `kode`: anak wilayah berdasarkan `id_up`. Di server di-cache per kombinasi parameter (grup `api:master:wilayah:`, TTL default 24 jam).',
@@ -361,7 +361,7 @@ class ApiDocs
     }
 
     #[OA\Get(
-        path: 'api/status-file',
+        path: '/api/status-file',
         tags: ['API Master'],
         summary: 'Master: template/daftar file per status pendataan',
         description: 'Filter opsional `status` (encoded id status). Di server di-cache per nilai filter (grup `api:master:status-file:`, TTL default 24 jam).',
@@ -407,7 +407,7 @@ class ApiDocs
     }
 
     #[OA\Post(
-        path: 'api/data-tertagih/list',
+        path: '/api/data-tertagih/list',
         tags: ['Data Tertagih'],
         summary: 'Daftar data tertagih (is_terdata=0) — hanya role petugas',
         description: 'Wilayah samsat diambil dari profil user login jika tidak dikirim di body. Role dicek dari token (bukan payload).',
@@ -499,7 +499,7 @@ class ApiDocs
     }
 
     #[OA\Get(
-        path: 'api/data-tertagih/{id}',
+        path: '/api/data-tertagih/{id}',
         tags: ['Data Tertagih'],
         summary: 'Detail data tertagih by id — hanya role petugas, wilayah sesuai profil user',
         security: [['bearerAuth' => []]],
@@ -548,7 +548,7 @@ class ApiDocs
     }
 
     #[OA\Post(
-        path: 'api/data-tertagih-d2d/list',
+        path: '/api/data-tertagih-d2d/list',
         tags: ['Data Tertagih D2D'],
         summary: 'Daftar data tertagih D2D (is_terdata=0) — hanya role petugas-d2d',
         description: 'Wilayah samsat diambil dari profil user login jika tidak dikirim di body. Role dicek dari token (bukan payload).',
@@ -595,7 +595,7 @@ class ApiDocs
     }
 
     #[OA\Get(
-        path: 'api/data-tertagih-d2d/{id}',
+        path: '/api/data-tertagih-d2d/{id}',
         tags: ['Data Tertagih D2D'],
         summary: 'Detail data tertagih D2D by id — hanya role petugas-d2d',
         security: [['bearerAuth' => []]],
@@ -614,7 +614,7 @@ class ApiDocs
     }
 
     #[OA\Get(
-        path: 'api/pendataan',
+        path: '/api/pendataan',
         tags: ['Pendataan Kendaraan'],
         summary: 'List pendataan kendaraan milik user login',
         description: 'Data dari tabel `seng_pendataan_kendaraan` (petugas biasa). Untuk D2D gunakan `/api/pendataan-d2d`.',
@@ -661,7 +661,7 @@ class ApiDocs
     }
 
     #[OA\Post(
-        path: 'api/pendataan',
+        path: '/api/pendataan',
         tags: ['Pendataan Kendaraan'],
         summary: 'Tambah data pendataan kendaraan',
         description: 'Menyimpan ke tabel `seng_pendataan_kendaraan`. Verifikasi admin di menu Verifikasi.',
@@ -707,7 +707,7 @@ class ApiDocs
     }
 
     #[OA\Get(
-        path: 'api/pendataan/{id}',
+        path: '/api/pendataan/{id}',
         tags: ['Pendataan Kendaraan'],
         summary: 'Detail data pendataan kendaraan',
         description: 'Detail dari tabel `seng_pendataan_kendaraan`.',
@@ -739,7 +739,7 @@ class ApiDocs
     }
 
     #[OA\Put(
-        path: 'api/pendataan/{id}',
+        path: '/api/pendataan/{id}',
         tags: ['Pendataan Kendaraan'],
         summary: 'Update data pendataan kendaraan',
         security: [['bearerAuth' => []]],
@@ -774,7 +774,7 @@ class ApiDocs
     }
 
     #[OA\Delete(
-        path: 'api/pendataan/{id}',
+        path: '/api/pendataan/{id}',
         tags: ['Pendataan Kendaraan'],
         summary: 'Hapus data pendataan kendaraan',
         security: [['bearerAuth' => []]],
@@ -792,7 +792,7 @@ class ApiDocs
     }
 
     #[OA\Post(
-        path: 'api/pendataan/{id}/upload',
+        path: '/api/pendataan/{id}/upload',
         tags: ['Pendataan Kendaraan'],
         summary: 'Upload berkas pendataan (mendukung enkripsi untuk KTP)',
         security: [['bearerAuth' => []]],
@@ -825,7 +825,7 @@ class ApiDocs
     }
 
     #[OA\Get(
-        path: 'api/secure-file/{id}/{fileIndex}',
+        path: '/api/secure-file/{id}/{fileIndex}',
         tags: ['Pendataan Kendaraan'],
         summary: 'Ambil file terenkripsi hasil upload',
         security: [['bearerAuth' => []]],
@@ -845,7 +845,7 @@ class ApiDocs
     }
 
     #[OA\Get(
-        path: 'api/pendataan-d2d',
+        path: '/api/pendataan-d2d',
         tags: ['Pendataan Kendaraan D2D'],
         summary: 'List pendataan D2D milik user login',
         description: 'Data dari tabel `seng_pendataan_kendaraan_d2d`. Hanya role petugas-d2d (middleware).',
@@ -866,7 +866,7 @@ class ApiDocs
     }
 
     #[OA\Post(
-        path: 'api/pendataan-d2d',
+        path: '/api/pendataan-d2d',
         tags: ['Pendataan Kendaraan D2D'],
         summary: 'Tambah pendataan D2D',
         description: 'Menyimpan ke `seng_pendataan_kendaraan_d2d`. Verifikasi admin di menu Verifikasi D2D.',
@@ -913,7 +913,7 @@ class ApiDocs
     }
 
     #[OA\Get(
-        path: 'api/pendataan-d2d/{id}',
+        path: '/api/pendataan-d2d/{id}',
         tags: ['Pendataan Kendaraan D2D'],
         summary: 'Detail pendataan D2D',
         security: [['bearerAuth' => []]],
@@ -931,7 +931,7 @@ class ApiDocs
     }
 
     #[OA\Post(
-        path: 'api/pendataan-d2d/{id}/upload',
+        path: '/api/pendataan-d2d/{id}/upload',
         tags: ['Pendataan Kendaraan D2D'],
         summary: 'Upload berkas pendataan D2D',
         security: [['bearerAuth' => []]],
@@ -945,7 +945,7 @@ class ApiDocs
     }
 
     #[OA\Get(
-        path: 'api/secure-file-d2d/{id}/{fileIndex}',
+        path: '/api/secure-file-d2d/{id}/{fileIndex}',
         tags: ['Pendataan Kendaraan D2D'],
         summary: 'Ambil file terenkripsi pendataan D2D',
         security: [['bearerAuth' => []]],

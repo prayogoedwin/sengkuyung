@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\SengStatus;
+use App\Models\SengStatusVerifikasi;
 use App\Models\SengWilayah;
 use App\Models\DataTertagih;
 use App\Models\DataTertagihD2d;
@@ -42,7 +43,15 @@ class BackController extends Controller
 
         $cacheKey = $this->readableDashboardStatsCacheKey($request, $showD2dStats);
 
-        $data = ApiCacheManager::remember($cacheKey, ApiCacheManager::dashboardTtl(), function () use ($request, $showD2dStats) {
+        // Resolve grup status verifikasi berdasarkan nama agar tidak tergantung ID hard-code.
+        // - "Menunggu Verifikasi" mencakup data yang sedang diperbaiki (SUDAH DIPERBAIKI) — perlu diverifikasi ulang.
+        // - "Ditolak" mencakup data yang dikembalikan untuk REVISI.
+        $statusGroups = $this->resolveDashboardStatusGroups();
+        $menungguIds = $statusGroups['menunggu'];
+        $verifikasiIds = $statusGroups['verifikasi'];
+        $ditolakIds = $statusGroups['ditolak'];
+
+        $data = ApiCacheManager::remember($cacheKey, ApiCacheManager::dashboardTtl(), function () use ($request, $showD2dStats, $menungguIds, $verifikasiIds, $ditolakIds) {
             // ===== Regular (data_tertagih + seng_pendataan_kendaraan) =====
             $dataTertagihQuery = DataTertagih::query();
             $this->applyDashboardFiltersToDataTertagihQuery($dataTertagihQuery, $request);
@@ -54,9 +63,9 @@ class BackController extends Controller
                 'jumlah_tunggakan' => (clone $dataTertagihQuery)->count(),
                 'jumlah_sudah_pendataan' => (clone $dataTertagihQuery)->where('is_terdata', 1)->count(),
                 'jumlah_belum_pendataan' => (clone $dataTertagihQuery)->where('is_terdata', 0)->count(),
-                'menunggu_verifikasi' => (clone $verifikasis)->where('status_verifikasi', 1)->count(),
-                'verifikasi' => (clone $verifikasis)->where('status_verifikasi', 2)->count(),
-                'ditolak' => (clone $verifikasis)->where('status_verifikasi', 3)->count(),
+                'menunggu_verifikasi' => (clone $verifikasis)->whereIn('status_verifikasi', $menungguIds)->count(),
+                'verifikasi' => (clone $verifikasis)->whereIn('status_verifikasi', $verifikasiIds)->count(),
+                'ditolak' => (clone $verifikasis)->whereIn('status_verifikasi', $ditolakIds)->count(),
             ];
 
             if ($showD2dStats) {
@@ -72,9 +81,9 @@ class BackController extends Controller
                     'jumlah_tunggakan_d2d' => (clone $dataTertagihD2dQuery)->count(),
                     'jumlah_sudah_pendataan_d2d' => (clone $dataTertagihD2dQuery)->where('is_terdata', 1)->count(),
                     'jumlah_belum_pendataan_d2d' => (clone $dataTertagihD2dQuery)->where('is_terdata', 0)->count(),
-                    'menunggu_verifikasi_d2d' => (clone $verifikasisD2d)->where('status_verifikasi', 1)->count(),
-                    'verifikasi_d2d' => (clone $verifikasisD2d)->where('status_verifikasi', 2)->count(),
-                    'ditolak_d2d' => (clone $verifikasisD2d)->where('status_verifikasi', 3)->count(),
+                    'menunggu_verifikasi_d2d' => (clone $verifikasisD2d)->whereIn('status_verifikasi', $menungguIds)->count(),
+                    'verifikasi_d2d' => (clone $verifikasisD2d)->whereIn('status_verifikasi', $verifikasiIds)->count(),
+                    'ditolak_d2d' => (clone $verifikasisD2d)->whereIn('status_verifikasi', $ditolakIds)->count(),
                 ];
             }
 
@@ -105,6 +114,60 @@ class BackController extends Controller
             'userKecamatanSamsat',
             'userKelurahanSamsat'
         ));
+    }
+
+    /**
+     * Kelompokkan ID `seng_status_verifikasi` ke bucket dashboard berdasarkan nama,
+     * supaya statistik tetap akurat walau ID di DB berbeda dengan asumsi seeder lama.
+     *
+     * - menunggu  : MENUNGGU VERIFIKASI + SUDAH DIPERBAIKI (perlu diverifikasi ulang)
+     * - verifikasi: DIVERIFIKASI / TERVERIFIKASI
+     * - ditolak   : DITOLAK + REVISI (kembali untuk diperbaiki)
+     *
+     * Fallback: kalau nama tidak match, pakai ID default seperti versi sebelumnya.
+     *
+     * @return array{menunggu: int[], verifikasi: int[], ditolak: int[]}
+     */
+    private function resolveDashboardStatusGroups(): array
+    {
+        $statuses = ApiCacheManager::remember(
+            'admin:master:status-verifikasi:all',
+            ApiCacheManager::masterTtl(),
+            static fn () => SengStatusVerifikasi::select('id', 'nama')->get()
+        );
+
+        $byName = [];
+        foreach ($statuses as $s) {
+            $key = strtoupper(trim((string) ($s->nama ?? '')));
+            if ($key === '') continue;
+            $byName[$key] = (int) $s->id;
+        }
+
+        $pick = static function (array $names) use ($byName): array {
+            $ids = [];
+            foreach ($names as $name) {
+                $key = strtoupper($name);
+                if (isset($byName[$key])) {
+                    $ids[] = $byName[$key];
+                }
+            }
+            return array_values(array_unique($ids));
+        };
+
+        $menungguIds = $pick(['MENUNGGU VERIFIKASI', 'SUDAH DIPERBAIKI']);
+        $verifikasiIds = $pick(['DIVERIFIKASI', 'TERVERIFIKASI']);
+        $ditolakIds = $pick(['DITOLAK', 'REVISI', 'PERLU REVISI']);
+
+        // Fallback ID default (sesuai seeder + konstanta yang sudah ada di codebase).
+        if (empty($menungguIds))  $menungguIds = [1, 5];
+        if (empty($verifikasiIds)) $verifikasiIds = [2];
+        if (empty($ditolakIds))   $ditolakIds = [3, 4];
+
+        return [
+            'menunggu' => $menungguIds,
+            'verifikasi' => $verifikasiIds,
+            'ditolak' => $ditolakIds,
+        ];
     }
 
     private function resolveKecamatanDagriValue(?string $value): ?string

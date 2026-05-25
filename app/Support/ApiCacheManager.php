@@ -13,7 +13,7 @@ class ApiCacheManager
 
     public const DATA_TTL_SECONDS = 1800;
 
-    public const DASHBOARD_TTL_SECONDS = 600;
+    public const DASHBOARD_TTL_SECONDS = 60;
 
     // Backward compatibility: old usage points to data TTL.
     public const DEFAULT_TTL_SECONDS = self::DATA_TTL_SECONDS;

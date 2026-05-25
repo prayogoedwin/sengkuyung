@@ -111,14 +111,14 @@ class UserController extends Controller
 
     private function getAllowedRoleIdsByCreator(string $creatorRoleName): array
     {
-        // Catatan: role `petugas-d2d` TIDAK diizinkan dibuat oleh `kabkota` & `kecamatan` —
-        // pembuatan akun petugas D2D hanya boleh dari UPTD ke atas. Lihat juga validasi
-        // assignment role di endpoint store/update.
+        // Catatan: role `petugas-d2d` TIDAK diizinkan dibuat oleh `kabkota`, `kecamatan`,
+        // dan `kelurahan` — pembuatan akun petugas D2D hanya boleh dari UPTD/UPPD ke atas.
+        // Lihat juga validasi assignment role di endpoint store/update.
         return match ($creatorRoleName) {
             'uptd', 'uppd' => $this->roleIdsByNames(['kabkota', 'kecamatan', 'kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE]),
             'kabkota' => $this->roleIdsByNames(['kecamatan', 'kelurahan', self::PETUGAS_ROLE]),
             'kecamatan' => $this->roleIdsByNames(['kelurahan', self::PETUGAS_ROLE]),
-            'kelurahan' => $this->roleIdsByNames([self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE]),
+            'kelurahan' => $this->roleIdsByNames([self::PETUGAS_ROLE]),
             default => $this->roleIdsByNames(['admin', 'uptd', 'uppd', 'kabkota', 'kecamatan', 'kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE]),
         };
     }
@@ -169,10 +169,11 @@ class UserController extends Controller
             }
 
             // Kabkota: tampilkan user kecamatan/kelurahan/petugas pada kabkota yang sama.
+            // petugas-d2d sengaja tidak ditampilkan — bukan domain kabkota.
             if ($isKabkotaScope) {
                 $usersQuery->where('kota', $userKotaId);
                 $usersQuery->whereHas('roles', function ($q) {
-                    $q->whereIn('name', ['kecamatan', 'kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE]);
+                    $q->whereIn('name', ['kecamatan', 'kelurahan', self::PETUGAS_ROLE]);
                 });
             }
 
@@ -201,8 +202,9 @@ class UserController extends Controller
                             $sub->whereRaw('1 = 0');
                         }
                     })->orWhere(function ($sub) use ($kelurahanIdsInKecamatan) {
+                        // petugas-d2d tidak ikut ditampilkan untuk scope kecamatan.
                         $sub->whereHas('roles', function ($roleQuery) {
-                            $roleQuery->whereIn('name', self::FIELD_OFFICER_ROLES);
+                            $roleQuery->where('name', self::PETUGAS_ROLE);
                         });
 
                         if (!empty($kelurahanIdsInKecamatan)) {
@@ -215,11 +217,12 @@ class UserController extends Controller
             }
 
             // Kelurahan: tampilkan user petugas pada kelurahan yang sama.
+            // petugas-d2d tidak ikut ditampilkan untuk scope kelurahan.
             if ($isKelurahanScope) {
                 $currentKelurahanSamsat = $user->kelurahan_samsat ?: $user->kelurahan;
                 $usersQuery->where('kota', $userKotaId);
                 $usersQuery->whereHas('roles', function ($q) {
-                    $q->whereIn('name', self::FIELD_OFFICER_ROLES);
+                    $q->where('name', self::PETUGAS_ROLE);
                 });
 
                 if (!empty($currentKelurahanSamsat)) {

@@ -28,8 +28,8 @@
                                                         @if (in_array($userRoleName ?? '', ['super-admin', 'superadmin', 'admin', 'uptd', 'uppd', 'kabkota', 'kecamatan', 'kelurahan'], true))
                                                             <option value="petugas">Petugas</option>
                                                         @endif
-                                                        {{-- kabkota & kecamatan tidak boleh kelola/filter petugas-d2d --}}
-                                                        @if (in_array($userRoleName ?? '', ['super-admin', 'superadmin', 'admin', 'uptd', 'uppd', 'kelurahan'], true))
+                                                        {{-- kabkota, kecamatan, kelurahan tidak boleh kelola/filter petugas-d2d --}}
+                                                        @if (in_array($userRoleName ?? '', ['super-admin', 'superadmin', 'admin', 'uptd', 'uppd'], true))
                                                             <option value="petugas-d2d">Petugas D2D</option>
                                                         @endif
                                                     </select>

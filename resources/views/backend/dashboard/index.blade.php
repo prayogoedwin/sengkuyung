@@ -149,34 +149,57 @@
                           
 
                             <div class="col-lg-12 col-md-12 order-1">
-                                <div class="row g-3 mb-2">
-                                    @php
-                                        $statCards = [
-                                            ['key' => 'jumlah_tunggakan', 'label' => 'Jumlah Tunggakan', 'color' => '#0d6efd'],
-                                            ['key' => 'jumlah_sudah_pendataan', 'label' => 'Jumlah Sudah Pendataan', 'color' => '#198754'],
-                                            ['key' => 'jumlah_belum_pendataan', 'label' => 'Jumlah Belum Pendataan', 'color' => '#fd7e14'],
-                                            ['key' => 'menunggu_verifikasi', 'label' => 'Menunggu Verifikasi', 'color' => '#6f42c1'],
-                                            ['key' => 'verifikasi', 'label' => 'Terverifikasi', 'color' => '#20c997'],
-                                            ['key' => 'ditolak', 'label' => 'Verifikasi Ditolak', 'color' => '#dc3545'],
-                                        ];
-                                    @endphp
+                                @php
+                                    $statRows = [
+                                        [
+                                            'title' => 'Pendataan Reguler',
+                                            'cards' => [
+                                                ['key' => 'jumlah_tunggakan', 'label' => 'Jumlah Tunggakan', 'color' => '#0d6efd'],
+                                                ['key' => 'jumlah_sudah_pendataan', 'label' => 'Jumlah Sudah Pendataan', 'color' => '#198754'],
+                                                ['key' => 'jumlah_belum_pendataan', 'label' => 'Jumlah Belum Pendataan', 'color' => '#fd7e14'],
+                                                ['key' => 'menunggu_verifikasi', 'label' => 'Menunggu Verifikasi', 'color' => '#6f42c1'],
+                                                ['key' => 'verifikasi', 'label' => 'Terverifikasi', 'color' => '#20c997'],
+                                                ['key' => 'ditolak', 'label' => 'Verifikasi Ditolak', 'color' => '#dc3545'],
+                                            ],
+                                        ],
+                                        [
+                                            'title' => 'Pendataan D2D',
+                                            'cards' => [
+                                                ['key' => 'jumlah_tunggakan_d2d', 'label' => 'Jumlah Tunggakan D2D', 'color' => '#0d6efd'],
+                                                ['key' => 'jumlah_sudah_pendataan_d2d', 'label' => 'Jumlah Sudah Pendataan D2D', 'color' => '#198754'],
+                                                ['key' => 'jumlah_belum_pendataan_d2d', 'label' => 'Jumlah Belum Pendataan D2D', 'color' => '#fd7e14'],
+                                                ['key' => 'menunggu_verifikasi_d2d', 'label' => 'Menunggu Verifikasi D2D', 'color' => '#6f42c1'],
+                                                ['key' => 'verifikasi_d2d', 'label' => 'Terverifikasi D2D', 'color' => '#20c997'],
+                                                ['key' => 'ditolak_d2d', 'label' => 'Verifikasi Ditolak D2D', 'color' => '#dc3545'],
+                                            ],
+                                        ],
+                                    ];
+                                @endphp
 
-                                    @foreach ($statCards as $card)
-                                        <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6 col-12">
-                                            <div class="card h-100 border-0 shadow-sm">
-                                                <div class="card-body p-3 text-center">
-                                                    <div class="text-uppercase fw-semibold mb-2"
-                                                        style="font-size: 0.72rem; line-height: 1.3; color: {{ $card['color'] }};">
-                                                        {{ $card['label'] }}
+                                @foreach ($statRows as $row)
+                                    <div class="mb-2">
+                                        <h6 class="fw-semibold text-uppercase text-muted mb-2" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+                                            {{ $row['title'] }}
+                                        </h6>
+                                        <div class="row g-3 mb-2">
+                                            @foreach ($row['cards'] as $card)
+                                                <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6 col-12">
+                                                    <div class="card h-100 border-0 shadow-sm">
+                                                        <div class="card-body p-3 text-center">
+                                                            <div class="text-uppercase fw-semibold mb-2"
+                                                                style="font-size: 0.72rem; line-height: 1.3; color: {{ $card['color'] }};">
+                                                                {{ $card['label'] }}
+                                                            </div>
+                                                            <h3 class="mb-0 fw-bold" style="color: {{ $card['color'] }};">
+                                                                {{ number_format($data[$card['key']] ?? 0) }}
+                                                            </h3>
+                                                        </div>
                                                     </div>
-                                                    <h3 class="mb-0 fw-bold" style="color: {{ $card['color'] }};">
-                                                        {{ number_format($data[$card['key']] ?? 0) }}
-                                                    </h3>
                                                 </div>
-                                            </div>
+                                            @endforeach
                                         </div>
-                                    @endforeach
-                                </div>
+                                    </div>
+                                @endforeach
                             </div>
 
                    

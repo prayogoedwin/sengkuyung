@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\DB;
 use App\Models\SengStatus;
 use App\Models\SengWilayah;
 use App\Models\DataTertagih;
+use App\Models\DataTertagihD2d;
 use App\Models\SengPendataanKendaraan;
+use App\Models\SengPendataanKendaraanD2d;
 use App\Models\SengSaamsat;
 use App\Models\WilayahSamsat;
 use App\Support\ApiCacheManager;
@@ -37,11 +39,20 @@ class BackController extends Controller
         $cacheKey = $this->readableDashboardStatsCacheKey($request);
 
         $data = ApiCacheManager::remember($cacheKey, ApiCacheManager::dashboardTtl(), function () use ($request) {
+            // ===== Regular (data_tertagih + seng_pendataan_kendaraan) =====
             $dataTertagihQuery = DataTertagih::query();
             $this->applyDashboardFiltersToDataTertagihQuery($dataTertagihQuery, $request);
 
             $verifikasis = SengPendataanKendaraan::query();
             $this->applyDashboardFiltersToQuery($verifikasis, $request);
+
+            // ===== D2D (data_tertagih_d2d + seng_pendataan_kendaraan_d2d) =====
+            // Skema kolom identik dengan tabel regular, jadi filter helper yang sama bisa dipakai ulang.
+            $dataTertagihD2dQuery = DataTertagihD2d::query();
+            $this->applyDashboardFiltersToDataTertagihQuery($dataTertagihD2dQuery, $request);
+
+            $verifikasisD2d = SengPendataanKendaraanD2d::query();
+            $this->applyDashboardFiltersToQuery($verifikasisD2d, $request);
 
             return [
                 'jumlah_tunggakan' => (clone $dataTertagihQuery)->count(),
@@ -50,6 +61,14 @@ class BackController extends Controller
                 'menunggu_verifikasi' => (clone $verifikasis)->where('status_verifikasi', 1)->count(),
                 'verifikasi' => (clone $verifikasis)->where('status_verifikasi', 2)->count(),
                 'ditolak' => (clone $verifikasis)->where('status_verifikasi', 3)->count(),
+
+                // D2D counters
+                'jumlah_tunggakan_d2d' => (clone $dataTertagihD2dQuery)->count(),
+                'jumlah_sudah_pendataan_d2d' => (clone $dataTertagihD2dQuery)->where('is_terdata', 1)->count(),
+                'jumlah_belum_pendataan_d2d' => (clone $dataTertagihD2dQuery)->where('is_terdata', 0)->count(),
+                'menunggu_verifikasi_d2d' => (clone $verifikasisD2d)->where('status_verifikasi', 1)->count(),
+                'verifikasi_d2d' => (clone $verifikasisD2d)->where('status_verifikasi', 2)->count(),
+                'ditolak_d2d' => (clone $verifikasisD2d)->where('status_verifikasi', 3)->count(),
             ];
         });
     

@@ -408,8 +408,10 @@ class VerifikasiController extends Controller
             $fileKet = $data->{$fileKey . "_ket"};
             $isEncrypted = $data->{$fileKey . "_encrypted"} ?? 0;
             
-            if ($fileUrl && $isEncrypted && strtoupper($fileKet) === 'KTP') {
-                // File adalah KTP yang ter-encrypt
+            // Cek encrypted apa adanya — file di disk pasti perlu di-decrypt kalau flag encrypted=1.
+            // Label `_ket` boleh "KTP" (lama) atau "Foto Identitas Pemilik" (baru).
+            if ($fileUrl && $isEncrypted) {
+                // File adalah identitas pemilik yang ter-encrypt
                 $filePath = str_replace('storage/', '', $fileUrl);
                 
                 if (Storage::disk('public')->exists($filePath)) {

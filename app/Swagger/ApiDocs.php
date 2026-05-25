@@ -807,7 +807,7 @@ class ApiDocs
                     required: ['file_ke', 'file', 'keterangan'],
                     properties: [
                         new OA\Property(property: 'file_ke', type: 'string', enum: ['file0', 'file1', 'file2', 'file3', 'file4', 'file5', 'file6', 'file7', 'file8', 'file9'], example: 'file0'),
-                        new OA\Property(property: 'keterangan', type: 'string', example: 'KTP', description: 'Jika bernilai KTP, file disimpan terenkripsi'),
+                        new OA\Property(property: 'keterangan', type: 'string', example: 'Foto Identitas Pemilik', description: 'Label file. Jika bernilai "KTP" atau "Foto Identitas Pemilik", file disimpan terenkripsi dan hanya bisa diakses via /api/secure-file.'),
                         new OA\Property(property: 'file', type: 'string', format: 'binary'),
                     ]
                 )
@@ -827,15 +827,15 @@ class ApiDocs
     #[OA\Get(
         path: '/api/secure-file/{id}/{fileIndex}',
         tags: ['Pendataan Kendaraan'],
-        summary: 'Ambil file terenkripsi hasil upload',
+        summary: 'Ambil file pendataan (otomatis decrypt jika ter-enkripsi)',
+        description: 'Endpoint terotentikasi untuk mengambil file hasil upload pendataan. Jika file ter-enkripsi (mis. KTP) akan otomatis di-decrypt; jika tidak, file di-stream apa adanya. Response binary (image/pdf).',
         security: [['bearerAuth' => []]],
         parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string'), description: 'Encoded ID pendataan'),
-            new OA\Parameter(name: 'fileIndex', in: 'path', required: true, schema: new OA\Schema(type: 'integer', minimum: 0, maximum: 9), description: 'Index file (0-9)'),
+            new OA\Parameter(name: 'id', in: 'path', required: true, example: 'M1AzWjBR', schema: new OA\Schema(type: 'string', example: 'M1AzWjBR'), description: 'Encoded ID pendataan (Helper::encodeId).'),
+            new OA\Parameter(name: 'fileIndex', in: 'path', required: true, example: 0, schema: new OA\Schema(type: 'integer', minimum: 0, maximum: 9, example: 0), description: 'Index file (0-9), sesuai kolom file0..file9.'),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'File berhasil diambil'),
-            new OA\Response(response: 403, description: 'File bukan file terenkripsi'),
+            new OA\Response(response: 200, description: 'File berhasil diambil (binary)'),
             new OA\Response(response: 404, description: 'Data/file tidak ditemukan'),
             new OA\Response(response: 401, description: 'Unauthorized'),
         ]
@@ -947,11 +947,18 @@ class ApiDocs
     #[OA\Get(
         path: '/api/secure-file-d2d/{id}/{fileIndex}',
         tags: ['Pendataan Kendaraan D2D'],
-        summary: 'Ambil file terenkripsi pendataan D2D',
+        summary: 'Ambil file pendataan D2D (otomatis decrypt jika ter-enkripsi)',
+        description: 'Sama seperti `/api/secure-file/{id}/{fileIndex}` namun untuk record di tabel `seng_pendataan_kendaraan_d2d`. Hanya role petugas-d2d.',
         security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, example: 'M1AzWjBR', schema: new OA\Schema(type: 'string', example: 'M1AzWjBR'), description: 'Encoded ID pendataan D2D.'),
+            new OA\Parameter(name: 'fileIndex', in: 'path', required: true, example: 0, schema: new OA\Schema(type: 'integer', minimum: 0, maximum: 9, example: 0)),
+        ],
         responses: [
-            new OA\Response(response: 200, description: 'Berhasil'),
+            new OA\Response(response: 200, description: 'File berhasil diambil (binary)'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
             new OA\Response(response: 403, description: 'Bukan role petugas-d2d'),
+            new OA\Response(response: 404, description: 'Data/file tidak ditemukan'),
         ]
     )]
     public function pendataanD2dSecureFile()

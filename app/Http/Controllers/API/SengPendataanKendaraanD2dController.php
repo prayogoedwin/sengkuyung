@@ -21,4 +21,9 @@ class SengPendataanKendaraanD2dController extends SengPendataanKendaraanControll
     {
         return $this->pendataanModelClass()::find($id);
     }
+
+    protected function secureFileBasePath(): string
+    {
+        return '/api/secure-file-d2d';
+    }
 }

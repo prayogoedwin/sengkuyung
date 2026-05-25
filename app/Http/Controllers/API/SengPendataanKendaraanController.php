@@ -49,6 +49,14 @@ class SengPendataanKendaraanController extends Controller
         return $this->pendataanModelClass()::find($id);
     }
 
+    /**
+     * Base path API untuk mengakses file ter-enkripsi. Override di subclass D2D.
+     */
+    protected function secureFileBasePath(): string
+    {
+        return '/api/secure-file';
+    }
+
     protected $rules = [
         'nohp' => 'required|digits_between:10,15|numeric',
         // 'email' => 'required|email',
@@ -513,7 +521,10 @@ class SengPendataanKendaraanController extends Controller
         $extension = $file->getClientOriginalExtension();
         
         // Untuk KTP, gunakan extension .enc agar orang tidak bisa langsung buka
-        $isKTP = strtoupper($request->keterangan) === 'KTP';
+        // Daftar keterangan yang dianggap identitas pemilik (di-encrypt). Sebelumnya hanya "KTP",
+        // sekarang label di mobile berubah menjadi "Foto Identitas Pemilik".
+        $identitasLabels = ['KTP', 'FOTO IDENTITAS PEMILIK'];
+        $isKTP = in_array(strtoupper(trim((string) $request->keterangan)), $identitasLabels, true);
         $finalExtension = $isKTP ? 'enc' : $extension;
         
         $nama_file = hash('sha256', $timestamp . $decodedId . $request->keterangan) . '.' . $finalExtension;
@@ -578,7 +589,7 @@ class SengPendataanKendaraanController extends Controller
                 // Jika file encrypted, gunakan route khusus
                 $isEncrypted = $data["{$fileKey}_encrypted"] ?? 0;
                 if ($isEncrypted) {
-                    $responseData[$fileKey] = $baseUrl . "/api/secure-file/" . Helper::encodeId($data->id) . "/$i";
+                    $responseData[$fileKey] = $baseUrl . $this->secureFileBasePath() . '/' . Helper::encodeId($data->id) . '/' . $i;
                 } else {
                     $responseData[$fileKey] = $baseUrl . '/' . $data[$fileKey];
                 }
@@ -594,32 +605,34 @@ class SengPendataanKendaraanController extends Controller
 
     public function getSecureFile($id, $fileIndex)
     {
+        if (!is_numeric($fileIndex) || (int) $fileIndex < 0 || (int) $fileIndex > 9) {
+            abort(404, 'File index tidak valid');
+        }
+
         $decodedId = Helper::decodeId($id);
-        
+
         $data = $this->findPendataan($decodedId);
         if (!$data) {
             abort(404, 'Data tidak ditemukan');
         }
 
         $fileKey = "file{$fileIndex}";
-        $isEncrypted = $data["{$fileKey}_encrypted"] ?? 0;
-        
-        if (!$isEncrypted) {
-            abort(403, 'File tidak ter-enkripsi');
-        }
-
-        $fileUrl = $data["{$fileKey}_url"];
-        $originalExt = $data["{$fileKey}_original_ext"] ?? 'jpg';
-        
+        $fileUrl = $data["{$fileKey}_url"] ?? null;
         if (!$fileUrl) {
             abort(404, 'File tidak ditemukan');
         }
 
         $filePath = str_replace('storage/', '', $fileUrl);
-        
         if (!Storage::disk('public')->exists($filePath)) {
             abort(404, 'File tidak ada di storage');
         }
+
+        $isEncrypted = (int) ($data["{$fileKey}_encrypted"] ?? 0) === 1;
+
+        // Tentukan mime type: kalau encrypted pakai original_ext, kalau tidak pakai ekstensi file aslinya.
+        $ext = $isEncrypted
+            ? ($data["{$fileKey}_original_ext"] ?? 'jpg')
+            : pathinfo($filePath, PATHINFO_EXTENSION);
 
         $mimeTypes = [
             'jpg' => 'image/jpeg',
@@ -628,15 +641,25 @@ class SengPendataanKendaraanController extends Controller
             'gif' => 'image/gif',
             'pdf' => 'application/pdf',
         ];
-        $mimeType = $mimeTypes[$originalExt] ?? 'application/octet-stream';
+        $mimeType = $mimeTypes[strtolower((string) $ext)] ?? 'application/octet-stream';
 
-        // Stream decryption langsung ke output HTTP. Tidak memuat file ke memory.
-        return response()->stream(function () use ($filePath) {
+        // Stream langsung ke output HTTP. Memory ~64 KB konstan berapapun ukuran file.
+        return response()->stream(function () use ($filePath, $isEncrypted) {
             $in = Storage::disk('public')->readStream($filePath);
             $out = fopen('php://output', 'wb');
 
             try {
-                FileEncryption::decryptToStream($in, $out);
+                if ($isEncrypted) {
+                    FileEncryption::decryptToStream($in, $out);
+                } else {
+                    while (!feof($in)) {
+                        $chunk = fread($in, 65536);
+                        if ($chunk === false) {
+                            break;
+                        }
+                        fwrite($out, $chunk);
+                    }
+                }
             } finally {
                 if (is_resource($in)) {
                     fclose($in);

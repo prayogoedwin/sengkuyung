@@ -80,7 +80,7 @@
         @endif
 
         <h2 class="text-center mb-4">LOGIN</h2>
-        <img src="{{ asset('LOGO_SENGKUYUNG/logo-sengkuyung-2026.png') }}" alt="Logo {{ config('app.name') }}"
+        <img src="{{ asset('LOGO_SENGKUYUNG/logo2.jpeg') }}" alt="Logo {{ config('app.name') }}"
             class="img-fluid mx-auto d-block">
         <br />
         <br />

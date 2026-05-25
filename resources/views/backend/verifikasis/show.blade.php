@@ -82,6 +82,12 @@
                                                             <th>Tahun Pembuatan</th>
                                                             <td>{{ $data->tahun }}</td>
                                                         </tr>
+                                                        <tr>
+                                                            <th>Alasan Tidak Bayar Pajak</th>
+                                                            <td>
+                                                                {{ \App\Helpers\Helper::getAlasanTidakBayarPajakLabel((int) ($data->alasan_tidak_bayar ?? 0)) }}
+                                                            </td>
+                                                        </tr>
                                                     </tbody>
                                                 </table>
                                             </div>

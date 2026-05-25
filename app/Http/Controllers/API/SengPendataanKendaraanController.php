@@ -153,7 +153,20 @@ $this->applyWilayahScopeToPendataanQuery($query, $user);
 
         $dStatus_verifikasi = Helper::decodeId($request->status_verifikasi);
         $status_verifikasi = SengStatusVerifikasi::find($dStatus_verifikasi);
-       
+
+        // Master: alasan tidak bayar pajak (opsional, dikirim sebagai id terenkode). Default 0 ('-').
+        $alasanTidakBayar = 0;
+        if ($request->filled('alasan_tidak_bayar')) {
+            $decodedAlasan = (int) Helper::decodeId((string) $request->input('alasan_tidak_bayar'));
+            if (!Helper::isValidAlasanTidakBayarPajak($decodedAlasan)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Alasan tidak bayar pajak tidak valid',
+                ], Response::HTTP_BAD_REQUEST);
+            }
+            $alasanTidakBayar = $decodedAlasan;
+        }
+
         $kec_dagri = SengWilayahKec::where('id_kecamatan', $request->kec)->first();
 
         // Buat variabel untuk menampung nilai dengan format khusus
@@ -249,6 +262,7 @@ $this->applyWilayahScopeToPendataanQuery($query, $user);
                 'kota_dagri' => $kota_dagri->kabkota,
                 'kec_dagri' => $kec_dagri->kode_dagri,
                 'is_selesai' => 1,
+                'alasan_tidak_bayar' => $alasanTidakBayar,
                 'created_by' => $user->id,
                 'updated_by' => $user->id
             ]);
@@ -262,6 +276,7 @@ $this->applyWilayahScopeToPendataanQuery($query, $user);
                 'status_verifikasi_name' => $status_verifikasi->nama,
                 'kota_dagri' => $kota_dagri->kabkota,
                 'kec_dagri' => $kec_dagri->kode_dagri,
+                'alasan_tidak_bayar' => $alasanTidakBayar,
                 'created_by' => $user->id,
                 'updated_by' => $user->id
             ]);

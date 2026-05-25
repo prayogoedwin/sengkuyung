@@ -213,6 +213,7 @@ class Helper
     public static function getAlasanTidakBayarPajak(): array
     {
         return [
+            0 => '-',
             1 => 'LUPA',
             2 => 'TIDAK MAU',
             3 => 'TIDAK PUNYA UANG',

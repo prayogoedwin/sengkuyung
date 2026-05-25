@@ -18,6 +18,7 @@ class SengPendataanKendaraan extends Model
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
         'is_selesai' => 'integer',
+        'alasan_tidak_bayar' => 'integer',
     ];
 
     protected $fillable = [
@@ -34,6 +35,7 @@ class SengPendataanKendaraan extends Model
         'status_verifikasi_name', 
         'nama_pembuat_pernyataan',
         'is_selesai',
+        'alasan_tidak_bayar',
         'created_by', 'updated_by', 'deleted_by',
         // 'kode_samsat', 
         // 'kode_kecamatan_samsat', 'kode_kelurahan_samsat',

@@ -686,6 +686,13 @@ class ApiDocs
                     new OA\Property(property: 'kota_name', type: 'string', nullable: true, example: 'Semarang'),
                     new OA\Property(property: 'merk', type: 'string', nullable: true, example: 'Honda'),
                     new OA\Property(property: 'tipe', type: 'string', nullable: true, example: 'Beat'),
+                    new OA\Property(
+                        property: 'alasan_tidak_bayar',
+                        type: 'string',
+                        nullable: true,
+                        example: 'MVAzWjBR',
+                        description: 'Opsional. Encoded ID dari master /api/alasan-tidak-bayar-pajak (LUPA/TIDAK MAU/TIDAK PUNYA UANG).'
+                    ),
                 ]
             )
         ),

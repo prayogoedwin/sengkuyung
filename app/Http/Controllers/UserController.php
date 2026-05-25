@@ -111,10 +111,13 @@ class UserController extends Controller
 
     private function getAllowedRoleIdsByCreator(string $creatorRoleName): array
     {
+        // Catatan: role `petugas-d2d` TIDAK diizinkan dibuat oleh `kabkota` & `kecamatan` —
+        // pembuatan akun petugas D2D hanya boleh dari UPTD ke atas. Lihat juga validasi
+        // assignment role di endpoint store/update.
         return match ($creatorRoleName) {
             'uptd', 'uppd' => $this->roleIdsByNames(['kabkota', 'kecamatan', 'kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE]),
-            'kabkota' => $this->roleIdsByNames(['kecamatan', 'kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE]),
-            'kecamatan' => $this->roleIdsByNames(['kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE]),
+            'kabkota' => $this->roleIdsByNames(['kecamatan', 'kelurahan', self::PETUGAS_ROLE]),
+            'kecamatan' => $this->roleIdsByNames(['kelurahan', self::PETUGAS_ROLE]),
             'kelurahan' => $this->roleIdsByNames([self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE]),
             default => $this->roleIdsByNames(['admin', 'uptd', 'uppd', 'kabkota', 'kecamatan', 'kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE]),
         };

@@ -22,6 +22,7 @@ use App\Helpers\FileEncryption;
 use Illuminate\Support\Facades\Storage;
 use App\Models\ActivityLog;
 use App\Support\ApiCacheManager;
+use App\Support\VerifikasiStatusGroups;
 
 class VerifikasiController extends Controller
 {
@@ -106,11 +107,13 @@ class VerifikasiController extends Controller
                 $verifikasis->where('created_by', $userId);
             }
 
-            // Filter berdasarkan input dari form
+            // Filter berdasarkan input dari form.
+            // Default (tanpa pilih status) menampilkan bucket "menunggu":
+            // MENUNGGU VERIFIKASI + SUDAH DIPERBAIKI — konsisten dengan kartu dashboard.
             if ($request->status_verifikasi_id) {
                 $verifikasis->where('status_verifikasi', $request->status_verifikasi_id);
-            }else{
-                $verifikasis->where('status_verifikasi', 1); //status menunggu verifikasi
+            } else {
+                $verifikasis->whereIn('status_verifikasi', VerifikasiStatusGroups::menungguIds());
             }
             
             if (!empty($userLokasiSamsat)) {

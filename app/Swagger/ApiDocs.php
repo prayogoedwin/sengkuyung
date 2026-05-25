@@ -691,7 +691,7 @@ class ApiDocs
                         type: 'string',
                         nullable: true,
                         example: 'MVAzWjBR',
-                        description: 'Opsional. Encoded ID dari master /api/alasan-tidak-bayar-pajak (LUPA/TIDAK MAU/TIDAK PUNYA UANG).'
+                        description: 'Opsional. Encoded ID dari master /api/alasan-tidak-bayar-pajak (-/LUPA/TIDAK MAU/TIDAK PUNYA UANG). Default 0 (-).'
                     ),
                 ]
             )
@@ -871,8 +871,40 @@ class ApiDocs
         summary: 'Tambah pendataan D2D',
         description: 'Menyimpan ke `seng_pendataan_kendaraan_d2d`. Verifikasi admin di menu Verifikasi D2D.',
         security: [['bearerAuth' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['nohp', 'nopol', 'nama', 'alamat', 'status', 'status_verifikasi', 'kota', 'kec'],
+                properties: [
+                    new OA\Property(property: 'nohp', type: 'string', example: '081234567890'),
+                    new OA\Property(property: 'nopol', type: 'string', example: 'H1234AB'),
+                    new OA\Property(property: 'nama', type: 'string', example: 'Budi Santoso'),
+                    new OA\Property(property: 'alamat', type: 'string', example: 'Jl. Merdeka No. 1'),
+                    new OA\Property(property: 'email', type: 'string', format: 'email', nullable: true, example: 'budi@mail.com'),
+                    new OA\Property(property: 'nik', type: 'string', nullable: true, example: '3374010101010001', description: 'Wajib jika status mengarah ke data dengan KTP'),
+                    new OA\Property(property: 'status', type: 'string', example: 'VXNlcjox', description: 'Encoded ID status'),
+                    new OA\Property(property: 'status_verifikasi', type: 'string', example: 'VXNlcjo1', description: 'Encoded ID status verifikasi'),
+                    new OA\Property(property: 'kota', type: 'string', example: '01'),
+                    new OA\Property(property: 'kec', type: 'string', example: '3374010'),
+                    new OA\Property(property: 'desa_name', type: 'string', nullable: true, example: 'Tembalang'),
+                    new OA\Property(property: 'kec_name', type: 'string', nullable: true, example: 'Tembalang'),
+                    new OA\Property(property: 'kota_name', type: 'string', nullable: true, example: 'Semarang'),
+                    new OA\Property(property: 'merk', type: 'string', nullable: true, example: 'Honda'),
+                    new OA\Property(property: 'tipe', type: 'string', nullable: true, example: 'Beat'),
+                    new OA\Property(
+                        property: 'alasan_tidak_bayar',
+                        type: 'string',
+                        nullable: true,
+                        example: 'MVAzWjBR',
+                        description: 'Opsional. Encoded ID dari master /api/alasan-tidak-bayar-pajak (-/LUPA/TIDAK MAU/TIDAK PUNYA UANG). Default 0 (-).'
+                    ),
+                ]
+            )
+        ),
         responses: [
             new OA\Response(response: 201, description: 'Berhasil'),
+            new OA\Response(response: 400, description: 'Validasi gagal / data tidak valid'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
             new OA\Response(response: 403, description: 'Bukan role petugas-d2d'),
         ]
     )]

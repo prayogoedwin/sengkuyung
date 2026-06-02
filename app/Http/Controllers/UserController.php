@@ -46,7 +46,7 @@ class UserController extends Controller
         if ($samsat) {
             return [
                 'kabkota' => $samsat->kabkota ? (string) $samsat->kabkota : null,
-                'lokasi_samsat' => $samsat->id_wilayah_samsat ? (string) $samsat->id_wilayah_samsat : (string) $samsat->id,
+                'lokasi_samsat' => (string) $samsat->id,
                 'uptd_id' => (string) $samsat->id,
             ];
         }
@@ -311,9 +311,8 @@ class UserController extends Controller
             });
         }
 
-        $samsats = ApiCacheManager::remember('admin:master:seng-samsat:all-full', ApiCacheManager::masterTtl(), static function () {
+        $samsats = ApiCacheManager::remember('admin:master:seng-samsat:all-full:v2', ApiCacheManager::masterTtl(), static function () {
             return SengSaamsat::select('id', 'id_wilayah_samsat', 'kabkota', 'lokasi', 'lokasi_singkat')
-                ->whereRaw('CAST(id AS UNSIGNED) <= 37')
                 ->orderBy('lokasi')
                 ->get();
         });

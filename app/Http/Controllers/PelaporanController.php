@@ -448,7 +448,7 @@ class PelaporanController extends Controller
         }
 
         if ($request->lokasi_samsat) {
-            $verifikasis->where('kota', $request->lokasi_samsat);
+            $verifikasis->whereIn('kota', SengSaamsat::lokasiFilterVariants((string) $request->lokasi_samsat));
         }
 
         $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;
@@ -627,7 +627,7 @@ class PelaporanController extends Controller
         }
 
         if ($request->lokasi_samsat) {
-            $verifikasis->where('kota', $request->lokasi_samsat);
+            $verifikasis->whereIn('kota', SengSaamsat::lokasiFilterVariants((string) $request->lokasi_samsat));
         }
 
         $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;
@@ -783,7 +783,7 @@ class PelaporanController extends Controller
         }
 
         if ($request->lokasi_samsat) {
-            $verifikasis->where('kota', $request->lokasi_samsat);
+            $verifikasis->whereIn('kota', SengSaamsat::lokasiFilterVariants((string) $request->lokasi_samsat));
         }
 
         $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;
@@ -975,7 +975,7 @@ class PelaporanController extends Controller
         }
 
         if ($request->lokasi_samsat) {
-            $baseQuery->where('kota', $request->lokasi_samsat);
+            $baseQuery->whereIn('kota', SengSaamsat::lokasiFilterVariants((string) $request->lokasi_samsat));
         }
 
         $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;

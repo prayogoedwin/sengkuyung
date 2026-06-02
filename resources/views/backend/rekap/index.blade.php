@@ -314,9 +314,9 @@
                     var options = '<option value="">Semua Lokasi Samsat</option>';
                     if (response.success) {
                         $.each(response.samsats, function(index, samsat) {
-                            var value = samsat.id_wilayah_samsat ?? samsat.id;
+                            var value = samsat.id;
                             var isSelected = (selectedValue == value) ? 'selected' : '';
-                            var label = samsat.lokasi ?? '-';
+                            var label = (samsat.lokasi ?? '-') + ' [' + samsat.id + ']';
                             options += '<option value="' + value + '" ' + isSelected + '>' + label + '</option>';
                         });
                     }

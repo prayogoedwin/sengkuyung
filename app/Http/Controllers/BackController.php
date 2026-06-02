@@ -277,9 +277,9 @@ class BackController extends Controller
         }
 
         if (!empty($userLokasiSamsat)) {
-            $verifikasis->where('kota', $userLokasiSamsat);
+            $verifikasis->whereIn('kota', SengSaamsat::lokasiFilterVariants((string) $userLokasiSamsat));
         } elseif ($request->lokasi_samsat) {
-            $verifikasis->where('kota', $request->lokasi_samsat);
+            $verifikasis->whereIn('kota', SengSaamsat::lokasiFilterVariants((string) $request->lokasi_samsat));
         }
 
         if ($isKecamatanScope && !empty($userKecamatanSamsat)) {
@@ -333,9 +333,8 @@ class BackController extends Controller
         if ($kabkotaId !== null) {
             $lokasiKabkota = SengSaamsat::query()
                 ->where('kabkota', $kabkotaId)
-                ->pluck('id_wilayah_samsat')
-                ->filter()
-                ->flatMap(fn ($id) => $this->samsatCodeVariants((string) $id))
+                ->get(['id', 'id_wilayah_samsat'])
+                ->flatMap(fn ($s) => SengSaamsat::lokasiFilterVariants((string) $s->id))
                 ->unique()
                 ->values()
                 ->all();
@@ -348,9 +347,9 @@ class BackController extends Controller
         }
 
         if (!empty($userLokasiSamsat)) {
-            $query->whereIn('id_lokasi_samsat', $this->samsatCodeVariants((string) $userLokasiSamsat));
+            $query->whereIn('id_lokasi_samsat', SengSaamsat::lokasiFilterVariants((string) $userLokasiSamsat));
         } elseif ($request->lokasi_samsat) {
-            $query->whereIn('id_lokasi_samsat', $this->samsatCodeVariants((string) $request->lokasi_samsat));
+            $query->whereIn('id_lokasi_samsat', SengSaamsat::lokasiFilterVariants((string) $request->lokasi_samsat));
         }
 
         if ($isKecamatanScope && !empty($userKecamatanSamsat)) {

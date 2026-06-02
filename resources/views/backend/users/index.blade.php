@@ -126,8 +126,8 @@
                                         <select class="form-control" id="userUptd" name="uptd_id">
                                             <option value="">Pilih Samsat</option>
                                             @foreach ($samsats as $smst)
-                                                <option value="{{ $smst->id_wilayah_samsat ?: $smst->id }}" data-kabkota="{{ $smst->kabkota }}">
-                                                    {{ $smst->lokasi ?: $smst->id_wilayah_samsat ?: $smst->id }}
+                                                <option value="{{ $smst->id }}" data-kabkota="{{ $smst->kabkota }}">
+                                                    {{ $smst->lokasi ?: $smst->id }} [{{ $smst->id }}]
                                                     @if (!empty($smst->lokasi_singkat))
                                                         ({{ $smst->lokasi_singkat }})
                                                     @endif
@@ -746,7 +746,7 @@
                                     var samsats = response.samsats;
                                     var options = '<option value="">Pilih Lokasi Samsat</option>';
                                     $.each(samsats, function(index, samsat) {
-                                        options += '<option value="' + samsat.id_wilayah_samsat + '">' + samsat.lokasi + '</option>';
+                                        options += '<option value="' + samsat.id + '">' + samsat.lokasi + ' [' + samsat.id + ']</option>';
                                     });
                                     $('#userSamsat').html(options);
                                 } else {

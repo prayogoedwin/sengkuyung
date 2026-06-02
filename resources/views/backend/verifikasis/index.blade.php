@@ -239,8 +239,8 @@
                             var samsats = response.samsats;
                             var options = '<option value="">Pilih Lokasi Samsat</option>';
                             $.each(samsats, function(index, samsat) {
-                                var value = samsat.id_wilayah_samsat ?? samsat.id;
-                                var label = samsat.lokasi ?? '-';
+                                var value = samsat.id;
+                                var label = (samsat.lokasi ?? '-') + ' [' + samsat.id + ']';
                                 if (!forcedLokasiSamsat || String(value) === String(forcedLokasiSamsat)) {
                                     options += '<option value="' + value + '">' + label + '</option>';
                                 }

@@ -35,10 +35,9 @@ class WilayahController extends Controller
             return response()->json(['success' => false, 'message' => 'Kabkota ID is required.'], 400);
         }
 
-        $cacheKey = 'admin:master:wilayah:samsat-by-kabkota:v2:' . (string) $kabkotaId;
+        $cacheKey = 'admin:master:wilayah:samsat-by-kabkota:v3:' . (string) $kabkotaId;
         $samsats = ApiCacheManager::remember($cacheKey, ApiCacheManager::masterTtl(), static function () use ($kabkotaId) {
             return SengSaamsat::where('kabkota', $kabkotaId)
-                ->whereRaw('CAST(id AS UNSIGNED) <= 37')
                 ->orderBy('lokasi')
                 ->get(['id', 'id_wilayah_samsat', 'lokasi']);
         });
@@ -54,15 +53,11 @@ class WilayahController extends Controller
             return response()->json(['success' => false, 'message' => 'Lokasi Samsat ID is required.'], 400);
         }
 
-        $cacheKey = 'admin:master:wilayah:kecamatan-by-samsat:' . (string) $lokasiSamsatId;
+        $cacheKey = 'admin:master:wilayah:kecamatan-by-samsat:v2:' . (string) $lokasiSamsatId;
         $kecamatans = ApiCacheManager::remember($cacheKey, ApiCacheManager::masterTtl(), static function () use ($lokasiSamsatId) {
-            return SengWilayahKec::where(function ($query) use ($lokasiSamsatId) {
-                    $query->where('id_lokasi_samsat', $lokasiSamsatId);
+            $lokasiIds = SengSaamsat::lokasiFilterVariants((string) $lokasiSamsatId);
 
-                    if (is_numeric($lokasiSamsatId)) {
-                        $query->orWhereRaw('CAST(id_lokasi_samsat AS UNSIGNED) = ?', [(int) $lokasiSamsatId]);
-                    }
-                })
+            return SengWilayahKec::whereIn('id_lokasi_samsat', $lokasiIds)
                 ->orderBy('kecamatan')
                 ->get(['id_kecamatan', 'kecamatan']);
         });

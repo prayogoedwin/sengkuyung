@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\Concerns;
 
 use App\Models\User;
+use App\Models\SengSaamsat;
 use App\Models\SengPendataanKendaraan;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Database\Eloquent\Model;
@@ -70,7 +71,7 @@ trait HandlesApiDataTertagih
         $year = (int) ($wilayahInput['year'] ?? date('Y'));
         $perPage = (int) ($wilayahInput['per_page'] ?? 15);
 
-        $lokasiVariants = $this->samsatCodeVariants($wilayahInput['lokasi_samsat']);
+        $lokasiVariants = SengSaamsat::lokasiFilterVariants($wilayahInput['lokasi_samsat']);
         $kecVariants = $this->samsatCodeVariants($wilayahInput['kecamatan_samsat']);
         $kelVariants = $this->samsatCodeVariants($wilayahInput['kelurahan_samsat']);
 
@@ -211,7 +212,7 @@ trait HandlesApiDataTertagih
             return false;
         }
 
-        $lokasiVariants = $this->samsatCodeVariants($user->lokasi_samsat);
+        $lokasiVariants = SengSaamsat::lokasiFilterVariants($user->lokasi_samsat);
         $kecVariants = $this->samsatCodeVariants($user->kecamatan_samsat);
         $kelVariants = $this->samsatCodeVariants($user->kelurahan_samsat);
 

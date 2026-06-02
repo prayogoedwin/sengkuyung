@@ -187,7 +187,7 @@ class RekapController extends Controller
             }
         }
         if ($lokasiSamsatId) {
-            $dataTertagihQuery->whereIn('id_lokasi_samsat', $this->codeVariants($lokasiSamsatId));
+            $dataTertagihQuery->whereIn('id_lokasi_samsat', SengSaamsat::lokasiFilterVariants((string) $lokasiSamsatId));
         }
         if ($kecamatanSamsatId) {
             $dataTertagihQuery->whereIn('id_kecamatan', $this->codeVariants($kecamatanSamsatId));

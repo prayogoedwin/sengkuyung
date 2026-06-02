@@ -834,7 +834,7 @@ class SengPendataanKendaraanController extends Controller
         }
 
         if ($userLokasiSamsat !== '') {
-            $query->whereIn('kota', $this->samsatCodeVariants($userLokasiSamsat));
+            $query->whereIn('kota', SengSaamsat::lokasiFilterVariants($userLokasiSamsat));
         }
 
         if ($userKelurahanSamsat !== '') {

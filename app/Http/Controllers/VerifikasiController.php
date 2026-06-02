@@ -117,9 +117,9 @@ class VerifikasiController extends Controller
             }
             
             if (!empty($userLokasiSamsat)) {
-                $verifikasis->where('kota', $userLokasiSamsat);
+                $verifikasis->whereIn('kota', SengSaamsat::lokasiFilterVariants((string) $userLokasiSamsat));
             } elseif ($request->lokasi_samsat) {
-                $verifikasis->where('kota', $request->lokasi_samsat);
+                $verifikasis->whereIn('kota', SengSaamsat::lokasiFilterVariants((string) $request->lokasi_samsat));
             }
 
             if (!empty($userKecamatanSamsat)) {

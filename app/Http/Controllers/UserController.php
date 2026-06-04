@@ -44,10 +44,13 @@ class UserController extends Controller
             ->first();
 
         if ($samsat) {
+            $wilayah = trim((string) ($samsat->id_wilayah_samsat ?? ''));
+            $lokasi = $wilayah !== '' ? $wilayah : (string) $samsat->id;
+
             return [
                 'kabkota' => $samsat->kabkota ? (string) $samsat->kabkota : null,
-                'lokasi_samsat' => (string) $samsat->id,
-                'uptd_id' => (string) $samsat->id,
+                'lokasi_samsat' => $lokasi,
+                'uptd_id' => $lokasi,
             ];
         }
 

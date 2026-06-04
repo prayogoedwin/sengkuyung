@@ -738,7 +738,8 @@
                                     var samsats = response.samsats;
                                     var options = '<option value="">Pilih Lokasi Samsat</option>';
                                     $.each(samsats, function(index, samsat) {
-                                        options += '<option value="' + samsat.id + '">' + samsat.lokasi + ' [' + samsat.id + ']</option>';
+                                        var samsatVal = String(samsat.id_wilayah_samsat || samsat.id || '');
+                                        options += '<option value="' + samsatVal + '">' + samsat.lokasi + ' [' + samsatVal + ']</option>';
                                     });
                                     $('#userSamsat').html(options);
                                 } else {

@@ -136,10 +136,10 @@
 
                     var options = '<option value="">Pilih Lokasi Samsat</option>';
                     $.each(response.samsats, function(index, samsat) {
-                        var value = samsat.id;
+                        var value = String(samsat.id_wilayah_samsat || samsat.id || '');
                         if (!forcedLokasiSamsat || String(value) === String(forcedLokasiSamsat)) {
                             var isSelected = ((selectedSamsat && String(selectedSamsat) === String(value)) || String(forcedLokasiSamsat) === String(value)) ? 'selected' : '';
-                            options += '<option value="' + value + '" ' + isSelected + '>' + samsat.lokasi + ' [' + samsat.id + ']</option>';
+                            options += '<option value="' + value + '" ' + isSelected + '>' + samsat.lokasi + ' [' + value + ']</option>';
                         }
                     });
 

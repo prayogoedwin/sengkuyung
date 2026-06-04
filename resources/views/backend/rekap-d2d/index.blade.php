@@ -332,9 +332,9 @@
                     var options = '<option value="">Semua Lokasi Samsat</option>';
                     if (response.success) {
                         $.each(response.samsats, function(index, samsat) {
-                            var value = samsat.id;
+                            var value = String(samsat.id_wilayah_samsat || samsat.id || '');
                             var isSelected = (selectedValue == value) ? 'selected' : '';
-                            var label = (samsat.lokasi ?? '-') + ' [' + samsat.id + ']';
+                            var label = (samsat.lokasi ?? '-') + ' [' + value + ']';
                             options += '<option value="' + value + '" ' + isSelected + '>' + label + '</option>';
                         });
                     }

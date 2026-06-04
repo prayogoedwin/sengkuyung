@@ -90,4 +90,64 @@ class SengSaamsat extends Model
 
         return array_values(array_unique($out));
     }
+
+    /**
+     * Nilai kanonik untuk dropdown / profil: id_wilayah_samsat ("20", "01", "02").
+     * Bukan PK seng_samsat.id ("1", "2", "3").
+     */
+    public static function resolveStoredLokasiId(?string $stored): ?string
+    {
+        $stored = trim((string) $stored);
+        if ($stored === '') {
+            return null;
+        }
+
+        $variants = self::lokasiFilterVariants($stored);
+        if (empty($variants)) {
+            return $stored;
+        }
+
+        $row = self::query()
+            ->where(function ($q) use ($variants) {
+                foreach ($variants as $variant) {
+                    $q->orWhere('id', $variant)->orWhere('id_wilayah_samsat', $variant);
+                }
+            })
+            ->first(['id_wilayah_samsat']);
+
+        if ($row && $row->id_wilayah_samsat !== null && (string) $row->id_wilayah_samsat !== '') {
+            return (string) $row->id_wilayah_samsat;
+        }
+
+        return $stored;
+    }
+
+    public static function dropdownValue(object|array $samsat): string
+    {
+        $wilayah = trim((string) (is_array($samsat) ? ($samsat['id_wilayah_samsat'] ?? '') : ($samsat->id_wilayah_samsat ?? '')));
+        if ($wilayah !== '') {
+            return $wilayah;
+        }
+
+        return (string) (is_array($samsat) ? ($samsat['id'] ?? '') : ($samsat->id ?? ''));
+    }
+
+    public static function profileMatchesSamsat(?string $profileLokasi, object|array $samsat): bool
+    {
+        $profileLokasi = trim((string) $profileLokasi);
+        if ($profileLokasi === '') {
+            return true;
+        }
+
+        $samsatId = is_array($samsat) ? ($samsat['id'] ?? '') : ($samsat->id ?? '');
+        $wilayahId = is_array($samsat) ? ($samsat['id_wilayah_samsat'] ?? '') : ($samsat->id_wilayah_samsat ?? '');
+
+        foreach (self::lokasiFilterVariants($profileLokasi) as $variant) {
+            if ($variant === (string) $samsatId || $variant === (string) $wilayahId) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

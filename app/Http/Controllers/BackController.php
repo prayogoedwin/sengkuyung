@@ -33,9 +33,11 @@ class BackController extends Controller
             || $isKecamatanScope
             || $isKelurahanScope
         );
-        $userLokasiSamsat = (string) ($user->lokasi_samsat ?? '');
+        $userLokasiSamsat = SengSaamsat::resolveStoredLokasiId($user->lokasi_samsat ?? null) ?? '';
         $userKecamatanSamsat = (string) ($user->kecamatan_samsat ?: $user->kecamatan ?: '');
         $userKelurahanSamsat = (string) ($user->kelurahan_samsat ?: $user->kelurahan ?: '');
+        $lockLokasiSamsat = $userLokasiSamsat !== ''
+            && ! $user->hasAnyRole(['super-admin', 'superadmin', 'admin', 'adminprov', 'uppd', 'uptd']);
 
         // Counter D2D hanya ditampilkan untuk role di atas kabkota (admin/UPTD/UPPD/dll).
         // kabkota/kecamatan/kelurahan tidak menangani D2D, jadi tidak perlu dihitung & disembunyikan dari view.
@@ -111,7 +113,8 @@ class BackController extends Controller
             'showD2dStats',
             'userLokasiSamsat',
             'userKecamatanSamsat',
-            'userKelurahanSamsat'
+            'userKelurahanSamsat',
+            'lockLokasiSamsat'
         ));
     }
 

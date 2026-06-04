@@ -234,6 +234,9 @@ class VerifikasiController extends Controller
         $user = Auth::user();
         $isUppd = $user && $user->hasRole('uppd');
         $isKabkotaRole = $user && $user->hasRole('kabkota');
+        $userLokasiSamsat = SengSaamsat::resolveStoredLokasiId($user->lokasi_samsat ?? null) ?? '';
+        $lockLokasiSamsat = $userLokasiSamsat !== ''
+            && ! $user->hasAnyRole(['super-admin', 'superadmin', 'admin', 'adminprov', 'uppd', 'uptd']);
         $resolvedKabkotaId = $this->resolveKabkotaIdFromLokasiSamsat($user->lokasi_samsat ?? null);
         $selectedKabkotaId = $user->kota ?? $resolvedKabkotaId;
 
@@ -248,7 +251,9 @@ class VerifikasiController extends Controller
             'status_verifikasis',
             'selectedKabkotaId',
             'isUppd',
-            'isKabkotaRole'
+            'isKabkotaRole',
+            'userLokasiSamsat',
+            'lockLokasiSamsat'
         ))->with([
             'verifikasiIndexRoute' => $this->verifikasiRouteIndex(),
             'verifikasiPageTitle' => $this->verifikasiPageTitle(),

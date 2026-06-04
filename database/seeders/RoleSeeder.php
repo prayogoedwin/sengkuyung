@@ -31,7 +31,9 @@ class RoleSeeder extends Seeder
         $roles = [
             'super-admin' => ['web'],
             'admin'       => ['web'],
+            'adminprov'   => ['web'],
             'uptd'        => ['web'],
+            'uppd'        => ['web'],
             'kabkota'     => ['web'],
             'kecamatan'   => ['web'],
             'kelurahan'   => ['web'],

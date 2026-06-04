@@ -19,19 +19,11 @@
                                                     <label for="filterRole" class="mb-0">Filter Role</label>
                                                     <select class="form-control form-control-sm" id="filterRole" style="max-width: 220px;">
                                                         <option value="">Semua Role</option>
-                                                        @if (in_array($userRoleName ?? '', ['super-admin', 'superadmin', 'admin', 'uptd', 'uppd', 'kabkota'], true))
-                                                            <option value="kecamatan">Kecamatan</option>
-                                                        @endif
-                                                        @if (in_array($userRoleName ?? '', ['super-admin', 'superadmin', 'admin', 'uptd', 'uppd', 'kabkota', 'kecamatan'], true))
-                                                            <option value="kelurahan">Kelurahan</option>
-                                                        @endif
-                                                        @if (in_array($userRoleName ?? '', ['super-admin', 'superadmin', 'admin', 'uptd', 'uppd', 'kabkota', 'kecamatan', 'kelurahan'], true))
-                                                            <option value="petugas">Petugas</option>
-                                                        @endif
-                                                        {{-- kabkota, kecamatan, kelurahan tidak boleh kelola/filter petugas-d2d --}}
-                                                        @if (in_array($userRoleName ?? '', ['super-admin', 'superadmin', 'admin', 'uptd', 'uppd'], true))
-                                                            <option value="petugas-d2d">Petugas D2D</option>
-                                                        @endif
+                                                        @foreach ($filterRoles ?? [] as $filterRole)
+                                                            <option value="{{ $filterRole['name'] }}" {{ request('role_name') === $filterRole['name'] ? 'selected' : '' }}>
+                                                                {{ $filterRole['label'] }}
+                                                            </option>
+                                                        @endforeach
                                                     </select>
                                                 </div>
                                             </div>

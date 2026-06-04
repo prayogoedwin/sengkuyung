@@ -82,6 +82,9 @@ class UserController extends Controller
         return match (strtolower($roleName)) {
             self::PETUGAS_ROLE => 'Petugas',
             self::PETUGAS_D2D_ROLE => 'Petugas D2D',
+            'uppd' => 'UPPD',
+            'uptd' => 'UPTD',
+            'adminprov' => 'Admin Prov',
             default => ucwords(str_replace(['-', '_'], ' ', $roleName)),
         };
     }
@@ -109,18 +112,43 @@ class UserController extends Controller
         return Auth::user()->roles[0]->id ?? null;
     }
 
-    private function getAllowedRoleIdsByCreator(string $creatorRoleName): array
+    /**
+     * @return list<string>
+     */
+    private function getCreatableRoleNamesByCreator(string $creatorRoleName): array
     {
         // Catatan: role `petugas-d2d` TIDAK diizinkan dibuat oleh `kabkota`, `kecamatan`,
         // dan `kelurahan` — pembuatan akun petugas D2D hanya boleh dari UPTD/UPPD ke atas.
-        // Lihat juga validasi assignment role di endpoint store/update.
         return match ($creatorRoleName) {
-            'uptd', 'uppd' => $this->roleIdsByNames(['kabkota', 'kecamatan', 'kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE]),
-            'kabkota' => $this->roleIdsByNames(['kecamatan', 'kelurahan', self::PETUGAS_ROLE]),
-            'kecamatan' => $this->roleIdsByNames(['kelurahan', self::PETUGAS_ROLE]),
-            'kelurahan' => $this->roleIdsByNames([self::PETUGAS_ROLE]),
-            default => $this->roleIdsByNames(['admin', 'uptd', 'uppd', 'kabkota', 'kecamatan', 'kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE]),
+            'uptd', 'uppd' => ['kabkota', 'kecamatan', 'kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE],
+            'kabkota' => ['kecamatan', 'kelurahan', self::PETUGAS_ROLE],
+            'kecamatan' => ['kelurahan', self::PETUGAS_ROLE],
+            'kelurahan' => [self::PETUGAS_ROLE],
+            default => ['admin', 'adminprov', 'uptd', 'uppd', 'kabkota', 'kecamatan', 'kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE],
         };
+    }
+
+    private function getAllowedRoleIdsByCreator(string $creatorRoleName): array
+    {
+        return $this->roleIdsByNames($this->getCreatableRoleNamesByCreator($creatorRoleName));
+    }
+
+    /**
+     * Opsi filter role di halaman Users (diselaraskan dengan role yang boleh dikelola).
+     *
+     * @return list<array{name: string, label: string}>
+     */
+    private function getFilterableRolesForCreator(string $creatorRoleName): array
+    {
+        $names = $this->getCreatableRoleNamesByCreator($creatorRoleName);
+
+        return collect($names)
+            ->map(fn (string $name) => [
+                'name' => $name,
+                'label' => $this->roleLabel($name),
+            ])
+            ->values()
+            ->all();
     }
 
     // public static function middleware(): array
@@ -318,7 +346,9 @@ class UserController extends Controller
         });
 
        
-        return view('backend.users.index',  compact('roles', 'kabkotas', 'samsats', 'userRoleName'));
+        $filterRoles = $this->getFilterableRolesForCreator($userRoleName);
+
+        return view('backend.users.index', compact('roles', 'kabkotas', 'samsats', 'userRoleName', 'filterRoles'));
     }
 
      public function ganti_password(Request $request)

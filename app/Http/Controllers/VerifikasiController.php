@@ -22,6 +22,7 @@ use App\Helpers\FileEncryption;
 use Illuminate\Support\Facades\Storage;
 use App\Models\ActivityLog;
 use App\Support\ApiCacheManager;
+use App\Support\PendataanWilayahFilter;
 use App\Support\VerifikasiStatusGroups;
 
 class VerifikasiController extends Controller
@@ -117,15 +118,15 @@ class VerifikasiController extends Controller
             }
             
             if (!empty($userLokasiSamsat)) {
-                $verifikasis->whereIn('kota', SengSaamsat::lokasiFilterVariants((string) $userLokasiSamsat));
-            } elseif ($request->lokasi_samsat) {
-                $verifikasis->whereIn('kota', SengSaamsat::lokasiFilterVariants((string) $request->lokasi_samsat));
+                PendataanWilayahFilter::applyLokasiSamsatFilter($verifikasis, (string) $userLokasiSamsat);
+            } elseif ($request->lokasi_samsat && ! $request->filled('kecamatan_samsat')) {
+                PendataanWilayahFilter::applyLokasiSamsatFilter($verifikasis, (string) $request->lokasi_samsat);
             }
 
             if (!empty($userKecamatanSamsat)) {
-                $verifikasis->where('kec', $userKecamatanSamsat);
+                PendataanWilayahFilter::applyKecamatanFilter($verifikasis, (string) $userKecamatanSamsat);
             } elseif ($request->kecamatan_samsat) {
-                $verifikasis->where('kec', $request->kecamatan_samsat);
+                PendataanWilayahFilter::applyKecamatanFilter($verifikasis, (string) $request->kecamatan_samsat);
             }
 
             if (!empty($userKelurahanSamsat)) {

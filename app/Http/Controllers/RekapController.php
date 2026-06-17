@@ -14,6 +14,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Support\ApiCacheManager;
+use App\Support\PendataanWilayahFilter;
 
 class RekapController extends Controller
 {
@@ -145,11 +146,11 @@ class RekapController extends Controller
                 $pendataanQuery->where('kota_dagri', $kabkotaId);
             }
         }
-        if ($lokasiSamsatId) {
-            $pendataanQuery->where('kota', $lokasiSamsatId);
+        if ($lokasiSamsatId && ! $kecamatanSamsatId) {
+            PendataanWilayahFilter::applyLokasiSamsatFilter($pendataanQuery, (string) $lokasiSamsatId);
         }
         if ($kecamatanSamsatId) {
-            $pendataanQuery->where('kec', $kecamatanSamsatId);
+            PendataanWilayahFilter::applyKecamatanFilter($pendataanQuery, (string) $kecamatanSamsatId);
         }
         if ($kelurahanSamsatId) {
             $pendataanQuery->where('desa', $kelurahanSamsatId);
@@ -186,7 +187,7 @@ class RekapController extends Controller
                 $dataTertagihQuery->whereRaw('1 = 0');
             }
         }
-        if ($lokasiSamsatId) {
+        if ($lokasiSamsatId && ! $kecamatanSamsatId) {
             $dataTertagihQuery->whereIn('id_lokasi_samsat', SengSaamsat::lokasiFilterVariants((string) $lokasiSamsatId));
         }
         if ($kecamatanSamsatId) {

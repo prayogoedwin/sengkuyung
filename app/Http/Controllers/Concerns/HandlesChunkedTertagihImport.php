@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Concerns;
 
 use App\Services\DataTertagihCsvImporter;
+use App\Services\ImportDuplicateTracker;
 use App\Support\ApiCacheManager;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -60,14 +61,17 @@ trait HandlesChunkedTertagihImport
         $year = (int) $request->year;
         $importId = (string) Str::uuid();
         $storedPath = $file->storeAs($this->importStorageDir(), $importId . '.csv', 'local');
+        $trackerPath = $this->importStorageDir() . '/' . $importId . '.sqlite';
+        $tracker = ImportDuplicateTracker::create(Storage::disk('local')->path($trackerPath));
+        $importer->seedExistingNoPolisiKeys($tracker, $year);
 
         Cache::put($this->importCacheKey($importId), [
             'path' => $storedPath,
+            'tracker_path' => $trackerPath,
             'year' => $year,
             'user_id' => Auth::id(),
             'delimiter' => $importer->detectCsvDelimiter($headerLine),
             'next_row' => 0,
-            'seen_keys' => $importer->loadExistingNoPolisiKeys($year),
             'stats' => DataTertagihCsvImporter::emptyStats(),
             'created_at' => Carbon::now()->toIso8601String(),
         ], now()->addHours(3));
@@ -103,6 +107,7 @@ trait HandlesChunkedTertagihImport
 
         $fullPath = Storage::disk('local')->path($state['path']);
         if (!is_file($fullPath)) {
+            $this->cleanupImportFiles($state);
             Cache::forget($cacheKey);
 
             return response()->json([
@@ -111,9 +116,31 @@ trait HandlesChunkedTertagihImport
             ], 404);
         }
 
+        $trackerPath = (string) ($state['tracker_path'] ?? '');
+        if ($trackerPath === '') {
+            Cache::forget($cacheKey);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Sesi import tidak valid. Silakan unggah ulang file CSV.',
+            ], 422);
+        }
+
+        $trackerFullPath = Storage::disk('local')->path($trackerPath);
+        if (!is_file($trackerFullPath)) {
+            $this->cleanupImportFiles($state);
+            Cache::forget($cacheKey);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Data pelacak duplikat tidak ditemukan. Silakan unggah ulang file CSV.',
+            ], 404);
+        }
+
         set_time_limit(120);
 
         $now = Carbon::parse($state['created_at'] ?? Carbon::now());
+        $tracker = ImportDuplicateTracker::open($trackerFullPath);
 
         $result = $importer->processChunk(
             $fullPath,
@@ -122,16 +149,15 @@ trait HandlesChunkedTertagihImport
             (int) $state['user_id'],
             $now,
             (int) $state['next_row'],
-            $state['seen_keys'] ?? [],
+            $tracker,
             $state['stats'] ?? DataTertagihCsvImporter::emptyStats(),
         );
 
         $state['next_row'] = $result['next_row'];
-        $state['seen_keys'] = $result['seen_keys'];
         $state['stats'] = $result['stats'];
 
         if ($result['done']) {
-            Storage::disk('local')->delete($state['path']);
+            $this->cleanupImportFiles($state);
             Cache::forget($cacheKey);
             ApiCacheManager::forgetByPrefix($this->importApiCachePrefix());
 
@@ -154,5 +180,19 @@ trait HandlesChunkedTertagihImport
                 'inserted' => $result['stats']['inserted'],
             ],
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $state
+     */
+    protected function cleanupImportFiles(array $state): void
+    {
+        if (!empty($state['path'])) {
+            Storage::disk('local')->delete((string) $state['path']);
+        }
+
+        if (!empty($state['tracker_path'])) {
+            Storage::disk('local')->delete((string) $state['tracker_path']);
+        }
     }
 }

@@ -60,6 +60,9 @@ class LogActivity
 
         if ($response->headers->get('content-type') === 'application/json') {
             $responseData = $response->getContent();
+            if (is_string($responseData) && strlen($responseData) > 16000) {
+                $responseData = substr($responseData, 0, 16000) . '...[truncated]';
+            }
         } elseif (is_array($response->original ?? null)) {
             $responseData = null; // Jika tidak ada JSON, set null
         } else {

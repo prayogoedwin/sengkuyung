@@ -65,8 +65,7 @@ class DataTertagihCsvImporter
     }
 
     /**
-     * @param  array<string, true>  $seenKeys
-     * @return array{stats: array, seen_keys: array<string, true>, next_row: int, done: bool}
+     * @return array{stats: array, next_row: int, done: bool}
      */
     public function processChunk(
         string $filePath,
@@ -75,7 +74,7 @@ class DataTertagihCsvImporter
         int $userId,
         Carbon $now,
         int $startRow,
-        array $seenKeys,
+        ImportDuplicateTracker $tracker,
         array $stats
     ): array {
         $handle = fopen($filePath, 'r');
@@ -91,7 +90,6 @@ class DataTertagihCsvImporter
 
                 return [
                     'stats' => $stats,
-                    'seen_keys' => $seenKeys,
                     'next_row' => $startRow,
                     'done' => true,
                 ];
@@ -128,8 +126,9 @@ class DataTertagihCsvImporter
 
             $lookupKey = strtoupper($formattedNoPolisi);
 
-            if (isset($seenKeys[$lookupKey])) {
-                if ($seenKeys[$lookupKey] === 'db') {
+            $existingSource = $tracker->getSource($lookupKey);
+            if ($existingSource !== null) {
+                if ($existingSource === 'db') {
                     $stats['skipped_duplicate_db']++;
                 } else {
                     $stats['skipped_duplicate_file']++;
@@ -137,7 +136,7 @@ class DataTertagihCsvImporter
                 continue;
             }
 
-            $seenKeys[$lookupKey] = 'file';
+            $tracker->markFile($lookupKey);
             $batch[] = [
                 'no_polisi' => $formattedNoPolisi,
                 'id_lokasi_samsat' => trim((string) ($row[1] ?? '')),
@@ -175,7 +174,6 @@ class DataTertagihCsvImporter
 
         return [
             'stats' => $stats,
-            'seen_keys' => $seenKeys,
             'next_row' => $startRow + $processedInChunk,
             'done' => $done,
         ];
@@ -193,27 +191,22 @@ class DataTertagihCsvImporter
         });
     }
 
-    /**
-     * @return array<string, 'db'>
-     */
-    public function loadExistingNoPolisiKeys(int $year): array
+    public function seedExistingNoPolisiKeys(ImportDuplicateTracker $tracker, int $year): void
     {
-        $keys = [];
-
         $this->modelClass::query()
             ->where('year', $year)
             ->select('no_polisi')
             ->orderBy('id')
-            ->chunk(5000, static function ($rows) use (&$keys) {
+            ->chunk(5000, static function ($rows) use ($tracker) {
+                $keys = [];
                 foreach ($rows as $row) {
                     $key = strtoupper(trim((string) $row->no_polisi));
                     if ($key !== '') {
-                        $keys[$key] = 'db';
+                        $keys[] = $key;
                     }
                 }
+                $tracker->markDbKeys($keys);
             });
-
-        return $keys;
     }
 
     public function buildSummaryMessage(array $stats): string

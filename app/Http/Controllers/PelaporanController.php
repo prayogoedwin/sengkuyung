@@ -21,6 +21,7 @@ use Dompdf\Options;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx as XlsxWriter;
 use App\Support\ApiCacheManager;
+use App\Support\PendataanWilayahFilter;
 
 use Illuminate\Http\Request;
 
@@ -116,6 +117,22 @@ class PelaporanController extends Controller
         }
 
         return array_values(array_unique(array_filter($variants, static fn ($v) => $v !== '')));
+    }
+
+    /**
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     */
+    private function applyPelaporanWilayahFilters($query, Request $request): void
+    {
+        $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;
+
+        if ($request->lokasi_samsat && ! $kecamatanFilter) {
+            PendataanWilayahFilter::applyLokasiSamsatFilter($query, (string) $request->lokasi_samsat);
+        }
+
+        if ($kecamatanFilter) {
+            PendataanWilayahFilter::applyKecamatanFilter($query, (string) $kecamatanFilter);
+        }
     }
 
     private function resolveWilayahContext(Request $request): array
@@ -447,15 +464,14 @@ class PelaporanController extends Controller
             $kotajudul_id = '_'.$request->kabkota_id;
         }
 
-        if ($request->lokasi_samsat) {
-            $verifikasis->whereIn('kota', SengSaamsat::lokasiFilterVariants((string) $request->lokasi_samsat));
+        if ($request->lokasi_samsat || ($request->kecamatan_samsat ?: $request->district_id)) {
+            $this->applyPelaporanWilayahFilters($verifikasis, $request);
         }
 
         $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;
         $kecjudul = '';
         $kecjudul_id = '';
         if ($kecamatanFilter) {
-            $verifikasis->where('kec', $kecamatanFilter);
             $wilayah = SengWilayah::where('id', $kecamatanFilter)->first();
             $kecjudul = $wilayah ? $wilayah->nama : '';
             $kecjudul = ' Kec. '.$kecjudul;
@@ -626,14 +642,7 @@ class PelaporanController extends Controller
             });
         }
 
-        if ($request->lokasi_samsat) {
-            $verifikasis->whereIn('kota', SengSaamsat::lokasiFilterVariants((string) $request->lokasi_samsat));
-        }
-
-        $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;
-        if ($kecamatanFilter) {
-            $verifikasis->where('kec', $kecamatanFilter);
-        }
+        $this->applyPelaporanWilayahFilters($verifikasis, $request);
 
         if ($request->kelurahan_samsat) {
             $verifikasis->where('desa', $request->kelurahan_samsat);
@@ -782,14 +791,11 @@ class PelaporanController extends Controller
             $kotajudul = $wilayah ? ' ' . $wilayah->nama : '';
         }
 
-        if ($request->lokasi_samsat) {
-            $verifikasis->whereIn('kota', SengSaamsat::lokasiFilterVariants((string) $request->lokasi_samsat));
-        }
+        $this->applyPelaporanWilayahFilters($verifikasis, $request);
 
         $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;
         $kecjudul = '';
         if ($kecamatanFilter) {
-            $verifikasis->where('kec', $kecamatanFilter);
             $wilayah = SengWilayah::where('id', $kecamatanFilter)->first();
             $kecjudul = $wilayah ? ' Kec. ' . $wilayah->nama : '';
         }
@@ -974,14 +980,7 @@ class PelaporanController extends Controller
             $baseQuery->where('kota_dagri', $request->kabkota_id);
         }
 
-        if ($request->lokasi_samsat) {
-            $baseQuery->whereIn('kota', SengSaamsat::lokasiFilterVariants((string) $request->lokasi_samsat));
-        }
-
-        $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;
-        if ($kecamatanFilter) {
-            $baseQuery->whereIn('kec_dagri', $this->resolveKecamatanDagriVariants((string) $kecamatanFilter));
-        }
+        $this->applyPelaporanWilayahFilters($baseQuery, $request);
 
         if ($request->kelurahan_samsat) {
             $baseQuery->whereIn('desa', $this->codeVariants($request->kelurahan_samsat));

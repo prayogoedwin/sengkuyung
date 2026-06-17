@@ -226,6 +226,37 @@
     $(document).ready(function() {
         const forcedLokasiSamsat = "{{ Auth::user()->lokasi_samsat ?? '' }}";
 
+        function loadKecamatanByKabkota(kabkotaId) {
+            if (!kabkotaId) {
+                $('#kecamatanSamsat').html('<option value="">Pilih Kecamatan Samsat</option>');
+                $('#kelurahanSamsat').html('<option value="">Pilih Kelurahan Samsat</option>');
+                return;
+            }
+
+            $.ajax({
+                url: '{{ route("getSamsatKecamatan") }}',
+                type: 'GET',
+                data: { kabkota_id: kabkotaId },
+                success: function(response) {
+                    if (response.success) {
+                        var kecamatans = response.kecamatans;
+                        var options = '<option value="">Pilih Kecamatan Samsat</option>';
+                        $.each(kecamatans, function(index, kecamatan) {
+                            options += '<option value="' + kecamatan.id_kecamatan + '">' + kecamatan.kecamatan + '</option>';
+                        });
+                        $('#kecamatanSamsat').html(options);
+                        $('#kelurahanSamsat').html('<option value="">Pilih Kelurahan Samsat</option>');
+                    } else {
+                        $('#kecamatanSamsat').html('<option value="">Kecamatan Samsat tidak ditemukan</option>');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fetching kecamatan samsat:', error);
+                    $('#kecamatanSamsat').html('<option value="">Gagal mengambil kecamatan samsat</option>');
+                }
+            });
+        }
+
         $('#userKabkota').on('change', function() {
             var kabkotaId = $(this).val();
     
@@ -259,8 +290,7 @@
                                 $('#lokasiSamsat').prop('disabled', false);
                             }
 
-                            $('#kecamatanSamsat').html('<option value="">Pilih Kecamatan Samsat</option>');
-                            $('#kelurahanSamsat').html('<option value="">Pilih Kelurahan Samsat</option>');
+                            loadKecamatanByKabkota(kabkotaId);
                         } else {
                             $('#lokasiSamsat').html('<option value="">Lokasi Samsat tidak ditemukan</option>');
                         }
@@ -278,35 +308,7 @@
         });
 
         $('#lokasiSamsat').on('change', function() {
-            var lokasiSamsatId = $(this).val();
-
-            if (lokasiSamsatId) {
-                $.ajax({
-                    url: '{{ route("getSamsatKecamatan") }}',
-                    type: 'GET',
-                    data: { lokasi_samsat_id: lokasiSamsatId },
-                    success: function(response) {
-                        if (response.success) {
-                            var kecamatans = response.kecamatans;
-                            var options = '<option value="">Pilih Kecamatan Samsat</option>';
-                            $.each(kecamatans, function(index, kecamatan) {
-                                options += '<option value="' + kecamatan.id_kecamatan + '">' + kecamatan.kecamatan + '</option>';
-                            });
-                            $('#kecamatanSamsat').html(options);
-                            $('#kelurahanSamsat').html('<option value="">Pilih Kelurahan Samsat</option>');
-                        } else {
-                            $('#kecamatanSamsat').html('<option value="">Kecamatan Samsat tidak ditemukan</option>');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error fetching kecamatan samsat:', error);
-                        $('#kecamatanSamsat').html('<option value="">Gagal mengambil kecamatan samsat</option>');
-                    }
-                });
-            } else {
-                $('#kecamatanSamsat').html('<option value="">Pilih Kecamatan Samsat</option>');
-                $('#kelurahanSamsat').html('<option value="">Pilih Kelurahan Samsat</option>');
-            }
+            $('#kelurahanSamsat').html('<option value="">Pilih Kelurahan Samsat</option>');
         });
 
         $('#kecamatanSamsat').on('change', function() {

@@ -35,6 +35,27 @@ class SengSaamsat extends Model
      *
      * @return list<string>
      */
+    /**
+     * Semua variant id_lokasi_samsat untuk seluruh samsat (utama + pembantu) di satu kabkota.
+     *
+     * @return list<string>
+     */
+    public static function lokasiFilterVariantsByKabkota(?string $kabkotaId): array
+    {
+        $kabkotaId = trim((string) $kabkotaId);
+        if ($kabkotaId === '') {
+            return [];
+        }
+
+        return self::query()
+            ->where('kabkota', $kabkotaId)
+            ->get(['id', 'id_wilayah_samsat'])
+            ->flatMap(fn ($s) => self::lokasiFilterVariants((string) $s->id))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
     public static function lokasiFilterVariants(?string $selected): array
     {
         $v = trim((string) $selected);

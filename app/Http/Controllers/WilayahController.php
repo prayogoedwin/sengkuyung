@@ -47,19 +47,29 @@ class WilayahController extends Controller
 
     public function getSamsatKecamatan(Request $request)
     {
+        $kabkotaId = $request->input('kabkota_id');
         $lokasiSamsatId = $request->input('lokasi_samsat_id');
 
-        if (!$lokasiSamsatId) {
-            return response()->json(['success' => false, 'message' => 'Lokasi Samsat ID is required.'], 400);
+        if ($kabkotaId) {
+            $lokasiIds = SengSaamsat::lokasiFilterVariantsByKabkota((string) $kabkotaId);
+            $cacheKey = 'admin:master:wilayah:kecamatan-by-kabkota:v1:' . (string) $kabkotaId;
+        } elseif ($lokasiSamsatId) {
+            $lokasiIds = SengSaamsat::lokasiFilterVariants((string) $lokasiSamsatId);
+            $cacheKey = 'admin:master:wilayah:kecamatan-by-samsat:v2:' . (string) $lokasiSamsatId;
+        } else {
+            return response()->json(['success' => false, 'message' => 'Kabkota ID or Lokasi Samsat ID is required.'], 400);
         }
 
-        $cacheKey = 'admin:master:wilayah:kecamatan-by-samsat:v2:' . (string) $lokasiSamsatId;
-        $kecamatans = ApiCacheManager::remember($cacheKey, ApiCacheManager::masterTtl(), static function () use ($lokasiSamsatId) {
-            $lokasiIds = SengSaamsat::lokasiFilterVariants((string) $lokasiSamsatId);
+        if (empty($lokasiIds)) {
+            return response()->json(['success' => true, 'kecamatans' => []]);
+        }
 
+        $kecamatans = ApiCacheManager::remember($cacheKey, ApiCacheManager::masterTtl(), static function () use ($lokasiIds) {
             return SengWilayahKec::whereIn('id_lokasi_samsat', $lokasiIds)
                 ->orderBy('kecamatan')
-                ->get(['id_kecamatan', 'kecamatan']);
+                ->get(['id_kecamatan', 'kecamatan'])
+                ->unique('id_kecamatan')
+                ->values();
         });
 
         return response()->json(['success' => true, 'kecamatans' => $kecamatans]);

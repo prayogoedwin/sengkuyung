@@ -50,7 +50,21 @@ class SengSaamsat extends Model
         return self::query()
             ->where('kabkota', $kabkotaId)
             ->get(['id', 'id_wilayah_samsat'])
-            ->flatMap(fn ($s) => self::lokasiFilterVariants((string) $s->id))
+            ->flatMap(function ($s) {
+                $seeds = [];
+
+                if ($s->id_wilayah_samsat !== null && (string) $s->id_wilayah_samsat !== '') {
+                    $seeds[] = (string) $s->id_wilayah_samsat;
+                }
+
+                if ($s->id !== null && (string) $s->id !== '') {
+                    $seeds[] = (string) $s->id;
+                }
+
+                return collect($seeds)->flatMap(
+                    fn (string $seed) => self::lokasiFilterVariants($seed)
+                );
+            })
             ->unique()
             ->values()
             ->all();

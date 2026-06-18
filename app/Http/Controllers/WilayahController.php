@@ -52,7 +52,7 @@ class WilayahController extends Controller
 
         if ($kabkotaId) {
             $lokasiIds = SengSaamsat::lokasiFilterVariantsByKabkota((string) $kabkotaId);
-            $cacheKey = 'admin:master:wilayah:kecamatan-by-kabkota:v1:' . (string) $kabkotaId;
+            $cacheKey = 'admin:master:wilayah:kecamatan-by-kabkota:v2:' . (string) $kabkotaId;
         } elseif ($lokasiSamsatId) {
             $lokasiIds = SengSaamsat::lokasiFilterVariants((string) $lokasiSamsatId);
             $cacheKey = 'admin:master:wilayah:kecamatan-by-samsat:v2:' . (string) $lokasiSamsatId;

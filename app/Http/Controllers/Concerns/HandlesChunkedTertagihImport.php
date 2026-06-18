@@ -62,8 +62,17 @@ trait HandlesChunkedTertagihImport
         $importId = (string) Str::uuid();
         $storedPath = $file->storeAs($this->importStorageDir(), $importId . '.csv', 'local');
         $trackerPath = $this->importStorageDir() . '/' . $importId . '.sqlite';
-        $tracker = ImportDuplicateTracker::create(Storage::disk('local')->path($trackerPath));
-        $importer->seedExistingNoPolisiKeys($tracker, $year);
+
+        try {
+            ImportDuplicateTracker::create(Storage::disk('local')->path($trackerPath));
+        } catch (\Throwable $e) {
+            Storage::disk('local')->delete($storedPath);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Pelacak duplikat tidak dapat dibuat. Pastikan ekstensi PHP PDO SQLite aktif di server.',
+            ], 500);
+        }
 
         Cache::put($this->importCacheKey($importId), [
             'path' => $storedPath,
@@ -72,6 +81,8 @@ trait HandlesChunkedTertagihImport
             'user_id' => Auth::id(),
             'delimiter' => $importer->detectCsvDelimiter($headerLine),
             'next_row' => 0,
+            'seed_after_id' => 0,
+            'db_seeded' => false,
             'stats' => DataTertagihCsvImporter::emptyStats(),
             'created_at' => Carbon::now()->toIso8601String(),
         ], now()->addHours(3));
@@ -137,10 +148,33 @@ trait HandlesChunkedTertagihImport
             ], 404);
         }
 
-        set_time_limit(120);
+        set_time_limit(300);
 
         $now = Carbon::parse($state['created_at'] ?? Carbon::now());
         $tracker = ImportDuplicateTracker::open($trackerFullPath);
+
+        if (!($state['db_seeded'] ?? false)) {
+            $seedResult = $importer->seedExistingNoPolisiKeysBatch(
+                $tracker,
+                (int) $state['year'],
+                (int) ($state['seed_after_id'] ?? 0),
+            );
+
+            $state['seed_after_id'] = $seedResult['after_id'];
+            $state['db_seeded'] = $seedResult['done'];
+
+            if (!$state['db_seeded']) {
+                Cache::put($cacheKey, $state, now()->addHours(3));
+
+                return response()->json([
+                    'success' => true,
+                    'done' => false,
+                    'seeding' => true,
+                    'stats' => $state['stats'] ?? DataTertagihCsvImporter::emptyStats(),
+                    'message' => 'Menyiapkan indeks duplikat database...',
+                ]);
+            }
+        }
 
         $result = $importer->processChunk(
             $fullPath,

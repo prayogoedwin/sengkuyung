@@ -227,6 +227,26 @@
             const importChunkUrl = @json(route('data-tertagih.import.chunk'));
             const csrfToken = @json(csrf_token());
 
+            async function parseJsonResponse(response) {
+                const text = await response.text();
+                try {
+                    return JSON.parse(text);
+                } catch (error) {
+                    const snippet = text.replace(/\s+/g, ' ').trim().slice(0, 120);
+                    let hint = 'Periksa log server atau hubungi admin.';
+
+                    if (response.status === 413) {
+                        hint = 'File terlalu besar untuk limit upload server (nginx/PHP).';
+                    } else if (response.status === 419) {
+                        hint = 'Sesi habis. Muat ulang halaman lalu coba lagi.';
+                    } else if (response.status >= 500) {
+                        hint = 'Server error. Pastikan ekstensi PDO SQLite aktif dan timeout PHP cukup besar.';
+                    }
+
+                    throw new Error('Respons server bukan JSON (HTTP ' + response.status + '). ' + hint + ' ' + snippet);
+                }
+            }
+
             $('#importForm').on('submit', async function(e) {
                 e.preventDefault();
 
@@ -255,7 +275,7 @@
                         },
                     });
 
-                    const uploadData = await uploadResponse.json();
+                    const uploadData = await parseJsonResponse(uploadResponse);
                     if (!uploadResponse.ok || !uploadData.success) {
                         throw new Error(uploadData.message || 'Gagal mengunggah file CSV.');
                     }
@@ -276,9 +296,14 @@
                             }),
                         });
 
-                        const chunkData = await chunkResponse.json();
+                        const chunkData = await parseJsonResponse(chunkResponse);
                         if (!chunkResponse.ok || !chunkData.success) {
                             throw new Error(chunkData.message || 'Gagal memproses chunk import.');
+                        }
+
+                        if (chunkData.seeding) {
+                            $progress.text(chunkData.message || 'Menyiapkan indeks duplikat database...');
+                            continue;
                         }
 
                         const stats = chunkData.stats || {};

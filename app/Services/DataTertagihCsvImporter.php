@@ -12,6 +12,8 @@ class DataTertagihCsvImporter
 
     public const BATCH_SIZE = 1000;
 
+    public const SEED_BATCH_SIZE = 50000;
+
     /**
      * @param  class-string<Model>  $modelClass
      */
@@ -191,22 +193,45 @@ class DataTertagihCsvImporter
         });
     }
 
-    public function seedExistingNoPolisiKeys(ImportDuplicateTracker $tracker, int $year): void
-    {
-        $this->modelClass::query()
+    /**
+     * @return array{done: bool, after_id: int, seeded: int}
+     */
+    public function seedExistingNoPolisiKeysBatch(
+        ImportDuplicateTracker $tracker,
+        int $year,
+        int $afterId,
+        int $limit = self::SEED_BATCH_SIZE,
+    ): array {
+        $rows = $this->modelClass::query()
             ->where('year', $year)
-            ->select('no_polisi')
+            ->where('id', '>', $afterId)
+            ->select(['id', 'no_polisi'])
             ->orderBy('id')
-            ->chunk(5000, static function ($rows) use ($tracker) {
-                $keys = [];
-                foreach ($rows as $row) {
-                    $key = strtoupper(trim((string) $row->no_polisi));
-                    if ($key !== '') {
-                        $keys[] = $key;
-                    }
-                }
-                $tracker->markDbKeys($keys);
-            });
+            ->limit($limit)
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return ['done' => true, 'after_id' => $afterId, 'seeded' => 0];
+        }
+
+        $keys = [];
+        $lastId = $afterId;
+
+        foreach ($rows as $row) {
+            $lastId = (int) $row->id;
+            $key = strtoupper(trim((string) $row->no_polisi));
+            if ($key !== '') {
+                $keys[] = $key;
+            }
+        }
+
+        $tracker->markDbKeys($keys);
+
+        return [
+            'done' => $rows->count() < $limit,
+            'after_id' => $lastId,
+            'seeded' => count($keys),
+        ];
     }
 
     public function buildSummaryMessage(array $stats): string

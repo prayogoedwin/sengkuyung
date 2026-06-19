@@ -119,7 +119,7 @@ class VerifikasiController extends Controller
             
             if (!empty($userLokasiSamsat)) {
                 PendataanWilayahFilter::applyLokasiSamsatFilter($verifikasis, (string) $userLokasiSamsat);
-            } elseif ($request->lokasi_samsat && ! $request->filled('kecamatan_samsat')) {
+            } elseif ($request->lokasi_samsat) {
                 PendataanWilayahFilter::applyLokasiSamsatFilter($verifikasis, (string) $request->lokasi_samsat);
             }
 
@@ -235,7 +235,7 @@ class VerifikasiController extends Controller
         $user = Auth::user();
         $isUppd = $user && $user->hasRole('uppd');
         $isKabkotaRole = $user && $user->hasRole('kabkota');
-        $userLokasiSamsat = SengSaamsat::resolveStoredLokasiId($user->lokasi_samsat ?? null) ?? '';
+        $userLokasiSamsat = SengSaamsat::resolveDropdownLokasiId($user->lokasi_samsat ?? null) ?? '';
         $lockLokasiSamsat = $userLokasiSamsat !== ''
             && ! $user->hasAnyRole(['super-admin', 'superadmin', 'admin', 'adminprov', 'uppd', 'uptd']);
         $resolvedKabkotaId = $this->resolveKabkotaIdFromLokasiSamsat($user->lokasi_samsat ?? null);

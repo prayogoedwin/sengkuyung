@@ -74,25 +74,60 @@ class PendataanWilayahFilter
     }
 
     /**
-     * Lokasi samsat form tidak mempersempit query jika kecamatan dipilih (daftar kecamatan kabkota-wide).
+     * Terapkan filter lokasi dan/atau kecamatan bila diisi (keduanya bisa aktif bersamaan).
      *
      * @param \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder $query
      */
     public static function applyOptionalLokasiAndKecamatanFilters(
         $query,
         ?string $lokasiSamsatId,
-        ?string $kecamatanSamsatId,
-        bool $forceLokasi = false
+        ?string $kecamatanSamsatId
     ): void {
         $lokasiSamsatId = trim((string) $lokasiSamsatId);
         $kecamatanSamsatId = trim((string) $kecamatanSamsatId);
 
-        if ($lokasiSamsatId !== '' && ($forceLokasi || $kecamatanSamsatId === '')) {
+        if ($lokasiSamsatId !== '') {
             self::applyLokasiSamsatFilter($query, $lokasiSamsatId);
         }
 
         if ($kecamatanSamsatId !== '') {
             self::applyKecamatanFilter($query, $kecamatanSamsatId);
+        }
+    }
+
+    /**
+     * @param \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder $query
+     */
+    public static function applyDataTertagihLokasiFilter($query, string $lokasiSamsatId): void
+    {
+        $query->whereIn('id_lokasi_samsat', SengSaamsat::lokasiFilterVariants($lokasiSamsatId));
+    }
+
+    /**
+     * @param \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder $query
+     */
+    public static function applyDataTertagihKecamatanFilter($query, string $kecamatanSamsatId): void
+    {
+        $query->whereIn('id_kecamatan', self::samsatCodeVariants($kecamatanSamsatId));
+    }
+
+    /**
+     * @param \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder $query
+     */
+    public static function applyOptionalDataTertagihLokasiAndKecamatanFilters(
+        $query,
+        ?string $lokasiSamsatId,
+        ?string $kecamatanSamsatId
+    ): void {
+        $lokasiSamsatId = trim((string) $lokasiSamsatId);
+        $kecamatanSamsatId = trim((string) $kecamatanSamsatId);
+
+        if ($lokasiSamsatId !== '') {
+            self::applyDataTertagihLokasiFilter($query, $lokasiSamsatId);
+        }
+
+        if ($kecamatanSamsatId !== '') {
+            self::applyDataTertagihKecamatanFilter($query, $kecamatanSamsatId);
         }
     }
 }

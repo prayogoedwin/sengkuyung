@@ -270,7 +270,7 @@
                             var samsats = response.samsats;
                             var options = '<option value="">Pilih Lokasi Samsat</option>';
                             $.each(samsats, function(index, samsat) {
-                                var value = String(samsat.id_wilayah_samsat || samsat.id || '');
+                                var value = String(samsat.id || samsat.id_wilayah_samsat || '');
                                 var label = (samsat.lokasi ?? '-') + ' [' + value + ']';
                                 var wilayahId = String(samsat.id_wilayah_samsat || '');
                                 var forced = String(forcedLokasiSamsat || '');

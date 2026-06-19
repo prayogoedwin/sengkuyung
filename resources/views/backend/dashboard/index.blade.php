@@ -248,21 +248,25 @@
                 || (profile.replace(/^0+/, '') !== '' && profile.replace(/^0+/, '') === wilayahId.replace(/^0+/, ''));
         }
 
-        function samsatWilayahValue(samsat) {
-            return String(samsat.id_wilayah_samsat || samsat.id || '');
+        function samsatDropdownValue(samsat) {
+            return String(samsat.id || samsat.id_wilayah_samsat || '');
         }
 
         function isSamsatSelected(samsat, selectedSamsat) {
-            var value = samsatWilayahValue(samsat);
-            if (selectedSamsat && String(selectedSamsat) === value) {
-                return true;
+            var pk = String(samsat.id || '');
+            var wilayah = String(samsat.id_wilayah_samsat || '');
+            if (selectedSamsat) {
+                var sel = String(selectedSamsat);
+                if (sel === pk || sel === wilayah) {
+                    return true;
+                }
             }
             return profileLokasiSamsat && samsatMatchesProfile(samsat);
         }
         var forcedKecamatanSamsat = '{{ $userKecamatanSamsat ?? '' }}';
         var forcedKelurahanSamsat = '{{ $userKelurahanSamsat ?? '' }}';
         var selectedKabkota = $('#userKabkota').val();
-        var selectedLokasiSamsat = '{{ request('lokasi_samsat') }}';
+        var selectedLokasiSamsat = '{{ $selectedLokasiSamsat ?? request('lokasi_samsat') }}';
         var selectedKecamatanSamsat = '{{ request('kecamatan_samsat') }}' || forcedKecamatanSamsat;
         var selectedKelurahanSamsat = '{{ request('kelurahan_samsat') }}' || forcedKelurahanSamsat;
 
@@ -304,7 +308,7 @@
                     var options = '<option value="">Pilih Lokasi Samsat</option>';
                     $.each(response.samsats, function(index, samsat) {
                         if (!lockLokasiSamsat || samsatMatchesProfile(samsat)) {
-                            var value = samsatWilayahValue(samsat);
+                            var value = samsatDropdownValue(samsat);
                             var isSelected = isSamsatSelected(samsat, selectedSamsat) ? 'selected' : '';
                             options += '<option value="' + value + '" ' + isSelected + '>' + samsat.lokasi + ' [' + value + ']</option>';
                         }

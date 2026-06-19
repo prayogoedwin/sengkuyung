@@ -159,12 +159,39 @@ class SengSaamsat extends Model
 
     public static function dropdownValue(object|array $samsat): string
     {
-        $wilayah = trim((string) (is_array($samsat) ? ($samsat['id_wilayah_samsat'] ?? '') : ($samsat->id_wilayah_samsat ?? '')));
-        if ($wilayah !== '') {
-            return $wilayah;
+        $id = trim((string) (is_array($samsat) ? ($samsat['id'] ?? '') : ($samsat->id ?? '')));
+        if ($id !== '') {
+            return $id;
         }
 
-        return (string) (is_array($samsat) ? ($samsat['id'] ?? '') : ($samsat->id ?? ''));
+        return trim((string) (is_array($samsat) ? ($samsat['id_wilayah_samsat'] ?? '') : ($samsat->id_wilayah_samsat ?? '')));
+    }
+
+    /**
+     * Resolve nilai tersimpan (PK atau legacy id_wilayah) ke PK seng_samsat untuk dropdown.
+     */
+    public static function resolveDropdownLokasiId(?string $stored): ?string
+    {
+        $stored = trim((string) $stored);
+        if ($stored === '') {
+            return null;
+        }
+
+        $byPk = self::query()->where('id', $stored)->value('id');
+        if ($byPk !== null && (string) $byPk !== '') {
+            return (string) $byPk;
+        }
+
+        $rows = self::query()
+            ->where('id_wilayah_samsat', $stored)
+            ->orderBy('lokasi')
+            ->pluck('id');
+
+        if ($rows->count() === 1) {
+            return (string) $rows->first();
+        }
+
+        return $stored;
     }
 
     public static function profileMatchesSamsat(?string $profileLokasi, object|array $samsat): bool

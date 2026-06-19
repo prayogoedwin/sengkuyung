@@ -284,7 +284,7 @@
                             var options = '<option value="">Pilih Lokasi Samsat</option>';
                             $.each(samsats, function(index, samsat) {
                                 if (!lockLokasiSamsat || samsatMatchesProfile(samsat)) {
-                                    var value = String(samsat.id_wilayah_samsat || samsat.id || '');
+                                    var value = String(samsat.id || samsat.id_wilayah_samsat || '');
                                     var label = (samsat.lokasi ?? '-') + ' [' + value + ']';
                                     var isSelected = profileLokasiSamsat && samsatMatchesProfile(samsat) ? 'selected' : '';
                                     options += '<option value="' + value + '" ' + isSelected + '>' + label + '</option>';

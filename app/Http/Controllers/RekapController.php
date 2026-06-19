@@ -146,7 +146,7 @@ class RekapController extends Controller
                 $pendataanQuery->where('kota_dagri', $kabkotaId);
             }
         }
-        if ($lokasiSamsatId && ! $kecamatanSamsatId) {
+        if ($lokasiSamsatId) {
             PendataanWilayahFilter::applyLokasiSamsatFilter($pendataanQuery, (string) $lokasiSamsatId);
         }
         if ($kecamatanSamsatId) {
@@ -187,7 +187,7 @@ class RekapController extends Controller
                 $dataTertagihQuery->whereRaw('1 = 0');
             }
         }
-        if ($lokasiSamsatId && ! $kecamatanSamsatId) {
+        if ($lokasiSamsatId) {
             $dataTertagihQuery->whereIn('id_lokasi_samsat', SengSaamsat::lokasiFilterVariants((string) $lokasiSamsatId));
         }
         if ($kecamatanSamsatId) {

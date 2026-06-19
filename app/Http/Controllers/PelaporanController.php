@@ -126,7 +126,7 @@ class PelaporanController extends Controller
     {
         $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;
 
-        if ($request->lokasi_samsat && ! $kecamatanFilter) {
+        if ($request->lokasi_samsat) {
             PendataanWilayahFilter::applyLokasiSamsatFilter($query, (string) $request->lokasi_samsat);
         }
 
@@ -341,7 +341,7 @@ class PelaporanController extends Controller
         $isKecamatan = $user->hasRole('kecamatan');
         $isKelurahan = $user->hasRole('kelurahan');
         $selectedKabkotaId = null;
-        $userLokasiSamsat = (string) ($user->lokasi_samsat ?? '');
+        $userLokasiSamsat = SengSaamsat::resolveDropdownLokasiId($user->lokasi_samsat ?? null) ?? '';
         $selectedKecamatanSamsatId = (string) ($user->kecamatan_samsat ?: $user->kecamatan ?: '');
         $selectedKelurahanSamsatId = (string) ($user->kelurahan_samsat ?: $user->kelurahan ?: '');
         $kabkotaBySamsat = $this->resolveKabkotaFromLokasiSamsat($userLokasiSamsat);

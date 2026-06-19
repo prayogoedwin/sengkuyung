@@ -273,7 +273,7 @@
         }
 
         var selectedKabkota = $('#userKabkota').val() || forcedKabkota;
-        var selectedLokasiSamsat = '{{ request('lokasi_samsat') }}' || forcedLokasiSamsat;
+        var selectedLokasiSamsat = '{{ \App\Models\SengSaamsat::resolveDropdownLokasiId(request('lokasi_samsat')) ?? request('lokasi_samsat') }}' || forcedLokasiSamsat;
         var selectedKecamatanSamsat = '{{ request('kecamatan_samsat') }}';
         var selectedKelurahanSamsat = '{{ request('kelurahan_samsat') }}';
 
@@ -326,8 +326,8 @@
                     var options = '<option value="">Semua Lokasi Samsat</option>';
                     if (response.success) {
                         $.each(response.samsats, function(index, samsat) {
-                            var value = String(samsat.id_wilayah_samsat || samsat.id || '');
-                            var isSelected = (selectedValue == value) ? 'selected' : '';
+                            var value = String(samsat.id || samsat.id_wilayah_samsat || '');
+                            var isSelected = (selectedValue == value || selectedValue == samsat.id_wilayah_samsat) ? 'selected' : '';
                             var label = (samsat.lokasi ?? '-') + ' [' + value + ']';
                             options += '<option value="' + value + '" ' + isSelected + '>' + label + '</option>';
                         });

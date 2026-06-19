@@ -786,7 +786,7 @@
                                     var samsats = response.samsats;
                                     var options = '<option value="">Pilih Lokasi Samsat</option>';
                                     $.each(samsats, function(index, samsat) {
-                                        var samsatVal = String(samsat.id_wilayah_samsat || samsat.id || '');
+                                        var samsatVal = String(samsat.id || samsat.id_wilayah_samsat || '');
                                         options += '<option value="' + samsatVal + '">' + samsat.lokasi + ' [' + samsatVal + ']</option>';
                                     });
                                     $('#userSamsat').html(options);

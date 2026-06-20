@@ -3,10 +3,73 @@
 namespace App\Support;
 
 use App\Models\SengSaamsat;
+use App\Models\SengWilayah;
+use App\Models\WilayahSamsat;
 use Illuminate\Support\Facades\DB;
 
 class PendataanWilayahFilter
 {
+    /**
+     * Role yang lokasi samsat profil terkunci ke filter (tidak bisa ganti di form).
+     */
+    public static function shouldForceProfileLokasiSamsat(?object $user): bool
+    {
+        if (!$user || trim((string) ($user->lokasi_samsat ?? '')) === '') {
+            return false;
+        }
+
+        return $user->hasAnyRole(['kabkota', 'kecamatan', 'kelurahan', 'petugas', 'petugas-d2d']);
+    }
+
+    /**
+     * UPPD/UPTD & admin boleh filter per samsat dari form; role terkunci pakai profil.
+     */
+    public static function resolveLokasiSamsatFilterValue(?object $user, ?string $requestLokasiSamsat): string
+    {
+        if (self::shouldForceProfileLokasiSamsat($user)) {
+            return trim((string) $user->lokasi_samsat);
+        }
+
+        return trim((string) $requestLokasiSamsat);
+    }
+
+    /**
+     * Normalisasi users.kota ke id kabkota dagri (3329), bukan id wilayah samsat (27).
+     */
+    public static function resolveScopedUserKabkotaId(?object $user): ?string
+    {
+        if (!$user) {
+            return null;
+        }
+
+        $kota = trim((string) ($user->kota ?? ''));
+        if ($kota === '') {
+            $kota = trim((string) ($user->lokasi_samsat ?? ''));
+        }
+        if ($kota === '') {
+            return null;
+        }
+
+        if (SengWilayah::query()->where('id', $kota)->where('id_up', 33)->exists()) {
+            return $kota;
+        }
+
+        $fromWilayahSamsat = WilayahSamsat::query()->where('id', $kota)->value('kabkota');
+        if ($fromWilayahSamsat !== null && (string) $fromWilayahSamsat !== '') {
+            return (string) $fromWilayahSamsat;
+        }
+
+        $fromSamsat = SengSaamsat::query()
+            ->where(function ($q) use ($kota) {
+                $q->where('id', $kota)->orWhere('id_wilayah_samsat', $kota);
+            })
+            ->value('kabkota');
+
+        return $fromSamsat !== null && (string) $fromSamsat !== ''
+            ? (string) $fromSamsat
+            : $kota;
+    }
+
     /**
      * @return list<string>
      */

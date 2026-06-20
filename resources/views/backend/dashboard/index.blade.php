@@ -61,7 +61,7 @@
 
                                         @php
                                         $userRoleId = Auth::user()->roles[0]->id ?? null;
-                                        $userKotaId = Auth::user()->kota ?? null;
+                                        $userKotaId = $scopedKabkotaId ?? (Auth::user()->kota ?? null);
                                         $userLokasiSamsat = $userLokasiSamsat ?? (Auth::user()->lokasi_samsat ?? null);
                                         $isScopedKabkota = $isScopedKabkota ?? false;
                                         $isKecamatanScope = $isKecamatanScope ?? false;
@@ -72,10 +72,13 @@
 
                                         <div class="col-md-2">
                                             <label for="userKabkota">Kabupaten/Kota</label>
-                                            <select class="form-control" id="userKabkota" name="kabkota_id" {{ $isScopedKabkota ? 'disabled' : '' }}>
+                                            @if ($isScopedKabkota && ($userKotaId ?? null))
+                                                <input type="hidden" name="kabkota_id" value="{{ $userKotaId }}">
+                                            @endif
+                                            <select class="form-control" id="userKabkota" name="{{ $isScopedKabkota ? '' : 'kabkota_id' }}" {{ $isScopedKabkota ? 'disabled' : '' }}>
                                                 <option value="">Pilih Kabkota</option>
                                                 @foreach ($kabkotas as $kbkt)
-                                                    @if ($userLokasiSamsat || $userRoleId == 3 || $userRoleId == 4)
+                                                    @if ($isScopedKabkota)
                                                         @if ($kbkt->id == $userKotaId)
                                                             <option value="{{ $kbkt->id }}" selected>{{ $kbkt->nama }}</option>
                                                         @endif

@@ -76,7 +76,7 @@ class VerifikasiController extends Controller
 
             $user = Auth::user();
             $userId = $user->id ?? null;
-            $userKotaId = $user->kota ?? null;
+            $userKotaId = PendataanWilayahFilter::resolveScopedUserKabkotaId($user);
             $userLokasiSamsat = $user->lokasi_samsat ?? null;
             $userKecamatanSamsat = $user->kecamatan_samsat ?? null;
             $userKelurahanSamsat = $user->kelurahan_samsat ?? null;
@@ -117,10 +117,9 @@ class VerifikasiController extends Controller
                 $verifikasis->whereIn('status_verifikasi', VerifikasiStatusGroups::menungguIds());
             }
             
-            if (!empty($userLokasiSamsat)) {
-                PendataanWilayahFilter::applyLokasiSamsatFilter($verifikasis, (string) $userLokasiSamsat);
-            } elseif ($request->lokasi_samsat) {
-                PendataanWilayahFilter::applyLokasiSamsatFilter($verifikasis, (string) $request->lokasi_samsat);
+            $resolvedLokasi = PendataanWilayahFilter::resolveLokasiSamsatFilterValue($user, $request->lokasi_samsat);
+            if ($resolvedLokasi !== '') {
+                PendataanWilayahFilter::applyLokasiSamsatFilter($verifikasis, $resolvedLokasi);
             }
 
             if (!empty($userKecamatanSamsat)) {

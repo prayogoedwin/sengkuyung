@@ -104,6 +104,7 @@ class BackController extends Controller
         });
 
         $selectedLokasiSamsat = SengSaamsat::resolveDropdownLokasiId($request->lokasi_samsat ?? null) ?? '';
+        $scopedKabkotaId = PendataanWilayahFilter::resolveScopedUserKabkotaId($user) ?? '';
     
         return view('backend.dashboard.index', compact(
             'kabkotas',
@@ -118,7 +119,8 @@ class BackController extends Controller
             'userKecamatanSamsat',
             'userKelurahanSamsat',
             'lockLokasiSamsat',
-            'selectedLokasiSamsat'
+            'selectedLokasiSamsat',
+            'scopedKabkotaId'
         ));
     }
 
@@ -149,15 +151,15 @@ class BackController extends Controller
     private function canonicalDashboardStatsScope(Request $request): array
     {
         $user = Auth::user();
-        $userKotaId = $user->kota ?? null;
+        $userKotaId = PendataanWilayahFilter::resolveScopedUserKabkotaId($user);
         $userLokasiSamsat = $user->lokasi_samsat ?? null;
         $userKecamatanSamsat = $user->kecamatan_samsat ?: $user->kecamatan ?: null;
         $userKelurahanSamsat = $user->kelurahan_samsat ?: $user->kelurahan ?: null;
-        $isKecamatanScope = $user && $user->hasRole('kecamatan');
-        $isKelurahanScope = $user && $user->hasRole('kelurahan');
-        $isKabkotaScope = $user && $user->hasRole('kabkota');
-        $isUppdScope = $user && ($user->hasRole('uppd') || $user->hasRole('uptd'));
-        $isAdminScope = $user && ($user->hasRole('super-admin') || $user->hasRole('superadmin') || $user->hasRole('admin') || $user->hasRole('adminprov'));
+        $isKecamatanScope = $user->hasRole('kecamatan');
+        $isKelurahanScope = $user->hasRole('kelurahan');
+        $isKabkotaScope = $user->hasRole('kabkota');
+        $isUppdScope = $user->hasRole('uppd') || $user->hasRole('uptd');
+        $isAdminScope = $user->hasRole('super-admin') || $user->hasRole('superadmin') || $user->hasRole('admin') || $user->hasRole('adminprov');
 
         $scope = [
             'kota_dagri' => null,
@@ -169,7 +171,7 @@ class BackController extends Controller
         ];
 
         if ($isAdminScope) {
-            if ($request->filled('kabkota_id')) {
+            if ($request->kabkota_id) {
                 $scope['kota_dagri'] = (string) $request->kabkota_id;
             }
         } elseif ($isKabkotaScope || $isUppdScope || $isKecamatanScope || $isKelurahanScope) {
@@ -178,10 +180,9 @@ class BackController extends Controller
             }
         }
 
-        if (!empty($userLokasiSamsat)) {
-            $scope['kota_layanan'] = (string) $userLokasiSamsat;
-        } elseif ($request->filled('lokasi_samsat')) {
-            $scope['kota_layanan'] = (string) $request->lokasi_samsat;
+        $resolvedLokasi = PendataanWilayahFilter::resolveLokasiSamsatFilterValue($user, $request->lokasi_samsat);
+        if ($resolvedLokasi !== '') {
+            $scope['kota_layanan'] = $resolvedLokasi;
         }
 
         if ($isKecamatanScope && !empty($userKecamatanSamsat)) {
@@ -265,28 +266,29 @@ class BackController extends Controller
 
     private function applyDashboardFiltersToQuery($verifikasis, Request $request): void
     {
-        $userKotaId = Auth::user()->kota ?? null;
-        $userLokasiSamsat = Auth::user()->lokasi_samsat ?? null;
-        $userKecamatanSamsat = Auth::user()->kecamatan_samsat ?: Auth::user()->kecamatan ?: null;
-        $userKelurahanSamsat = Auth::user()->kelurahan_samsat ?: Auth::user()->kelurahan ?: null;
-        $isKecamatanScope = Auth::user()->hasRole('kecamatan');
-        $isKelurahanScope = Auth::user()->hasRole('kelurahan');
-        $isKabkotaScope = Auth::user()->hasRole('kabkota');
-        $isUppdScope = Auth::user()->hasRole('uppd') || Auth::user()->hasRole('uptd');
-        $isAdminScope = Auth::user()->hasRole('super-admin') || Auth::user()->hasRole('superadmin') || Auth::user()->hasRole('admin') || Auth::user()->hasRole('adminprov');
+        $user = Auth::user();
+        $userKotaId = PendataanWilayahFilter::resolveScopedUserKabkotaId($user);
+        $userKecamatanSamsat = $user->kecamatan_samsat ?: $user->kecamatan ?: null;
+        $userKelurahanSamsat = $user->kelurahan_samsat ?: $user->kelurahan ?: null;
+        $isKecamatanScope = $user->hasRole('kecamatan');
+        $isKelurahanScope = $user->hasRole('kelurahan');
+        $isKabkotaScope = $user->hasRole('kabkota');
+        $isUppdScope = $user->hasRole('uppd') || $user->hasRole('uptd');
+        $isAdminScope = $user->hasRole('super-admin') || $user->hasRole('superadmin') || $user->hasRole('admin') || $user->hasRole('adminprov');
 
         if ($isAdminScope) {
             if ($request->kabkota_id) {
                 $verifikasis->where('kota_dagri', $request->kabkota_id);
             }
         } elseif ($isKabkotaScope || $isUppdScope || $isKecamatanScope || $isKelurahanScope) {
-            $verifikasis->where('kota_dagri', $userKotaId);
+            if ($userKotaId !== null && $userKotaId !== '') {
+                $verifikasis->where('kota_dagri', $userKotaId);
+            }
         }
 
-        if (!empty($userLokasiSamsat)) {
-            PendataanWilayahFilter::applyLokasiSamsatFilter($verifikasis, (string) $userLokasiSamsat);
-        } elseif ($request->lokasi_samsat) {
-            PendataanWilayahFilter::applyLokasiSamsatFilter($verifikasis, (string) $request->lokasi_samsat);
+        $lokasiFilter = PendataanWilayahFilter::resolveLokasiSamsatFilterValue($user, $request->lokasi_samsat);
+        if ($lokasiFilter !== '') {
+            PendataanWilayahFilter::applyLokasiSamsatFilter($verifikasis, $lokasiFilter);
         }
 
         if ($isKecamatanScope && !empty($userKecamatanSamsat)) {
@@ -310,8 +312,7 @@ class BackController extends Controller
     private function applyDashboardFiltersToDataTertagihQuery($query, Request $request): void
     {
         $user = Auth::user();
-        $userKotaId = $user->kota ?? null;
-        $userLokasiSamsat = $user->lokasi_samsat ?? null;
+        $userKotaId = PendataanWilayahFilter::resolveScopedUserKabkotaId($user);
         $userKecamatanSamsat = $user->kecamatan_samsat ?: $user->kecamatan ?: null;
         $userKelurahanSamsat = $user->kelurahan_samsat ?: $user->kelurahan ?: null;
         $isKecamatanScope = $user->hasRole('kecamatan');
@@ -357,9 +358,7 @@ class BackController extends Controller
             ? (string) $userKecamatanSamsat
             : (string) ($request->kecamatan_samsat ?? '');
 
-        $lokasiFilter = !empty($userLokasiSamsat)
-            ? (string) $userLokasiSamsat
-            : (string) ($request->lokasi_samsat ?? '');
+        $lokasiFilter = PendataanWilayahFilter::resolveLokasiSamsatFilterValue($user, $request->lokasi_samsat);
 
         PendataanWilayahFilter::applyOptionalDataTertagihLokasiAndKecamatanFilters(
             $query,

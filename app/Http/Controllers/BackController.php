@@ -103,8 +103,16 @@ class BackController extends Controller
             return WilayahSamsat::select('id', 'nama', 'kabkota')->orderBy('nama')->get();
         });
 
-        $selectedLokasiSamsat = SengSaamsat::resolveDropdownLokasiId($request->lokasi_samsat ?? null) ?? '';
+        $selectedLokasiSamsat = '';
+        if ($request->filled('lokasi_samsat')) {
+            $requested = trim((string) $request->lokasi_samsat);
+            $selectedLokasiSamsat = SengSaamsat::query()->where('id', $requested)->exists()
+                ? $requested
+                : (SengSaamsat::resolveDropdownLokasiId($requested) ?? $requested);
+        }
         $scopedKabkotaId = PendataanWilayahFilter::resolveScopedUserKabkotaId($user) ?? '';
+        // Profil lokasi hanya dipakai di UI bila role terkunci; UPPD pakai pilihan form/URL.
+        $profileLokasiSamsat = $lockLokasiSamsat ? $userLokasiSamsat : '';
     
         return view('backend.dashboard.index', compact(
             'kabkotas',
@@ -120,7 +128,8 @@ class BackController extends Controller
             'userKelurahanSamsat',
             'lockLokasiSamsat',
             'selectedLokasiSamsat',
-            'scopedKabkotaId'
+            'scopedKabkotaId',
+            'profileLokasiSamsat'
         ));
     }
 

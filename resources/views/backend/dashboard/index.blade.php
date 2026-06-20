@@ -236,7 +236,7 @@
 
 <script>
     $(document).ready(function() {
-        var profileLokasiSamsat = '{{ $userLokasiSamsat ?? '' }}';
+        var profileLokasiSamsat = '{{ $profileLokasiSamsat ?? '' }}';
         var lockLokasiSamsat = @json($lockLokasiSamsat ?? false);
 
         function samsatMatchesProfile(samsat) {
@@ -256,20 +256,36 @@
         }
 
         function isSamsatSelected(samsat, selectedSamsat) {
-            var pk = String(samsat.id || '');
-            var wilayah = String(samsat.id_wilayah_samsat || '');
+            if (!selectedSamsat) {
+                return lockLokasiSamsat && profileLokasiSamsat && samsatMatchesProfile(samsat);
+            }
+            return String(selectedSamsat) === String(samsat.id || '');
+        }
+
+        function applyLokasiSamsatDropdownState(selectedSamsat) {
+            if (lockLokasiSamsat && profileLokasiSamsat) {
+                $('#lokasiSamsat').val(String(profileLokasiSamsat)).prop('disabled', true);
+                return;
+            }
             if (selectedSamsat) {
-                var sel = String(selectedSamsat);
-                if (sel === pk || sel === wilayah) {
-                    return true;
+                var hasOption = $('#lokasiSamsat option').filter(function () {
+                    return String($(this).val()) === String(selectedSamsat);
+                }).length > 0;
+                if (hasOption) {
+                    $('#lokasiSamsat').val(String(selectedSamsat)).prop('disabled', false);
+                    return;
                 }
             }
-            return profileLokasiSamsat && samsatMatchesProfile(samsat);
+            if (profileLokasiSamsat && !selectedSamsat) {
+                $('#lokasiSamsat').val(String(profileLokasiSamsat)).prop('disabled', false);
+                return;
+            }
+            $('#lokasiSamsat').prop('disabled', false);
         }
         var forcedKecamatanSamsat = '{{ $userKecamatanSamsat ?? '' }}';
         var forcedKelurahanSamsat = '{{ $userKelurahanSamsat ?? '' }}';
         var selectedKabkota = $('#userKabkota').val();
-        var selectedLokasiSamsat = '{{ $selectedLokasiSamsat ?? request('lokasi_samsat') }}';
+        var selectedLokasiSamsat = '{{ $selectedLokasiSamsat ?: request('lokasi_samsat') }}';
         var selectedKecamatanSamsat = '{{ request('kecamatan_samsat') }}' || forcedKecamatanSamsat;
         var selectedKelurahanSamsat = '{{ request('kelurahan_samsat') }}' || forcedKelurahanSamsat;
 
@@ -319,13 +335,7 @@
 
                     $('#lokasiSamsat').html(options);
 
-                    if (lockLokasiSamsat && profileLokasiSamsat) {
-                        $('#lokasiSamsat').val(String(profileLokasiSamsat)).prop('disabled', true);
-                    } else if (profileLokasiSamsat) {
-                        $('#lokasiSamsat').val(String(profileLokasiSamsat)).prop('disabled', false);
-                    } else {
-                        $('#lokasiSamsat').prop('disabled', false);
-                    }
+                    applyLokasiSamsatDropdownState(selectedSamsat);
 
                     loadKecamatanSamsat(kabkotaId, selectedKecamatanSamsat);
                 },

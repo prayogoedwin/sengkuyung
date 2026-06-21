@@ -20,6 +20,8 @@ use Dompdf\Dompdf;
 use Dompdf\Options;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx as XlsxWriter;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use App\Support\ApiCacheManager;
 use App\Support\PendataanWilayahFilter;
 
@@ -55,6 +57,101 @@ class PelaporanController extends Controller
     protected function exportFilenamePrefix(): string
     {
         return '';
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function jurnalColumnHeaders(): array
+    {
+        return [
+            'No.',
+            'No.POLISI',
+            'NAMA',
+            'ALAMAT',
+            'KELURAHAN',
+            'KECAMATAN',
+            'STATUS PENDATAAN',
+            'NOMOR HANDPHONE',
+            'STATUS VERIFIKASI',
+            'NAMA PETUGAS',
+        ];
+    }
+
+    private function jurnalReportTitle(Request $request): string
+    {
+        $title = 'DOWNLOAD JURNAL UPPD, KABKOTA, KECAMATAN';
+
+        if ($request->tanggal_start && $request->tanggal_end) {
+            $tanggalStart = Carbon::parse($request->tanggal_start)->translatedFormat('d F Y');
+            $tanggalEnd = Carbon::parse($request->tanggal_end)->translatedFormat('d F Y');
+            $title .= " — Periode: {$tanggalStart} s.d. {$tanggalEnd}";
+        }
+
+        return mb_strtoupper($title, 'UTF-8');
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    private function buildJurnalQuery(Request $request)
+    {
+        $user = auth()->user();
+        $userRole = $user->role ?? null;
+        $verifikasis = $this->pendataanModelClass()::query()->with('createdByUser');
+
+        if ($userRole == 4) {
+            $scopedKabkota = PendataanWilayahFilter::resolveScopedUserKabkotaId($user) ?? $user->kota;
+            $verifikasis->where(function ($query) use ($scopedKabkota) {
+                $query->where('kota', $scopedKabkota)
+                    ->orWhere('kota_dagri', $scopedKabkota);
+            });
+        } elseif ($userRole == 7) {
+            $verifikasis->where('created_by', $user->id);
+        }
+
+        if ($request->status_verifikasi_id) {
+            $verifikasis->where('status_verifikasi', $request->status_verifikasi_id);
+        }
+
+        if ($request->kabkota_id) {
+            $kabkotaId = (string) $request->kabkota_id;
+            $verifikasis->where(function ($query) use ($kabkotaId) {
+                $query->where('kota', $kabkotaId)
+                    ->orWhere('kota_dagri', $kabkotaId);
+            });
+        }
+
+        $this->applyPelaporanWilayahFilters($verifikasis, $request);
+
+        if ($request->kelurahan_samsat) {
+            $verifikasis->where('desa', $request->kelurahan_samsat);
+        }
+
+        if ($request->tanggal_start && $request->tanggal_end) {
+            $verifikasis->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
+        }
+
+        return $verifikasis->orderBy('id');
+    }
+
+    /**
+     * @return list<string|int>
+     */
+    private function mapJurnalRow(object $row, int $no): array
+    {
+        return [
+            $no,
+            (string) ($row->nopol ?? '-'),
+            (string) ($row->nama ?? '-'),
+            (string) ($row->alamat ?? '-'),
+            (string) ($row->desa_name ?? '-'),
+            (string) ($row->kec_name ?? '-'),
+            (string) ($row->status_name ?? '-'),
+            (string) ($row->nohp ?? '-'),
+            (string) ($row->status_verifikasi_name ?? '-'),
+            (string) ($row->createdByUser?->name ?? '-'),
+        ];
     }
 
     private function codeVariants($value): array
@@ -125,9 +222,10 @@ class PelaporanController extends Controller
     private function applyPelaporanWilayahFilters($query, Request $request): void
     {
         $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;
+        $lokasiFilter = PendataanWilayahFilter::resolveLokasiSamsatFilterValue(auth()->user(), $request->lokasi_samsat);
 
-        if ($request->lokasi_samsat) {
-            PendataanWilayahFilter::applyLokasiSamsatFilter($query, (string) $request->lokasi_samsat);
+        if ($lokasiFilter !== '') {
+            PendataanWilayahFilter::applyLokasiSamsatFilter($query, $lokasiFilter);
         }
 
         if ($kecamatanFilter) {
@@ -271,10 +369,10 @@ class PelaporanController extends Controller
         $kabkotaBySamsat = $this->resolveKabkotaFromLokasiSamsat($lokasiSamsat);
         $kabkotaScoped = (string) ($user->kota ?: $kabkotaBySamsat ?: '');
 
-        if ($kabkotaScoped !== '') {
+        if ($kabkotaScoped !== '' && ! $request->filled('kabkota_id')) {
             $request->merge(['kabkota_id' => $kabkotaScoped]);
         }
-        if ($lokasiSamsat !== '') {
+        if ($lokasiSamsat !== '' && ! $request->filled('lokasi_samsat')) {
             $request->merge(['lokasi_samsat' => $lokasiSamsat]);
         }
     }
@@ -428,117 +526,37 @@ class PelaporanController extends Controller
 
     public function jurnalCsv(Request $request)
     {
-        $userRole = auth()->user()->role;
-        $user = User::findOrFail(auth()->id());
-        $verifikasis = $this->pendataanModelClass()::query();
+        $verifikasis = $this->buildJurnalQuery($request);
+        $judul = $this->jurnalReportTitle($request);
+        $headers = $this->jurnalColumnHeaders();
 
-        // Apply filters based on user role
-        if ($userRole == 1 || $userRole == 2) {
-            // No additional WHERE clause for roles 1 and 2
-        } elseif ($userRole == 4) {
-            $verifikasis->where(function ($query) use ($user) {
-                $query->where('kota', $user->kota)
-                    ->orWhere('kota_dagri', $user->kota);
-            });
-        } elseif ($userRole == 7) {
-            $verifikasis->where('created_by', auth()->id());
-        }
-
-        // Filter berdasarkan input dari form
-        if ($request->status_verifikasi_id) {
-            $verifikasis->where('status_verifikasi', $request->status_verifikasi_id);
-        }
-
-        // Jika ingin tambahkan nama kota di judul, bisa seperti ini:
-        $kotajudul = '';
-        $kotajudul_id = '';
-        if ($request->kabkota_id) {
-            $verifikasis->where(function ($query) use ($request) {
-                $query->where('kota', $request->kabkota_id)
-                    ->orWhere('kota_dagri', $request->kabkota_id);
-            });
-            // $wilayah = SengWilayah::find($request->kabkota_id);
-            $wilayah = SengWilayah::where('id', $request->kabkota_id)->first();
-            $kotajudul = $wilayah ? $wilayah->nama : '';
-            $kotajudul = ' '.$kotajudul;
-            $kotajudul_id = '_'.$request->kabkota_id;
-        }
-
-        if ($request->lokasi_samsat || ($request->kecamatan_samsat ?: $request->district_id)) {
-            $this->applyPelaporanWilayahFilters($verifikasis, $request);
-        }
-
-        $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;
-        $kecjudul = '';
-        $kecjudul_id = '';
-        if ($kecamatanFilter) {
-            $wilayah = SengWilayah::where('id', $kecamatanFilter)->first();
-            $kecjudul = $wilayah ? $wilayah->nama : '';
-            $kecjudul = ' Kec. '.$kecjudul;
-            $kecjudul_id = '_'.$kecamatanFilter;
-        }
-
-        if ($request->kelurahan_samsat) {
-            $verifikasis->where('desa', $request->kelurahan_samsat);
-        }
-
-        $periode = '';
-        if ($request->tanggal_start && $request->tanggal_end) {
-            $verifikasis->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
-
-            $tanggalStart = Carbon::parse($request->tanggal_start)->translatedFormat('d F Y');
-            $tanggalEnd = Carbon::parse($request->tanggal_end)->translatedFormat('d F Y');
-
-            $periode = " Periode: $tanggalStart s.d. $tanggalEnd";
-        }
-
-        $filename = $this->exportFilenamePrefix() . "jurnal_pelaporan_" . date('YmdHis') . ".csv";
-        $headers = [
-            "Content-Type" => "text/csv",
+        $filename = $this->exportFilenamePrefix() . 'jurnal_pelaporan_' . date('YmdHis') . '.csv';
+        $responseHeaders = [
+            'Content-Type' => 'text/csv',
             "Content-Disposition" => "attachment; filename=$filename",
-            "Pragma" => "no-cache",
-            "Expires" => "0",
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
         ];
 
-        $judul = mb_strtoupper('JURNAL PELAPORAN ' . $kotajudul . ' ' . $kecjudul . ' ' . $periode, 'UTF-8');
-
-        $callback = function () use ($verifikasis, $judul) {
+        $callback = function () use ($verifikasis, $judul, $headers) {
             ob_clean();
             flush();
 
             $file = fopen('php://output', 'w');
-
-            fputcsv($file, ['']); // baris kosong
-            fputcsv($file, [$judul]); // header utama
-            fputcsv($file, ['']); // baris kosong lagi
-
-
-            // Header CSV
-            fputcsv($file, ['No', 'Tanggal Pendataan', 'Nopol', 'Nama', 'Kota', 'Kecamatan', 'Kelurahan', 'Alamat', 'Nama Petugas']);
+            fputcsv($file, ['']);
+            fputcsv($file, [$judul]);
+            fputcsv($file, ['']);
+            fputcsv($file, $headers);
 
             $no = 1;
-            foreach ($verifikasis->get() as $verifikasi) {
-                fputcsv($file, [
-                    $no++,
-                    $verifikasi->created_at ? Carbon::parse($verifikasi->created_at)->format('Y-m-d') : 'N/A',
-                    $verifikasi->nopol ?? 'N/A',
-                    $verifikasi->nama ?? 'N/A',
-                    $verifikasi->kota_name ?? 'N/A',
-                    $verifikasi->kec_name ?? 'N/A',
-                    $verifikasi->desa_name ?? 'N/A',
-                    $verifikasi->alamat ?? 'N/A',
-                    $verifikasi->createdByUser ? $verifikasi->createdByUser->name : 'N/A', // Nama User dari created_by
-
-                   
-                ]);
+            foreach ($verifikasis->cursor() as $verifikasi) {
+                fputcsv($file, $this->mapJurnalRow($verifikasi, $no++));
             }
 
             fclose($file);
         };
 
-     
-
-        return response()->stream($callback, 200, $headers);
+        return response()->stream($callback, 200, $responseHeaders);
     }
 
     public function rekapCsv(Request $request)
@@ -618,72 +636,38 @@ class PelaporanController extends Controller
 
     public function jurnalExcel(Request $request)
     {
-        $userRole = auth()->user()->role;
-        $user = User::findOrFail(auth()->id());
-        $verifikasis = $this->pendataanModelClass()::query();
-
-        if ($userRole == 4) {
-            $verifikasis->where(function ($query) use ($user) {
-                $query->where('kota', $user->kota)
-                    ->orWhere('kota_dagri', $user->kota);
-            });
-        } elseif ($userRole == 7) {
-            $verifikasis->where('created_by', auth()->id());
-        }
-
-        if ($request->status_verifikasi_id) {
-            $verifikasis->where('status_verifikasi', $request->status_verifikasi_id);
-        }
-
-        if ($request->kabkota_id) {
-            $verifikasis->where(function ($query) use ($request) {
-                $query->where('kota', $request->kabkota_id)
-                    ->orWhere('kota_dagri', $request->kabkota_id);
-            });
-        }
-
-        $this->applyPelaporanWilayahFilters($verifikasis, $request);
-
-        if ($request->kelurahan_samsat) {
-            $verifikasis->where('desa', $request->kelurahan_samsat);
-        }
-
-        if ($request->tanggal_start && $request->tanggal_end) {
-            $verifikasis->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
-        }
+        $verifikasis = $this->buildJurnalQuery($request);
+        $judul = $this->jurnalReportTitle($request);
+        $columnHeaders = $this->jurnalColumnHeaders();
+        $lastCol = 'J';
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->fromArray([
-            'No',
-            'Tanggal Pendataan',
-            'Nopol',
-            'Nama',
-            'Kota',
-            'Kecamatan',
-            'Kelurahan',
-            'Alamat',
-            'Nama Petugas',
-        ], null, 'A1');
 
-        $rowNumber = 2;
+        $sheet->setCellValue('A2', $judul);
+        $sheet->mergeCells("A2:{$lastCol}2");
+        $sheet->getStyle('A2')->getFont()->setBold(true);
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        $sheet->fromArray($columnHeaders, null, 'A4');
+        $sheet->getStyle("A4:{$lastCol}4")->getFont()->setBold(true);
+        $sheet->getStyle("A4:{$lastCol}4")->getFill()
+            ->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('D9D9D9');
+
+        $rowNumber = 5;
         $no = 1;
-        foreach ($verifikasis->get() as $verifikasi) {
-            $sheet->fromArray([[
-                $no++,
-                $verifikasi->created_at ? Carbon::parse($verifikasi->created_at)->format('Y-m-d') : 'N/A',
-                $verifikasi->nopol ?? 'N/A',
-                $verifikasi->nama ?? 'N/A',
-                $verifikasi->kota_name ?? 'N/A',
-                $verifikasi->kec_name ?? 'N/A',
-                $verifikasi->desa_name ?? 'N/A',
-                $verifikasi->alamat ?? 'N/A',
-                $verifikasi->createdByUser ? $verifikasi->createdByUser->name : 'N/A',
-            ]], null, 'A' . $rowNumber);
+        foreach ($verifikasis->cursor() as $verifikasi) {
+            $sheet->fromArray([$this->mapJurnalRow($verifikasi, $no++)], null, 'A' . $rowNumber);
             $rowNumber++;
         }
 
-        $filename = $this->exportFilenamePrefix() . "jurnal_pelaporan_" . date('YmdHis') . ".xlsx";
+        foreach (range('A', $lastCol) as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = $this->exportFilenamePrefix() . 'jurnal_pelaporan_' . date('YmdHis') . '.xlsx';
+
         return response()->streamDownload(function () use ($spreadsheet) {
             $writer = new XlsxWriter($spreadsheet);
             $writer->save('php://output');
@@ -762,119 +746,56 @@ class PelaporanController extends Controller
 
     public function jurnalPdf(Request $request)
     {
-        $userRole = auth()->user()->role;
-        $user = User::findOrFail(auth()->id());
-        $verifikasis = $this->pendataanModelClass()::query();
+        $verifikasis = $this->buildJurnalQuery($request);
+        $judul = htmlspecialchars($this->jurnalReportTitle($request), ENT_QUOTES, 'UTF-8');
+        $columnHeaders = $this->jurnalColumnHeaders();
 
-        if ($userRole == 1 || $userRole == 2) {
-            // admin pusat / admin prov
-        } elseif ($userRole == 4) {
-            $verifikasis->where(function ($query) use ($user) {
-                $query->where('kota', $user->kota)
-                    ->orWhere('kota_dagri', $user->kota);
-            });
-        } elseif ($userRole == 7) {
-            $verifikasis->where('created_by', auth()->id());
+        $headerCells = '';
+        foreach ($columnHeaders as $header) {
+            $headerCells .= '<th>' . htmlspecialchars($header, ENT_QUOTES, 'UTF-8') . '</th>';
         }
 
-        if ($request->status_verifikasi_id) {
-            $verifikasis->where('status_verifikasi', $request->status_verifikasi_id);
+        $bodyRows = '';
+        $no = 1;
+        foreach ($verifikasis->cursor() as $verifikasi) {
+            $cells = '';
+            foreach ($this->mapJurnalRow($verifikasi, $no++) as $cell) {
+                $cells .= '<td>' . htmlspecialchars((string) $cell, ENT_QUOTES, 'UTF-8') . '</td>';
+            }
+            $bodyRows .= '<tr>' . $cells . '</tr>';
         }
-
-        $kotajudul = '';
-        if ($request->kabkota_id) {
-            $verifikasis->where(function ($query) use ($request) {
-                $query->where('kota', $request->kabkota_id)
-                    ->orWhere('kota_dagri', $request->kabkota_id);
-            });
-            $wilayah = SengWilayah::where('id', $request->kabkota_id)->first();
-            $kotajudul = $wilayah ? ' ' . $wilayah->nama : '';
-        }
-
-        $this->applyPelaporanWilayahFilters($verifikasis, $request);
-
-        $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;
-        $kecjudul = '';
-        if ($kecamatanFilter) {
-            $wilayah = SengWilayah::where('id', $kecamatanFilter)->first();
-            $kecjudul = $wilayah ? ' Kec. ' . $wilayah->nama : '';
-        }
-
-        if ($request->kelurahan_samsat) {
-            $verifikasis->where('desa', $request->kelurahan_samsat);
-        }
-
-        $periode = '';
-        if ($request->tanggal_start && $request->tanggal_end) {
-            $verifikasis->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
-            $tanggalStart = Carbon::parse($request->tanggal_start)->translatedFormat('d F Y');
-            $tanggalEnd = Carbon::parse($request->tanggal_end)->translatedFormat('d F Y');
-            $periode = " Periode: $tanggalStart s.d. $tanggalEnd";
-        }
-
-        $judul = mb_strtoupper('JURNAL PELAPORAN' . $kotajudul . $kecjudul . $periode, 'UTF-8');
-
-        $data = $verifikasis->get();
-
-        // DOMPDF
-        $dompdf = new \Dompdf\Dompdf();
-        $options = new \Dompdf\Options();
-        $options->set('isHtml5ParserEnabled', true);
-        $dompdf->setOptions($options);
 
         $html = "<html>
         <head>
             <style>
-                body { font-family: Arial, sans-serif; font-size: 12px; }
-                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                th, td { border: 1px solid black; padding: 6px; text-align: left; }
-                th { background-color: #f2f2f2; }
+                body { font-family: Arial, sans-serif; font-size: 9px; }
+                h2 { font-size: 12px; text-align: center; margin-bottom: 16px; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { border: 1px solid #000; padding: 4px; text-align: left; vertical-align: top; }
+                th { background-color: #d9d9d9; font-weight: bold; }
             </style>
         </head>
         <body>
-            <h2 style='text-align:center;'>{$judul}</h2>
+            <h2>{$judul}</h2>
             <table>
-                <thead>
-                    <tr>
-                        <th>No</th>
-                        <th>Tanggal Pendataan</th>
-                        <th>Nopol</th>
-                        <th>Nama</th>
-                        <th>Kota</th>
-                        <th>Kecamatan</th>
-                        <th>Kelurahan</th>
-                        <th>Alamat</th>
-                        <th>Nama Petugas</th>
-                    </tr>
-                </thead>
-                <tbody>";
+                <thead><tr>{$headerCells}</tr></thead>
+                <tbody>{$bodyRows}</tbody>
+            </table>
+        </body>
+        </html>";
 
-        $no = 1;
-        foreach ($data as $verifikasi) {
-            $html .= "<tr>
-                <td>{$no}</td>
-                <td>" . ($verifikasi->created_at ? Carbon::parse($verifikasi->created_at)->format('Y-m-d') : 'N/A') . "</td>
-                <td>" . ($verifikasi->nopol ?? 'N/A') . "</td>
-                <td>" . ($verifikasi->nama ?? 'N/A') . "</td>
-                <td>" . ($verifikasi->kota_name ?? 'N/A') . "</td>
-                <td>" . ($verifikasi->kec_name ?? 'N/A') . "</td>
-                <td>" . ($verifikasi->desa_name ?? 'N/A') . "</td>
-                <td>" . ($verifikasi->alamat ?? 'N/A') . "</td>
-                <td>" . ($verifikasi->createdByUser ? $verifikasi->createdByUser->name : 'N/A') . "</td>
-            </tr>";
-            $no++;
-        }
-
-        $html .= "</tbody></table></body></html>";
-
-        $filename = $this->exportFilenamePrefix() . "jurnal_pelaporan_" . date('YmdHis') . ".pdf";
-
+        $dompdf = new Dompdf();
+        $options = new Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $dompdf->setOptions($options);
         $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'landscape');
         $dompdf->render();
 
+        $filename = $this->exportFilenamePrefix() . 'jurnal_pelaporan_' . date('YmdHis') . '.pdf';
+
         return response()->streamDownload(
-            fn() => print($dompdf->output()),
+            fn () => print($dompdf->output()),
             $filename
         );
     }

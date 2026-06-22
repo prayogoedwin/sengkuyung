@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\WilayahSamsat;
 use App\Models\SengSaamsat;
 use App\Models\SengPendataanKendaraan;
+use App\Models\DataTertagih;
 use App\Models\SengStatus;
 use App\Models\SengStatusVerifikasi;
 use App\Models\SengStatusFile;
@@ -22,8 +23,10 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx as XlsxWriter;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use App\Support\ApiCacheManager;
 use App\Support\PendataanWilayahFilter;
+use App\Support\VerifikasiStatusGroups;
 
 use Illuminate\Http\Request;
 
@@ -32,6 +35,11 @@ class PelaporanController extends Controller
     protected function pendataanModelClass(): string
     {
         return SengPendataanKendaraan::class;
+    }
+
+    protected function dataTertagihModelClass(): string
+    {
+        return DataTertagih::class;
     }
 
     protected function pelaporanViewName(): string
@@ -152,6 +160,449 @@ class PelaporanController extends Controller
             (string) ($row->status_verifikasi_name ?? '-'),
             (string) ($row->createdByUser?->name ?? '-'),
         ];
+    }
+
+    /**
+     * @return list<array{id: int, label: string}>
+     */
+    private function rekapStatusColumnDefs(): array
+    {
+        return [
+            ['id' => 1, 'label' => 'DIMILIKI'],
+            ['id' => 2, 'label' => 'GANTI KEPIMILIKAN'],
+            ['id' => 3, 'label' => 'RUSAK BERAT'],
+            ['id' => 4, 'label' => 'HILANG'],
+            ['id' => 5, 'label' => 'MENINGGAL DUNIA TANPA AHLI WARIS'],
+            ['id' => 6, 'label' => 'MENUTUP USAHA/ PAILIT'],
+            ['id' => 7, 'label' => 'DICABUT REGISTRASINYA'],
+            ['id' => 10, 'label' => 'TIDAK DIKETAHUI ALAMAT/ KEDUDUKAN TERAKHIRNYA'],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function resolveRekapLayout(?User $user, Request $request): array
+    {
+        $isAdminProv = $user && $user->hasAnyRole(['super-admin', 'superadmin', 'admin', 'adminprov']);
+        $hasKecamatanFilter = $request->filled('kecamatan_samsat') || $request->filled('district_id');
+        $hasKabkotaFilter = $request->filled('kabkota_id');
+
+        if ($isAdminProv && ! $hasKabkotaFilter) {
+            return [
+                'variant' => 'provinsi',
+                'title' => 'DOWNLOAD REKAP ADMIN PROVINSI',
+                'wilayahColumn' => 'UPPD',
+                'mapLevel' => 'kabkota',
+            ];
+        }
+
+        return [
+            'variant' => 'scoped',
+            'title' => 'DOWNLOAD REKAP ADMIN UPPD, KABKOTA, KECAMATAN',
+            'wilayahColumn' => 'KECAMATAN',
+            'mapLevel' => $hasKecamatanFilter ? 'kelurahan' : 'kecamatan',
+        ];
+    }
+
+    private function rekapReportTitle(Request $request, array $layout): string
+    {
+        $title = $layout['title'];
+        if ($request->tanggal_start && $request->tanggal_end) {
+            $tanggalStart = Carbon::parse($request->tanggal_start)->translatedFormat('d F Y');
+            $tanggalEnd = Carbon::parse($request->tanggal_end)->translatedFormat('d F Y');
+            $title .= " — Periode: {$tanggalStart} s.d. {$tanggalEnd}";
+        }
+
+        return mb_strtoupper($title, 'UTF-8');
+    }
+
+    /**
+     * @param \Illuminate\Database\Query\Builder $query
+     */
+    private function applyDataTertagihRekapFiltersOnQuery($query, Request $request, string $tableAlias = 'dt'): void
+    {
+        if ($request->tanggal_start && $request->tanggal_end) {
+            $query->whereBetween("{$tableAlias}.created_at", [$request->tanggal_start, $request->tanggal_end]);
+        } else {
+            $query->where("{$tableAlias}.year", (int) now()->year);
+        }
+
+        if ($request->kabkota_id) {
+            $lokasiKabkota = SengSaamsat::lokasiFilterVariantsByKabkota((string) $request->kabkota_id);
+            if ($lokasiKabkota !== []) {
+                $query->whereIn("{$tableAlias}.id_lokasi_samsat", $lokasiKabkota);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        $lokasiFilter = PendataanWilayahFilter::resolveLokasiSamsatFilterValue(auth()->user(), $request->lokasi_samsat);
+        if ($lokasiFilter !== '') {
+            $query->whereIn("{$tableAlias}.id_lokasi_samsat", SengSaamsat::lokasiFilterVariants($lokasiFilter));
+        }
+
+        $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;
+        if ($kecamatanFilter) {
+            $query->whereIn("{$tableAlias}.id_kecamatan", $this->codeVariants((string) $kecamatanFilter));
+        }
+
+        if ($request->kelurahan_samsat) {
+            $query->whereIn("{$tableAlias}.id_kelurahan", $this->codeVariants((string) $request->kelurahan_samsat));
+        }
+    }
+
+    /**
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     */
+    private function applyPendataanRekapFilters($query, Request $request): void
+    {
+        if ($request->status_verifikasi_id) {
+            $query->where('status_verifikasi', $request->status_verifikasi_id);
+        }
+
+        if ($request->kabkota_id) {
+            $query->where('kota_dagri', $request->kabkota_id);
+        }
+
+        $this->applyPelaporanWilayahFilters($query, $request);
+
+        if ($request->kelurahan_samsat) {
+            $query->whereIn('desa', $this->codeVariants((string) $request->kelurahan_samsat));
+        }
+
+        if ($request->tanggal_start && $request->tanggal_end) {
+            $query->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
+        } else {
+            $query->whereYear('created_at', now()->year);
+        }
+    }
+
+    private function tertagihGroupExpression(array $layout): string
+    {
+        if ($layout['variant'] === 'provinsi') {
+            return "COALESCE(NULLIF(ss.kabkota, ''), '-')";
+        }
+
+        if ($layout['mapLevel'] === 'kelurahan') {
+            return "COALESCE(NULLIF(dt.id_kelurahan, ''), '-')";
+        }
+
+        return "COALESCE(NULLIF(dt.id_kecamatan, ''), '-')";
+    }
+
+    private function pendataanGroupExpression(array $layout): string
+    {
+        if ($layout['variant'] === 'provinsi') {
+            return "COALESCE(NULLIF(kota_dagri, ''), '-')";
+        }
+
+        if ($layout['mapLevel'] === 'kelurahan') {
+            return "COALESCE(NULLIF(desa, ''), NULLIF(desa_name, ''), '-')";
+        }
+
+        return "COALESCE(NULLIF(kec, ''), NULLIF(kec_dagri, ''), NULLIF(kec_name, ''), '-')";
+    }
+
+    /**
+     * @return array<string, array{potensi: int, belum: int, sudah: int}>
+     */
+    private function aggregateTertagihRekapStats(Request $request, array $layout): array
+    {
+        $modelClass = $this->dataTertagihModelClass();
+        $table = (new $modelClass())->getTable();
+        $groupExpr = $this->tertagihGroupExpression($layout);
+
+        $query = DB::table("{$table} as dt")
+            ->leftJoin('seng_samsat as ss', function ($join) {
+                $join->on('ss.id', '=', 'dt.id_lokasi_samsat')
+                    ->orOn('ss.id_wilayah_samsat', '=', 'dt.id_lokasi_samsat');
+            });
+
+        $this->applyDataTertagihRekapFiltersOnQuery($query, $request, 'dt');
+
+        $rows = $query
+            ->selectRaw("{$groupExpr} as group_code")
+            ->selectRaw('COUNT(*) as potensi')
+            ->selectRaw('SUM(CASE WHEN dt.is_terdata = 0 THEN 1 ELSE 0 END) as belum')
+            ->selectRaw('SUM(CASE WHEN dt.is_terdata = 1 THEN 1 ELSE 0 END) as sudah')
+            ->groupBy('group_code')
+            ->get();
+
+        $out = [];
+        foreach ($rows as $row) {
+            $code = (string) ($row->group_code ?? '-');
+            $out[$code] = [
+                'potensi' => (int) ($row->potensi ?? 0),
+                'belum' => (int) ($row->belum ?? 0),
+                'sudah' => (int) ($row->sudah ?? 0),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @return array<string, array<string, array{obyek: int, pkb: float}>>
+     */
+    private function aggregatePendataanRekapStats(Request $request, array $layout): array
+    {
+        $groupExpr = $this->pendataanGroupExpression($layout);
+        $verifikasiIds = VerifikasiStatusGroups::verifikasiIds();
+        $statusDefs = $this->rekapStatusColumnDefs();
+
+        $query = $this->pendataanModelClass()::query();
+        $this->applyPendataanRekapFilters($query, $request);
+        if ($verifikasiIds !== []) {
+            $query->whereIn('status_verifikasi', $verifikasiIds);
+        }
+
+        $selects = ["{$groupExpr} as group_code"];
+        foreach ($statusDefs as $def) {
+            $id = (int) $def['id'];
+            $selects[] = "SUM(CASE WHEN status = {$id} THEN 1 ELSE 0 END) as status_{$id}_obyek";
+            $selects[] = "SUM(CASE WHEN status = {$id} THEN COALESCE(pkb_pokok, 0) ELSE 0 END) as status_{$id}_pkb";
+        }
+
+        $rows = $query
+            ->selectRaw(implode(', ', $selects))
+            ->groupBy('group_code')
+            ->get();
+
+        $out = [];
+        foreach ($rows as $row) {
+            $code = (string) ($row->group_code ?? '-');
+            $statuses = [];
+            foreach ($statusDefs as $def) {
+                $id = (int) $def['id'];
+                $statuses[(string) $id] = [
+                    'obyek' => (int) ($row->{"status_{$id}_obyek"} ?? 0),
+                    'pkb' => (float) ($row->{"status_{$id}_pkb"} ?? 0),
+                ];
+            }
+            $out[$code] = $statuses;
+        }
+
+        return $out;
+    }
+
+    private function mapRekapWilayahName(array $layout, string $groupCode): string
+    {
+        if ($groupCode === '-' || $groupCode === '') {
+            return '-';
+        }
+
+        return $this->mapWilayahName((string) $layout['mapLevel'], $groupCode);
+    }
+
+    /**
+     * @return array{layout: array<string, mixed>, title: string, rows: list<array<string, mixed>>, totals: array<string, mixed>}
+     */
+    private function buildRekapExportPayload(Request $request): array
+    {
+        $user = auth()->user();
+        $layout = $this->resolveRekapLayout($user, $request);
+        $title = $this->rekapReportTitle($request, $layout);
+        $statusDefs = $this->rekapStatusColumnDefs();
+
+        $tertagihStats = $this->aggregateTertagihRekapStats($request, $layout);
+        $pendataanStats = $this->aggregatePendataanRekapStats($request, $layout);
+
+        $allCodes = collect(array_keys($tertagihStats))
+            ->merge(array_keys($pendataanStats))
+            ->unique()
+            ->sort()
+            ->values();
+
+        $rows = [];
+        $totals = [
+            'potensi' => 0,
+            'belum' => 0,
+            'sudah' => 0,
+            'statuses' => [],
+        ];
+        foreach ($statusDefs as $def) {
+            $totals['statuses'][(string) $def['id']] = ['obyek' => 0, 'pkb' => 0.0];
+        }
+
+        foreach ($allCodes as $code) {
+            $code = (string) $code;
+            $t = $tertagihStats[$code] ?? ['potensi' => 0, 'belum' => 0, 'sudah' => 0];
+            $p = $pendataanStats[$code] ?? [];
+            $statuses = [];
+            foreach ($statusDefs as $def) {
+                $id = (string) $def['id'];
+                $statuses[$id] = $p[$id] ?? ['obyek' => 0, 'pkb' => 0.0];
+                $totals['statuses'][$id]['obyek'] += $statuses[$id]['obyek'];
+                $totals['statuses'][$id]['pkb'] += $statuses[$id]['pkb'];
+            }
+
+            $rows[] = [
+                'wilayah' => $this->mapRekapWilayahName($layout, $code),
+                'potensi' => $t['potensi'],
+                'belum' => $t['belum'],
+                'sudah' => $t['sudah'],
+                'statuses' => $statuses,
+            ];
+
+            $totals['potensi'] += $t['potensi'];
+            $totals['belum'] += $t['belum'];
+            $totals['sudah'] += $t['sudah'];
+        }
+
+        return compact('layout', 'title', 'rows', 'totals');
+    }
+
+    /**
+     * @return list<string|int|float>
+     */
+    private function mapRekapDataRow(array $row, int $no, array $statusDefs): array
+    {
+        $line = [
+            $no,
+            $row['wilayah'],
+            $row['potensi'],
+            $row['belum'],
+            $row['sudah'],
+        ];
+        foreach ($statusDefs as $def) {
+            $id = (string) $def['id'];
+            $stat = $row['statuses'][$id] ?? ['obyek' => 0, 'pkb' => 0];
+            $line[] = $stat['obyek'];
+            $line[] = $stat['pkb'];
+        }
+
+        return $line;
+    }
+
+    /**
+     * @return list<list<string>>
+     */
+    private function rekapHeaderMatrix(array $layout): array
+    {
+        $statusDefs = $this->rekapStatusColumnDefs();
+        $statusLabels = array_column($statusDefs, 'label');
+
+        $row4 = ['No', $layout['wilayahColumn'], 'JUMLAH POTENSI KENDARAAN', 'JUMLAH KENDARAAN BELUM TERDATA', 'JUMLAH KENDARAAN SUDAH TERDATA', 'STATUS KENDARAAN TERVERIFIKASI'];
+        while (count($row4) < 5 + count($statusLabels) * 2) {
+            $row4[] = '';
+        }
+
+        $row5 = ['', '', '', '', ''];
+        foreach ($statusLabels as $label) {
+            $row5[] = $label;
+            $row5[] = '';
+        }
+
+        $row6 = ['', '', '', '', ''];
+        foreach ($statusDefs as $_def) {
+            $row6[] = 'OBYEK';
+            $row6[] = 'NILAI PKB';
+        }
+
+        return [$row4, $row5, $row6];
+    }
+
+    private function writeRekapExcelSheet(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet, array $payload): void
+    {
+        $layout = $payload['layout'];
+        $statusDefs = $this->rekapStatusColumnDefs();
+        $lastColIndex = 5 + count($statusDefs) * 2;
+        $lastCol = Coordinate::stringFromColumnIndex($lastColIndex);
+
+        $sheet->setCellValue('A2', $payload['title']);
+        $sheet->mergeCells("A2:{$lastCol}2");
+        $sheet->getStyle('A2')->getFont()->setBold(true);
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        $headers = $this->rekapHeaderMatrix($layout);
+        $sheet->fromArray($headers[0], null, 'A4');
+        $sheet->fromArray($headers[1], null, 'A5');
+        $sheet->fromArray($headers[2], null, 'A6');
+
+        $sheet->mergeCells("F4:{$lastCol}4");
+        $sheet->getStyle("A4:{$lastCol}6")->getFont()->setBold(true);
+        $sheet->getStyle("A4:{$lastCol}6")->getFill()
+            ->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('D9D9D9');
+
+        $col = 6;
+        foreach ($statusDefs as $def) {
+            $start = Coordinate::stringFromColumnIndex($col);
+            $end = Coordinate::stringFromColumnIndex($col + 1);
+            $sheet->mergeCells("{$start}5:{$end}5");
+            $col += 2;
+        }
+
+        $rowNumber = 7;
+        $no = 1;
+        foreach ($payload['rows'] as $row) {
+            $sheet->fromArray([$this->mapRekapDataRow($row, $no++, $statusDefs)], null, 'A' . $rowNumber);
+            $rowNumber++;
+        }
+
+        $sheet->fromArray([$this->mapRekapDataRow([
+            'wilayah' => 'JUMLAH',
+            'potensi' => $payload['totals']['potensi'],
+            'belum' => $payload['totals']['belum'],
+            'sudah' => $payload['totals']['sudah'],
+            'statuses' => $payload['totals']['statuses'],
+        ], 0, $statusDefs)], null, 'A' . $rowNumber);
+
+        for ($i = 1; $i <= $lastColIndex; $i++) {
+            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i))->setAutoSize(true);
+        }
+    }
+
+    private function buildRekapPdfHtml(array $payload): string
+    {
+        $layout = $payload['layout'];
+        $statusDefs = $this->rekapStatusColumnDefs();
+        $title = htmlspecialchars($payload['title'], ENT_QUOTES, 'UTF-8');
+
+        $head = '<tr><th>No</th><th>' . htmlspecialchars($layout['wilayahColumn'], ENT_QUOTES, 'UTF-8') . '</th>'
+            . '<th>JUMLAH POTENSI KENDARAAN</th><th>JUMLAH KENDARAAN BELUM TERDATA</th><th>JUMLAH KENDARAAN SUDAH TERDATA</th>';
+        foreach ($statusDefs as $def) {
+            $label = htmlspecialchars($def['label'], ENT_QUOTES, 'UTF-8');
+            $head .= "<th colspan=\"2\">{$label}</th>";
+        }
+        $head .= '</tr><tr><th></th><th></th><th></th><th></th><th></th>';
+        foreach ($statusDefs as $_def) {
+            $head .= '<th>OBYEK</th><th>NILAI PKB</th>';
+        }
+        $head .= '</tr>';
+
+        $body = '';
+        $no = 1;
+        foreach ($payload['rows'] as $row) {
+            $cells = '';
+            foreach ($this->mapRekapDataRow($row, $no++, $statusDefs) as $cell) {
+                $cells .= '<td>' . htmlspecialchars((string) $cell, ENT_QUOTES, 'UTF-8') . '</td>';
+            }
+            $body .= "<tr>{$cells}</tr>";
+        }
+        $totalCells = '';
+        foreach ($this->mapRekapDataRow([
+            'wilayah' => 'JUMLAH',
+            'potensi' => $payload['totals']['potensi'],
+            'belum' => $payload['totals']['belum'],
+            'sudah' => $payload['totals']['sudah'],
+            'statuses' => $payload['totals']['statuses'],
+        ], 0, $statusDefs) as $cell) {
+            $totalCells .= '<td>' . htmlspecialchars((string) $cell, ENT_QUOTES, 'UTF-8') . '</td>';
+        }
+        $body .= "<tr>{$totalCells}</tr>";
+
+        return "<html><head><style>
+            body{font-family:Arial,sans-serif;font-size:7px;}
+            h2{font-size:11px;text-align:center;}
+            table{width:100%;border-collapse:collapse;}
+            th,td{border:1px solid #000;padding:2px;text-align:left;vertical-align:top;}
+            th{background:#d9d9d9;}
+        </style></head><body>
+            <h2>{$title}</h2>
+            <table><thead>{$head}</thead><tbody>{$body}</tbody></table>
+        </body></html>";
     }
 
     private function codeVariants($value): array
@@ -561,77 +1012,43 @@ class PelaporanController extends Controller
 
     public function rekapCsv(Request $request)
     {
-        $kotajudul = '';
-        $kotajudul_id = '';
-        if ($request->kabkota_id) {
-            $wilayah = SengWilayah::where('id', $request->kabkota_id)->first();
-            $kotajudul = $wilayah ? $wilayah->nama : '';
-            $kotajudul = ' '.$kotajudul;
-            $kotajudul_id = '_'.$request->kabkota_id;
-        }
+        $payload = $this->buildRekapExportPayload($request);
+        $statusDefs = $this->rekapStatusColumnDefs();
+        $headers = $this->rekapHeaderMatrix($payload['layout']);
 
-        $kecjudul = '';
-        $kecjudul_id = '';
-        $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;
-        if ($kecamatanFilter) {
-            $wilayah = SengWilayah::where('id', $kecamatanFilter)->first();
-            $kecjudul = $wilayah ? $wilayah->nama : '';
-            $kecjudul = ' Kec. '.$kecjudul;
-            $kecjudul_id = '_'.$kecamatanFilter;
-        }
+        $filename = $this->exportFilenamePrefix() . 'rekap_pelaporan_' . date('YmdHis') . '.csv';
+        $responseHeaders = [
+            'Content-Type' => 'text/csv',
+            "Content-Disposition" => "attachment; filename=$filename",
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+        ];
 
-        $periode = '';
-        if ($request->tanggal_start && $request->tanggal_end) {
-            $tanggalStart = Carbon::parse($request->tanggal_start)->translatedFormat('d F Y');
-            $tanggalEnd = Carbon::parse($request->tanggal_end)->translatedFormat('d F Y');
-            $periode = " Periode: $tanggalStart s.d. $tanggalEnd";
-        }
-        
-        $judul = mb_strtoupper('REKAP PELAPORAN ' . $kotajudul . ' ' . $kecjudul . ' ' . $periode, 'UTF-8');
+        $callback = function () use ($payload, $headers, $statusDefs) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['']);
+            fputcsv($file, [$payload['title']]);
+            fputcsv($file, ['']);
+            fputcsv($file, $headers[0]);
+            fputcsv($file, $headers[1]);
+            fputcsv($file, $headers[2]);
 
-        $fileName = $this->exportFilenamePrefix() . "rekap_pelaporan_" . date('YmdHis') . ".csv";
-        $filePath = storage_path('app/' . $fileName);
-        $file = fopen($filePath, 'w');
+            $no = 1;
+            foreach ($payload['rows'] as $row) {
+                fputcsv($file, $this->mapRekapDataRow($row, $no++, $statusDefs));
+            }
+            fputcsv($file, $this->mapRekapDataRow([
+                'wilayah' => 'JUMLAH',
+                'potensi' => $payload['totals']['potensi'],
+                'belum' => $payload['totals']['belum'],
+                'sudah' => $payload['totals']['sudah'],
+                'statuses' => $payload['totals']['statuses'],
+            ], 0, $statusDefs));
 
-        fputcsv($file, ['']); // baris kosong
-        fputcsv($file, [$judul]); // header utama
-        fputcsv($file, ['']); // baris kosong lagi
+            fclose($file);
+        };
 
-        $rekapPayload = $this->getRekapData($request);
-        $rekapData = $rekapPayload['rows'];
-        $wilayahLabel = $rekapPayload['wilayahLabel'];
-
-        // Header CSV
-        fputcsv($file, [
-            'NO', 'WILAYAH (' . strtoupper($wilayahLabel) . ')', 'DIMILIKI', 'GANTI KEPEMILIKAN', 'RUSAK BERAT', 'HILANG',
-            'MENINGGAL DUNIA TANPA AHLI WARIS', 'MENUTUP USAHA / PAILIT', 
-            'DICABUT REGISTRASINYA', 'TERKENA BENCANA ALAM', 
-            'TIDAK MEMPUNYAI KEKAYAAN LAGI', 'TIDAK DIKETAHUI ALAMAT'
-        ]);
-
-        // Tulis data ke CSV
-        $no = 1;
-        foreach ($rekapData as $row) {
-            fputcsv($file, [
-                $no++, 
-                $row->wilayah,
-                $row->DIMILIKI,
-                $row->GANTI_KEPEMILIKAN,
-                $row->RUSAK_BERAT,
-                $row->HILANG,
-                $row->MENINGGAL_DUNIA,
-                $row->MENUTUP_USAHA,
-                $row->DICABUT_REGISTRASI,
-                $row->BENCANA_ALAM,
-                $row->TIDAK_PUNYA_KEKAYAAN,
-                $row->TIDAK_DIKEATAHUI_ALAMAT
-            ]);
-        }
-
-        fclose($file);
-
-        // Kirim response sebagai file download dan hapus file setelah dikirim
-        return response()->download($filePath)->deleteFileAfterSend(true);
+        return response()->stream($callback, 200, $responseHeaders);
     }
 
     public function jurnalExcel(Request $request)
@@ -680,40 +1097,14 @@ class PelaporanController extends Controller
 
     public function rekapExcel(Request $request)
     {
-        $rekapPayload = $this->getRekapData($request);
-        $rekapData = $rekapPayload['rows'];
-        $wilayahLabel = $rekapPayload['wilayahLabel'];
+        $payload = $this->buildRekapExportPayload($request);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->fromArray([
-            'NO', 'WILAYAH (' . strtoupper($wilayahLabel) . ')', 'DIMILIKI', 'GANTI KEPEMILIKAN', 'RUSAK BERAT', 'HILANG',
-            'MENINGGAL DUNIA TANPA AHLI WARIS', 'MENUTUP USAHA / PAILIT',
-            'DICABUT REGISTRASINYA', 'TERKENA BENCANA ALAM',
-            'TIDAK MEMPUNYAI KEKAYAAN LAGI', 'TIDAK DIKETAHUI ALAMAT',
-        ], null, 'A1');
+        $this->writeRekapExcelSheet($sheet, $payload);
 
-        $rowNumber = 2;
-        $no = 1;
-        foreach ($rekapData as $row) {
-            $sheet->fromArray([[
-                $no++,
-                $row->wilayah,
-                $row->DIMILIKI,
-                $row->GANTI_KEPEMILIKAN,
-                $row->RUSAK_BERAT,
-                $row->HILANG,
-                $row->MENINGGAL_DUNIA,
-                $row->MENUTUP_USAHA,
-                $row->DICABUT_REGISTRASI,
-                $row->BENCANA_ALAM,
-                $row->TIDAK_PUNYA_KEKAYAAN,
-                $row->TIDAK_DIKEATAHUI_ALAMAT,
-            ]], null, 'A' . $rowNumber);
-            $rowNumber++;
-        }
+        $filename = $this->exportFilenamePrefix() . 'rekap_pelaporan_' . date('YmdHis') . '.xlsx';
 
-        $filename = $this->exportFilenamePrefix() . "rekap_pelaporan_" . date('YmdHis') . ".xlsx";
         return response()->streamDownload(function () use ($spreadsheet) {
             $writer = new XlsxWriter($spreadsheet);
             $writer->save('php://output');
@@ -802,79 +1193,9 @@ class PelaporanController extends Controller
 
     public function rekapPdf(Request $request)
     {
-        $kotajudul = '';
-        $kecjudul = '';
-        $periode = '';
+        $payload = $this->buildRekapExportPayload($request);
+        $html = $this->buildRekapPdfHtml($payload);
 
-        if ($request->kabkota_id) {
-            $wilayah = SengWilayah::find($request->kabkota_id);
-            $kotajudul = $wilayah ? ' ' . $wilayah->nama : '';
-        }
-
-        if ($request->district_id) {
-            $wilayah = SengWilayah::find($request->district_id);
-            $kecjudul = $wilayah ? ' Kec. ' . $wilayah->nama : '';
-        }
-
-        if ($request->tanggal_start && $request->tanggal_end) {
-            $periode = " Periode: {$request->tanggal_start} s.d. {$request->tanggal_end}";
-        }
-
-        $judul = mb_strtoupper('REKAP PELAPORAN ' . $kotajudul . $kecjudul . $periode, 'UTF-8');
-
-        $rekapPayload = $this->getRekapData($request);
-        $rekapData = $rekapPayload['rows'];
-        $wilayahLabel = $rekapPayload['wilayahLabel'];
-
-        // Mulai HTML untuk PDF
-        $html = '
-            <style>
-                body { font-size: 10px; }
-                table { font-size: 9px; }
-                h1, h2, h3 { font-size: 12px; }
-            </style>
-            <h3 style="text-align:center;">' . $judul . '</h3>
-            <table border="1" cellpadding="5" cellspacing="0" width="100%">
-                <thead>
-                    <tr>
-                        <th>NO</th>
-                        <th>WILAYAH (' . strtoupper($wilayahLabel) . ')</th>
-                        <th>DIMILIKI</th>
-                        <th>GANTI KEPEMILIKAN</th>
-                        <th>RUSAK BERAT</th>
-                        <th>HILANG</th>
-                        <th>MENINGGAL DUNIA TANPA AHLI WARIS</th>
-                        <th>MENUTUP USAHA / PAILIT</th>
-                        <th>DICABUT REGISTRASINYA</th>
-                        <th>TERKENA BENCANA ALAM</th>
-                        <th>TIDAK MEMPUNYAI KEKAYAAN LAGI</th>
-                        <th>TIDAK DIKETAHUI ALAMAT</th>
-                    </tr>
-                </thead>
-                <tbody>';
-
-        $no = 1;
-        foreach ($rekapData as $row) {
-            $html .= '
-                <tr>
-                    <td>' . $no++ . '</td>
-                    <td>' . $row->wilayah . '</td>
-                    <td>' . $row->DIMILIKI . '</td>
-                    <td>' . $row->GANTI_KEPEMILIKAN . '</td>
-                    <td>' . $row->RUSAK_BERAT . '</td>
-                    <td>' . $row->HILANG . '</td>
-                    <td>' . $row->MENINGGAL_DUNIA . '</td>
-                    <td>' . $row->MENUTUP_USAHA . '</td>
-                    <td>' . $row->DICABUT_REGISTRASI . '</td>
-                    <td>' . $row->BENCANA_ALAM . '</td>
-                    <td>' . $row->TIDAK_PUNYA_KEKAYAAN . '</td>
-                    <td>' . $row->TIDAK_DIKEATAHUI_ALAMAT . '</td>
-                </tr>';
-        }
-
-        $html .= '</tbody></table>';
-
-        // Dompdf setup
         $options = new Options();
         $options->set('isRemoteEnabled', true);
         $dompdf = new Dompdf($options);
@@ -882,81 +1203,11 @@ class PelaporanController extends Controller
         $dompdf->setPaper('A4', 'landscape');
         $dompdf->render();
 
-        // Download langsung PDF
         $fileName = $this->exportFilenamePrefix() . 'rekap_pelaporan_' . date('YmdHis') . '.pdf';
+
         return response($dompdf->output(), 200)
             ->header('Content-Type', 'application/pdf')
             ->header('Content-Disposition', "attachment; filename=\"$fileName\"");
-    }
-
-    private function getRekapData(Request $request): array
-    {
-        $baseQuery = $this->pendataanModelClass()::query();
-
-        if ($request->status_verifikasi_id) {
-            $baseQuery->where('status_verifikasi', $request->status_verifikasi_id);
-        }
-
-        if ($request->kabkota_id) {
-            $baseQuery->where('kota_dagri', $request->kabkota_id);
-        }
-
-        $this->applyPelaporanWilayahFilters($baseQuery, $request);
-
-        if ($request->kelurahan_samsat) {
-            $baseQuery->whereIn('desa', $this->codeVariants($request->kelurahan_samsat));
-        }
-
-        if ($request->tanggal_start && $request->tanggal_end) {
-            $baseQuery->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
-        }
-
-        $context = $this->resolveWilayahContext($request);
-        $level = $context['level'];
-        $wilayahLabel = $context['label'];
-
-        if ($level === 'petugas') {
-            $groupExpr = "COALESCE(NULLIF(created_by, ''), '-')";
-        } elseif ($level === 'kelurahan') {
-            $groupExpr = "COALESCE(NULLIF(desa_name, ''), NULLIF(desa, ''), '-')";
-        } elseif ($level === 'kecamatan') {
-            $groupExpr = "COALESCE(NULLIF(kec_name, ''), NULLIF(kec_dagri, ''), '-')";
-        } elseif ($level === 'samsat') {
-            $groupExpr = "COALESCE(NULLIF(kota, ''), '-')";
-        } else {
-            $groupExpr = "COALESCE(NULLIF(kota_name, ''), NULLIF(kota_dagri, ''), '-')";
-        }
-
-        $sub = $baseQuery
-            ->selectRaw("$groupExpr AS group_code")
-            ->selectRaw('status');
-
-        $rows = DB::query()
-            ->fromSub($sub, 'rekap_source')
-            ->select('group_code')
-            ->selectRaw("SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS DIMILIKI")
-            ->selectRaw("SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS GANTI_KEPEMILIKAN")
-            ->selectRaw("SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) AS RUSAK_BERAT")
-            ->selectRaw("SUM(CASE WHEN status = 4 THEN 1 ELSE 0 END) AS HILANG")
-            ->selectRaw("SUM(CASE WHEN status = 5 THEN 1 ELSE 0 END) AS MENINGGAL_DUNIA")
-            ->selectRaw("SUM(CASE WHEN status = 6 THEN 1 ELSE 0 END) AS MENUTUP_USAHA")
-            ->selectRaw("SUM(CASE WHEN status = 7 THEN 1 ELSE 0 END) AS DICABUT_REGISTRASI")
-            ->selectRaw("SUM(CASE WHEN status = 8 THEN 1 ELSE 0 END) AS BENCANA_ALAM")
-            ->selectRaw("SUM(CASE WHEN status = 9 THEN 1 ELSE 0 END) AS TIDAK_PUNYA_KEKAYAAN")
-            ->selectRaw("SUM(CASE WHEN status = 10 THEN 1 ELSE 0 END) AS TIDAK_DIKEATAHUI_ALAMAT")
-            ->groupBy('group_code')
-            ->orderBy('group_code')
-            ->get();
-
-        $rows = $rows->map(function ($row) use ($level) {
-            $row->wilayah = $this->mapWilayahName($level, isset($row->group_code) ? (string) $row->group_code : null);
-            return $row;
-        })->sortBy('wilayah')->values();
-
-        return [
-            'rows' => $rows,
-            'wilayahLabel' => $wilayahLabel,
-        ];
     }
 
 }

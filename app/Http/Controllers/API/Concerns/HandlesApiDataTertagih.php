@@ -45,6 +45,7 @@ trait HandlesApiDataTertagih
             'year' => $request->input('year'),
             'no_polisi' => $request->input('no_polisi'),
             'alamat' => $request->input('alamat'),
+            'jenis_roda' => $request->input('jenis_roda'),
             'page' => $request->input('page'),
             'per_page' => $request->input('per_page'),
         ];
@@ -56,6 +57,7 @@ trait HandlesApiDataTertagih
             'year' => 'nullable|integer|min:2000|max:2100',
             'no_polisi' => 'nullable|string|max:50',
             'alamat' => 'nullable|string|max:255',
+            'jenis_roda' => 'nullable',
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1|max:100',
         ], $this->dataTertagihWilayahValidationMessages());
@@ -95,6 +97,13 @@ trait HandlesApiDataTertagih
                         ->orWhere('nm_kecamatan', 'like', '%' . $term . '%')
                         ->orWhere('lokasi_layanan', 'like', '%' . $term . '%');
                 });
+            }
+        }
+
+        if ($wilayahInput['jenis_roda'] !== null && $wilayahInput['jenis_roda'] !== '') {
+            $rodaVariants = $this->samsatCodeVariants((string) $wilayahInput['jenis_roda']);
+            if ($rodaVariants !== []) {
+                $query->whereIn('jenis_roda', $rodaVariants);
             }
         }
 

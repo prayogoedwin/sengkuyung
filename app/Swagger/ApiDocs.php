@@ -422,6 +422,7 @@ class ApiDocs
                     'year' => 2026,
                     'no_polisi' => 'H8121QY',
                     'alamat' => 'Kedungwuni',
+                    'jenis_roda' => 4,
                     'page' => 1,
                     'per_page' => 15,
                 ],
@@ -436,6 +437,12 @@ class ApiDocs
                         type: 'string',
                         example: 'Kedungwuni',
                         description: 'Opsional. Pencarian LIKE pada alamat, nm_kelurahan, nm_kecamatan, lokasi_layanan.'
+                    ),
+                    new OA\Property(
+                        property: 'jenis_roda',
+                        type: 'integer',
+                        example: 4,
+                        description: 'Opsional. Filter exact jenis roda (mis. 2, 3, 4).'
                     ),
                     new OA\Property(property: 'page', type: 'integer', example: 1),
                     new OA\Property(property: 'per_page', type: 'integer', example: 15),
@@ -563,6 +570,7 @@ class ApiDocs
                     'year' => 2026,
                     'no_polisi' => 'H8121QY',
                     'alamat' => 'Kedungwuni',
+                    'jenis_roda' => 4,
                     'page' => 1,
                     'per_page' => 15,
                 ],
@@ -577,6 +585,12 @@ class ApiDocs
                         type: 'string',
                         example: 'Kedungwuni',
                         description: 'Opsional. Pencarian LIKE pada alamat, nm_kelurahan, nm_kecamatan, lokasi_layanan.'
+                    ),
+                    new OA\Property(
+                        property: 'jenis_roda',
+                        type: 'integer',
+                        example: 4,
+                        description: 'Opsional. Filter exact jenis roda (mis. 2, 3, 4).'
                     ),
                     new OA\Property(property: 'page', type: 'integer', example: 1),
                     new OA\Property(property: 'per_page', type: 'integer', example: 15),

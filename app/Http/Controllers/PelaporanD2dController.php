@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SengPendataanKendaraanD2d;
+use App\Models\DataTertagihD2d;
 use Illuminate\Http\Request;
 class PelaporanD2dController extends PelaporanController
 {
@@ -52,6 +53,11 @@ class PelaporanD2dController extends PelaporanController
     protected function pendataanModelClass(): string
     {
         return SengPendataanKendaraanD2d::class;
+    }
+
+    protected function dataTertagihModelClass(): string
+    {
+        return DataTertagihD2d::class;
     }
 
     protected function pelaporanViewName(): string

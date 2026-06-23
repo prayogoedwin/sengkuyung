@@ -53,13 +53,7 @@ class Helper
 
     public static function fungsi_wa($no_wa, $subjek, $text)
     {
-
-        Log::info("WhatsApp berhasil dikirim ke: {$no_wa}", [
-                    'response' => 'res',
-                    'http_code' => 200
-                ]);
-                return true;
-                
+        return true;
     }
 
     
@@ -92,12 +86,7 @@ class Helper
             $curlError = curl_error($curl);
             curl_close($curl);
             
-            // Log response untuk debugging
             if ($httpCode == 200 && empty($curlError)) {
-                Log::info("WhatsApp berhasil dikirim ke: {$no_wa}", [
-                    'response' => $response,
-                    'http_code' => $httpCode
-                ]);
                 return true;
             } else {
                 Log::error("Gagal mengirim WhatsApp ke {$no_wa}", [

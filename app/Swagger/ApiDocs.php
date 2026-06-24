@@ -496,7 +496,7 @@ class ApiDocs
                         property: 'jenis_roda',
                         type: 'integer',
                         example: 4,
-                        description: 'Opsional. Filter exact jenis roda (mis. 2, 3, 4).'
+                        description: 'Opsional. Null/0/kosong = semua data. Isi 2/4/dst untuk filter exact jenis roda.'
                     ),
                     new OA\Property(property: 'page', type: 'integer', example: 1),
                     new OA\Property(property: 'per_page', type: 'integer', example: 15),
@@ -644,7 +644,7 @@ class ApiDocs
                         property: 'jenis_roda',
                         type: 'integer',
                         example: 4,
-                        description: 'Opsional. Filter exact jenis roda (mis. 2, 3, 4).'
+                        description: 'Opsional. Null/0/kosong = semua data. Isi 2/4/dst untuk filter exact jenis roda.'
                     ),
                     new OA\Property(property: 'page', type: 'integer', example: 1),
                     new OA\Property(property: 'per_page', type: 'integer', example: 15),

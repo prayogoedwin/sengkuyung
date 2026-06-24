@@ -100,7 +100,7 @@ trait HandlesApiDataTertagih
             }
         }
 
-        if ($wilayahInput['jenis_roda'] !== null && $wilayahInput['jenis_roda'] !== '') {
+        if ($this->shouldApplyJenisRodaFilter($wilayahInput['jenis_roda'])) {
             $rodaVariants = $this->samsatCodeVariants((string) $wilayahInput['jenis_roda']);
             if ($rodaVariants !== []) {
                 $query->whereIn('jenis_roda', $rodaVariants);
@@ -254,5 +254,20 @@ trait HandlesApiDataTertagih
         }
 
         return array_values(array_unique($out));
+    }
+
+    private function shouldApplyJenisRodaFilter(mixed $jenisRoda): bool
+    {
+        if ($jenisRoda === null) {
+            return false;
+        }
+
+        $value = trim((string) $jenisRoda);
+
+        if ($value === '' || $value === '0') {
+            return false;
+        }
+
+        return true;
     }
 }

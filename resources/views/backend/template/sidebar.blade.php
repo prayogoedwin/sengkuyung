@@ -54,24 +54,29 @@
             </li>
 
             @if ($isSuperAdmin)
-            <li class="menu-item {{ request()->routeIs('cache-management.*') ? 'active open' : '' }}">
-                <a href="javascript:void(0);" class="menu-link menu-toggle">
-                    <i class="menu-icon tf-icons bx bx-data"></i>
-                    <div data-i18n="Analytics">Kelola Cache</div>
-                </a>
-                <ul class="menu-sub">
-                    <li class="menu-item {{ request()->routeIs('cache-management.scope') && request()->route('scope') === 'admin' ? 'active' : '' }}">
-                        <a href="{{ route('cache-management.scope', ['scope' => 'admin']) }}" class="menu-link">
-                            <div data-i18n="Analytics">Cache Admin</div>
-                        </a>
-                    </li>
-                    <li class="menu-item {{ request()->routeIs('cache-management.scope') && request()->route('scope') === 'api' ? 'active' : '' }}">
-                        <a href="{{ route('cache-management.scope', ['scope' => 'api']) }}" class="menu-link">
-                            <div data-i18n="Analytics">Cache API</div>
-                        </a>
-                    </li>
-                </ul>
-            </li>
+                <li class="menu-item {{ request()->routeIs('version.*') || request()->routeIs('cache-management.*') ? 'active open' : '' }}">
+                    <a href="javascript:void(0);" class="menu-link menu-toggle">
+                        <i class="menu-icon tf-icons bx bx-cog"></i>
+                        <div data-i18n="Analytics">Setting</div>
+                    </a>
+                    <ul class="menu-sub">
+                        <li class="menu-item {{ request()->routeIs('version.*') ? 'active' : '' }}">
+                            <a href="{{ route('version.index') }}" class="menu-link">
+                                <div data-i18n="Analytics">Version</div>
+                            </a>
+                        </li>
+                        <li class="menu-item {{ request()->routeIs('cache-management.scope') && request()->route('scope') === 'admin' ? 'active' : '' }}">
+                            <a href="{{ route('cache-management.scope', ['scope' => 'admin']) }}" class="menu-link">
+                                <div data-i18n="Analytics">Cache Admin</div>
+                            </a>
+                        </li>
+                        <li class="menu-item {{ request()->routeIs('cache-management.scope') && request()->route('scope') === 'api' ? 'active' : '' }}">
+                            <a href="{{ route('cache-management.scope', ['scope' => 'api']) }}" class="menu-link">
+                                <div data-i18n="Analytics">Cache API</div>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
             @endif
 
             <li class="menu-item {{ request()->routeIs('download.index') ? 'active' : '' }}" hidden>

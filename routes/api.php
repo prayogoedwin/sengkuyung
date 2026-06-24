@@ -14,6 +14,7 @@ use App\Http\Controllers\API\RekapD2dController;
 use App\Http\Controllers\API\DataTertagihController;
 use App\Http\Controllers\API\DataTertagihD2dController;
 use App\Http\Controllers\API\AlasanTidakBayarPajakController;
+use App\Http\Controllers\API\CekVersiController;
 use App\Http\Controllers\KebijakanPrivasiController;
 use Illuminate\Support\Facades\Auth;
 
@@ -24,6 +25,7 @@ Route::get('/kebijakan-privasi', [KebijakanPrivasiController::class, 'api']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/login_with_otp', [AuthController::class, 'login_otp']);
 Route::post('/verifikasi_otp', [AuthController::class, 'verifyOtp']);
+Route::get('/cek-versi/{id}', [CekVersiController::class, 'show']);
 
 
 // Route::get('/user', function (Request $request) {

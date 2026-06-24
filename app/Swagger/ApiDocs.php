@@ -49,6 +49,60 @@ class ApiDocs
     {
     }
 
+    #[OA\Get(
+        path: '/api/cek-versi/{id}',
+        tags: ['Version'],
+        summary: 'Cek versi aplikasi by id',
+        description: 'Endpoint publik untuk cek versi aplikasi. Hasil di-cache 24 jam pada key `api:cek-versi:{id}`.',
+        parameters: [
+            new OA\Parameter(
+                name: 'id',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'integer', minimum: 1),
+                example: 1,
+                description: 'ID versi aplikasi, misal 1 (web) atau 2 (mobile).'
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Data versi ditemukan',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'Data versi ditemukan.'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'id', type: 'integer', example: 1),
+                                new OA\Property(property: 'nama_aplikasi', type: 'string', example: 'web'),
+                                new OA\Property(property: 'versi', type: 'string', example: '2.0.5'),
+                                new OA\Property(property: 'alias', type: 'string', nullable: true, example: 'beta'),
+                            ]
+                        ),
+                        new OA\Property(property: 'cache_ttl_seconds', type: 'integer', example: 86400),
+                    ]
+                )
+            ),
+            new OA\Response(
+                response: 404,
+                description: 'Data versi tidak ditemukan',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'boolean', example: false),
+                        new OA\Property(property: 'message', type: 'string', example: 'Data versi tidak ditemukan.'),
+                        new OA\Property(property: 'data', nullable: true, example: null),
+                    ]
+                )
+            ),
+        ]
+    )]
+    public function cekVersi()
+    {
+    }
+
     #[OA\Post(
         path: '/api/login',
         tags: ['Auth'],

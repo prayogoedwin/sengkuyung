@@ -19,6 +19,7 @@ use App\Http\Controllers\DataTertagihController;
 use App\Http\Controllers\DataTertagihD2dController;
 use App\Http\Controllers\CacheManagementController;
 use App\Http\Controllers\KebijakanPrivasiController;
+use App\Http\Controllers\VersionController;
 
 Route::get('/kebijakan-privasi', [KebijakanPrivasiController::class, 'show'])->name('kebijakan-privasi');
 
@@ -115,6 +116,11 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::post('/cache-management/{scope}/clear-all', [CacheManagementController::class, 'clearAll'])
             ->whereIn('scope', ['admin', 'api'])
             ->name('cache-management.clear-all');
+
+        Route::get('/version', [VersionController::class, 'index'])->name('version.index');
+        Route::post('/version', [VersionController::class, 'store'])->name('version.store');
+        Route::put('/version/{id}', [VersionController::class, 'update'])->name('version.update');
+        Route::delete('/version/{id}', [VersionController::class, 'destroy'])->name('version.destroy');
     });
 });
 

@@ -82,63 +82,35 @@ class VerifikasiController extends Controller
             $userKelurahanSamsat = $user->kelurahan_samsat ?? null;
             $isSuperAdmin = $user && ($user->hasRole('super-admin') || $user->hasRole('superadmin'));
             $isAdminProv = $user && ($user->hasRole('admin') || $user->hasRole('adminprov'));
-            $isUptd = $user && ($user->hasRole('uptd') || $user->hasRole('uppd'));
+            $isUppd = $user && $user->hasRole('uppd');
+            $isUptd = $user && ($user->hasRole('uptd') || $isUppd);
             $isKabkota = $user && $user->hasRole('kabkota');
             $resolvedKabkotaId = $this->resolveKabkotaIdFromLokasiSamsat($userLokasiSamsat);
             $effectiveKotaId = $userKotaId ?: $resolvedKabkotaId;
+            $nopolSearch = $this->resolveNopolSearch($request);
 
-            // $userRole = auth()->user()->role; 
-            // Cari admin berdasarkan ID
-            // $user = User::findOrFail(auth()->id());
-            // $verifikasis = SengPendataanKendaraan::select('*')->get();
             $verifikasis = $this->pendataanModelClass()::query();
 
-            // Apply filters based on user role
-            if ($isSuperAdmin || $isAdminProv) {
-                if ($request->kota) {
-                    $verifikasis->where('kota_dagri', $request->kota);
-                }
-            } elseif ($isUptd || $isKabkota) {
-                if (!empty($effectiveKotaId)) {
-                    $verifikasis->where('kota_dagri', $effectiveKotaId);
-                } elseif ($request->kota) {
-                    $verifikasis->where('kota_dagri', $request->kota);
-                }
-            } elseif ($user && $user->hasAnyRole(['petugas', 'petugas-d2d'])) {
-                $verifikasis->where('created_by', $userId);
-            }
-
-            // Filter berdasarkan input dari form.
-            // Default (tanpa pilih status) menampilkan bucket "menunggu":
-            // MENUNGGU VERIFIKASI + SUDAH DIPERBAIKI — konsisten dengan kartu dashboard.
-            if ($request->status_verifikasi_id) {
-                $verifikasis->where('status_verifikasi', $request->status_verifikasi_id);
+            if ($nopolSearch !== '' && ($isSuperAdmin || $isAdminProv)) {
+                $this->applyNopolSearchFilter($verifikasis, $nopolSearch);
+            } elseif ($nopolSearch !== '' && $isUppd) {
+                $this->applyUppdNopolSearchScope($verifikasis, $user, $effectiveKotaId);
+                $this->applyNopolSearchFilter($verifikasis, $nopolSearch);
             } else {
-                $verifikasis->whereIn('status_verifikasi', VerifikasiStatusGroups::menungguIds());
-            }
-            
-            $resolvedLokasi = PendataanWilayahFilter::resolveLokasiSamsatFilterValue($user, $request->lokasi_samsat);
-            if ($resolvedLokasi !== '') {
-                PendataanWilayahFilter::applyLokasiSamsatFilter($verifikasis, $resolvedLokasi);
-            }
-
-            if (!empty($userKecamatanSamsat)) {
-                PendataanWilayahFilter::applyKecamatanFilter($verifikasis, (string) $userKecamatanSamsat);
-            } elseif ($request->kecamatan_samsat) {
-                PendataanWilayahFilter::applyKecamatanFilter($verifikasis, (string) $request->kecamatan_samsat);
-            }
-
-            if (!empty($userKelurahanSamsat)) {
-                $verifikasis->where('desa', $userKelurahanSamsat);
-            } elseif ($request->kelurahan_samsat) {
-                $verifikasis->where('desa', $request->kelurahan_samsat);
-            }
-
-            if ($request->nopol) {
-                $verifikasis->where('nopol', 'like', '%' . trim($request->nopol) . '%');
-            }
-            if ($request->tanggal_start && $request->tanggal_end) {
-                $verifikasis->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
+                $this->applyVerifikasiIndexFilters(
+                    $verifikasis,
+                    $request,
+                    $user,
+                    $userId,
+                    $isSuperAdmin,
+                    $isAdminProv,
+                    $isUptd,
+                    $isKabkota,
+                    $effectiveKotaId,
+                    $userKecamatanSamsat,
+                    $userKelurahanSamsat,
+                    $nopolSearch
+                );
             }
 
                 // return DataTables::of($verifikasis)
@@ -284,6 +256,105 @@ class VerifikasiController extends Controller
 
             return $samsat?->kabkota ? (string) $samsat->kabkota : null;
         });
+    }
+
+    private function resolveNopolSearch(Request $request): string
+    {
+        return trim((string) ($request->nopol ?? ''));
+    }
+
+    /**
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     */
+    private function applyNopolSearchFilter($query, string $nopolSearch): void
+    {
+        $query->where('nopol', 'like', '%' . $nopolSearch . '%');
+    }
+
+    /**
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     */
+    private function applyUppdNopolSearchScope($query, ?User $user, ?string $effectiveKotaId): void
+    {
+        $profileLokasi = trim((string) ($user?->lokasi_samsat ?? ''));
+
+        if ($profileLokasi !== '') {
+            PendataanWilayahFilter::applyLokasiSamsatFilter($query, $profileLokasi);
+
+            return;
+        }
+
+        if (!empty($effectiveKotaId)) {
+            $lokasiVariants = SengSaamsat::lokasiFilterVariantsByKabkota((string) $effectiveKotaId);
+            if ($lokasiVariants !== []) {
+                $query->whereIn('kota', $lokasiVariants);
+            } else {
+                $query->where('kota_dagri', $effectiveKotaId);
+            }
+        }
+    }
+
+    /**
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     */
+    private function applyVerifikasiIndexFilters(
+        $query,
+        Request $request,
+        ?User $user,
+        ?int $userId,
+        bool $isSuperAdmin,
+        bool $isAdminProv,
+        bool $isUptd,
+        bool $isKabkota,
+        ?string $effectiveKotaId,
+        ?string $userKecamatanSamsat,
+        ?string $userKelurahanSamsat,
+        string $nopolSearch
+    ): void {
+        if ($isSuperAdmin || $isAdminProv) {
+            if ($request->kota) {
+                $query->where('kota_dagri', $request->kota);
+            }
+        } elseif ($isUptd || $isKabkota) {
+            if (!empty($effectiveKotaId)) {
+                $query->where('kota_dagri', $effectiveKotaId);
+            } elseif ($request->kota) {
+                $query->where('kota_dagri', $request->kota);
+            }
+        } elseif ($user && $user->hasAnyRole(['petugas', 'petugas-d2d'])) {
+            $query->where('created_by', $userId);
+        }
+
+        if ($request->status_verifikasi_id) {
+            $query->where('status_verifikasi', $request->status_verifikasi_id);
+        } else {
+            $query->whereIn('status_verifikasi', VerifikasiStatusGroups::menungguIds());
+        }
+
+        $resolvedLokasi = PendataanWilayahFilter::resolveLokasiSamsatFilterValue($user, $request->lokasi_samsat);
+        if ($resolvedLokasi !== '') {
+            PendataanWilayahFilter::applyLokasiSamsatFilter($query, $resolvedLokasi);
+        }
+
+        if (!empty($userKecamatanSamsat)) {
+            PendataanWilayahFilter::applyKecamatanFilter($query, (string) $userKecamatanSamsat);
+        } elseif ($request->kecamatan_samsat) {
+            PendataanWilayahFilter::applyKecamatanFilter($query, (string) $request->kecamatan_samsat);
+        }
+
+        if (!empty($userKelurahanSamsat)) {
+            $query->where('desa', $userKelurahanSamsat);
+        } elseif ($request->kelurahan_samsat) {
+            $query->where('desa', $request->kelurahan_samsat);
+        }
+
+        if ($nopolSearch !== '') {
+            $this->applyNopolSearchFilter($query, $nopolSearch);
+        }
+
+        if ($request->tanggal_start && $request->tanggal_end) {
+            $query->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
+        }
     }
 
     // Show a single record

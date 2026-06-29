@@ -114,12 +114,27 @@
 
 <script>
     $(document).ready(function() {
-        var forcedLokasiSamsat = '{{ $userLokasiSamsat ?? '' }}';
+        var profileLokasiSamsat = '{{ $userLokasiSamsat ?? '' }}';
+        var lockLokasiSamsat = @json((bool) ($isLokasiSamsatLocked ?? false));
         var forcedKecamatanSamsat = '{{ $selectedKecamatanSamsatId ?? '' }}';
         var forcedKelurahanSamsat = '{{ $selectedKelurahanSamsatId ?? '' }}';
         var selectedLokasiSamsat = '';
         var selectedKecamatanSamsat = forcedKecamatanSamsat || '';
         var selectedKelurahanSamsat = forcedKelurahanSamsat || '';
+
+        function samsatMatchesProfile(samsat) {
+            if (!profileLokasiSamsat) {
+                return true;
+            }
+
+            var id = String(samsat.id ?? '');
+            var wilayahId = String(samsat.id_wilayah_samsat ?? '');
+            var profile = String(profileLokasiSamsat);
+
+            return profile === id || profile === wilayahId
+                || (profile.replace(/^0+/, '') !== '' && profile.replace(/^0+/, '') === id.replace(/^0+/, ''))
+                || (profile.replace(/^0+/, '') !== '' && profile.replace(/^0+/, '') === wilayahId.replace(/^0+/, ''));
+        }
 
         function loadSamsatsByKabkota(kabkotaId, selectedSamsat) {
             if (!kabkotaId) {
@@ -141,17 +156,22 @@
 
                     var options = '<option value="">Pilih Lokasi Samsat</option>';
                     $.each(response.samsats, function(index, samsat) {
-                        var value = String(samsat.id || samsat.id_wilayah_samsat || '');
-                        if (!forcedLokasiSamsat || String(value) === String(forcedLokasiSamsat)) {
-                            var isSelected = ((selectedSamsat && String(selectedSamsat) === String(value)) || String(forcedLokasiSamsat) === String(value)) ? 'selected' : '';
+                        if (!lockLokasiSamsat || samsatMatchesProfile(samsat)) {
+                            var value = String(samsat.id || samsat.id_wilayah_samsat || '');
+                            var isSelected = (selectedSamsat && String(selectedSamsat) === String(value))
+                                || (!selectedSamsat && profileLokasiSamsat && samsatMatchesProfile(samsat))
+                                ? 'selected'
+                                : '';
                             options += '<option value="' + value + '" ' + isSelected + '>' + samsat.lokasi + ' [' + value + ']</option>';
                         }
                     });
 
                     $('#lokasiSamsat').html(options);
 
-                    if (forcedLokasiSamsat) {
-                        $('#lokasiSamsat').val(String(forcedLokasiSamsat)).prop('disabled', true);
+                    if (lockLokasiSamsat && profileLokasiSamsat) {
+                        $('#lokasiSamsat').val(String(profileLokasiSamsat)).prop('disabled', true);
+                    } else if (profileLokasiSamsat) {
+                        $('#lokasiSamsat').val(String(profileLokasiSamsat)).prop('disabled', false);
                     } else {
                         $('#lokasiSamsat').prop('disabled', false);
                     }
@@ -245,9 +265,6 @@
             loadSamsatsByKabkota(initialKabkotaId, selectedLokasiSamsat);
         }
 
-        if (forcedLokasiSamsat) {
-            $('#userKabkota').prop('disabled', true);
-        }
     });
 </script>
 

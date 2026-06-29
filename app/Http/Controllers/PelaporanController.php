@@ -896,7 +896,8 @@ class PelaporanController extends Controller
         $kabkotaBySamsat = $this->resolveKabkotaFromLokasiSamsat($userLokasiSamsat);
         $scopedKabkotaId = (string) ($user->kota ?: $kabkotaBySamsat ?: '');
         $isScopedKabkota = $isKabkota || $isUppd || $isKecamatan || $isKelurahan;
-        $isLokasiSamsatLocked = $isUppd || $isKecamatan || $isKelurahan;
+        $isLokasiSamsatLocked = $userLokasiSamsat !== ''
+            && ($isKecamatan || $isKelurahan);
         $isKecamatanSamsatLocked = $isKecamatan || $isKelurahan;
         $isKelurahanSamsatLocked = $isKelurahan;
         $isRekapOnlyRole = $isKecamatan || $isKelurahan;

@@ -161,8 +161,8 @@ class ApiDocs
     #[OA\Post(
         path: '/api/login-external',
         tags: ['Auth', 'Jasa Raharja'],
-        summary: 'Login eksternal Jasa Raharja (username + password + header apikey)',
-        description: 'Khusus akun role `jasa_raharja`. Kirim `username` dan `password` di body JSON. Header `apikey` wajib dan harus cocok dengan nilai API Key akun (kolom `apikey` di database). Mengembalikan bearer token untuk group middleware `auth-api-jr`.',
+        summary: 'Login eksternal Jasa Raharja (username + password + header apikey) — tanpa Bearer token',
+        description: '**Autentikasi:** Tidak memerlukan Bearer token. Wajib header `apikey` + body `username` dan `password`. Khusus akun role `jasa_raharja`. Header `apikey` harus cocok dengan nilai API Key akun (kolom `apikey` di database). Response berisi bearer token untuk dipakai di endpoint Jasa Raharja lainnya (klik Authorize di Swagger).',
         parameters: [
             new OA\Parameter(
                 name: 'apikey',
@@ -735,12 +735,12 @@ class ApiDocs
     #[OA\Get(
         path: '/api/master/status-verifikasi',
         tags: ['Jasa Raharja'],
-        summary: 'Master status verifikasi (khusus Jasa Raharja)',
-        description: 'Endpoint master untuk filter status verifikasi di API verifikasi JR. ID integer (tidak di-encode).',
+        summary: 'Master status verifikasi (khusus Jasa Raharja) — Bearer token wajib',
+        description: '**Autentikasi:** Wajib Bearer token di header `Authorization: Bearer {token}`. Token didapat dari `POST /api/login-external` (klik Authorize di Swagger untuk mengisi token). Endpoint master untuk filter status verifikasi di API verifikasi JR. ID integer (tidak di-encode).',
         security: [['bearerAuth' => []]],
         responses: [
             new OA\Response(response: 200, description: 'Berhasil'),
-            new OA\Response(response: 401, description: 'Unauthorized'),
+            new OA\Response(response: 401, description: 'Bearer token tidak ada, tidak valid, atau kedaluwarsa'),
             new OA\Response(response: 403, description: 'Bukan role jasa_raharja'),
         ]
     )]
@@ -751,8 +751,8 @@ class ApiDocs
     #[OA\Get(
         path: '/api/data-tertagih',
         tags: ['Jasa Raharja'],
-        summary: 'Daftar data tertagih reguler untuk Jasa Raharja',
-        description: 'Membutuhkan bearer token dari `/api/login-external`. Filter tahun dan status data (`is_terdata`) mengikuti halaman dapur/data-tertagih. Default per_page = 10.',
+        summary: 'Daftar data tertagih reguler untuk Jasa Raharja — Bearer token wajib',
+        description: '**Autentikasi:** Wajib Bearer token di header `Authorization: Bearer {token}`. Token didapat dari `POST /api/login-external` (klik Authorize di Swagger untuk mengisi token). Filter tahun dan status data (`is_terdata`) mengikuti halaman dapur/data-tertagih. Default per_page = 10.',
         security: [['bearerAuth' => []]],
         parameters: [
             new OA\Parameter(name: 'year', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 2026), description: 'Default tahun berjalan'),
@@ -763,7 +763,7 @@ class ApiDocs
         ],
         responses: [
             new OA\Response(response: 200, description: 'Berhasil'),
-            new OA\Response(response: 401, description: 'Unauthorized'),
+            new OA\Response(response: 401, description: 'Bearer token tidak ada, tidak valid, atau kedaluwarsa'),
             new OA\Response(response: 403, description: 'Bukan role jasa_raharja'),
             new OA\Response(response: 422, description: 'Validasi gagal'),
         ]
@@ -775,8 +775,8 @@ class ApiDocs
     #[OA\Get(
         path: '/api/data-tertagih-d2d',
         tags: ['Jasa Raharja'],
-        summary: 'Daftar data tertagih D2D untuk Jasa Raharja',
-        description: 'Membutuhkan bearer token dari `/api/login-external`. Filter tahun dan status data (`is_terdata`) mengikuti halaman dapur/data-tertagih-d2d. Default per_page = 10.',
+        summary: 'Daftar data tertagih D2D untuk Jasa Raharja — Bearer token wajib',
+        description: '**Autentikasi:** Wajib Bearer token di header `Authorization: Bearer {token}`. Token didapat dari `POST /api/login-external` (klik Authorize di Swagger untuk mengisi token). Filter tahun dan status data (`is_terdata`) mengikuti halaman dapur/data-tertagih-d2d. Default per_page = 10.',
         security: [['bearerAuth' => []]],
         parameters: [
             new OA\Parameter(name: 'year', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 2026)),
@@ -787,7 +787,7 @@ class ApiDocs
         ],
         responses: [
             new OA\Response(response: 200, description: 'Berhasil'),
-            new OA\Response(response: 401, description: 'Unauthorized'),
+            new OA\Response(response: 401, description: 'Bearer token tidak ada, tidak valid, atau kedaluwarsa'),
             new OA\Response(response: 403, description: 'Bukan role jasa_raharja'),
             new OA\Response(response: 422, description: 'Validasi gagal'),
         ]
@@ -799,8 +799,8 @@ class ApiDocs
     #[OA\Get(
         path: '/api/verifikasi',
         tags: ['Jasa Raharja'],
-        summary: 'Daftar verifikasi pendataan reguler untuk Jasa Raharja',
-        description: 'Filter mengikuti halaman dapur/verifikasi. Default status = bucket menunggu verifikasi jika `status_verifikasi_id` kosong. Pencarian `nopol` mengabaikan filter lain.',
+        summary: 'Daftar verifikasi pendataan reguler untuk Jasa Raharja — Bearer token wajib',
+        description: '**Autentikasi:** Wajib Bearer token di header `Authorization: Bearer {token}`. Token didapat dari `POST /api/login-external` (klik Authorize di Swagger untuk mengisi token). Filter mengikuti halaman dapur/verifikasi. Default status = bucket menunggu verifikasi jika `status_verifikasi_id` kosong. Pencarian `nopol` mengabaikan filter lain.',
         security: [['bearerAuth' => []]],
         parameters: [
             new OA\Parameter(name: 'status_verifikasi_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 1)),
@@ -816,7 +816,7 @@ class ApiDocs
         ],
         responses: [
             new OA\Response(response: 200, description: 'Berhasil'),
-            new OA\Response(response: 401, description: 'Unauthorized'),
+            new OA\Response(response: 401, description: 'Bearer token tidak ada, tidak valid, atau kedaluwarsa'),
             new OA\Response(response: 403, description: 'Bukan role jasa_raharja'),
             new OA\Response(response: 422, description: 'Validasi gagal'),
         ]
@@ -828,8 +828,8 @@ class ApiDocs
     #[OA\Get(
         path: '/api/verifikasi-d2d',
         tags: ['Jasa Raharja'],
-        summary: 'Daftar verifikasi pendataan D2D untuk Jasa Raharja',
-        description: 'Filter mengikuti halaman dapur/verifikasi-d2d. Gunakan `/api/master/status-verifikasi` untuk daftar status.',
+        summary: 'Daftar verifikasi pendataan D2D untuk Jasa Raharja — Bearer token wajib',
+        description: '**Autentikasi:** Wajib Bearer token di header `Authorization: Bearer {token}`. Token didapat dari `POST /api/login-external` (klik Authorize di Swagger untuk mengisi token). Filter mengikuti halaman dapur/verifikasi-d2d. Gunakan `/api/master/status-verifikasi` untuk daftar status.',
         security: [['bearerAuth' => []]],
         parameters: [
             new OA\Parameter(name: 'status_verifikasi_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 1)),
@@ -845,7 +845,7 @@ class ApiDocs
         ],
         responses: [
             new OA\Response(response: 200, description: 'Berhasil'),
-            new OA\Response(response: 401, description: 'Unauthorized'),
+            new OA\Response(response: 401, description: 'Bearer token tidak ada, tidak valid, atau kedaluwarsa'),
             new OA\Response(response: 403, description: 'Bukan role jasa_raharja'),
             new OA\Response(response: 422, description: 'Validasi gagal'),
         ]

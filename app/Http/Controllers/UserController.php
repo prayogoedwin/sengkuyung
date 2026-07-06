@@ -293,12 +293,19 @@ class UserController extends Controller
 
            
 
-            $users = $usersQuery->get();
+            $users = $usersQuery->with('roles')->get();
 
             return DataTables::of($users)
                 ->addIndexColumn()
                 ->addColumn('user_name', function ($user) {
-                    return $user->name ? $user->name : 'N/A';
+                    $name = $user->name ? e($user->name) : 'N/A';
+                    $roleName = strtolower((string) optional($user->roles->first())->name);
+
+                    if ($roleName === self::JASA_RAHARJA_ROLE && ! empty($user->otp)) {
+                        return $name . '<br><small class="text-muted">API Key: ' . e($user->otp) . '</small>';
+                    }
+
+                    return $name;
                 })
                 ->addColumn('email', function ($user) {
                     return $user->email ? $user->email : 'N/A';
@@ -320,7 +327,7 @@ class UserController extends Controller
                         <button class="btn btn-danger btn-sm" onclick="confirmDelete(' . $user->id . ')">Delete</button>&nbsp;
                     ';
                 })
-                ->rawColumns(['options'])  // Pastikan menambahkan ini untuk kolom options
+                ->rawColumns(['user_name', 'options'])
                 ->make(true);
         }
 

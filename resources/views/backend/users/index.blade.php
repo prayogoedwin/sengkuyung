@@ -129,7 +129,10 @@
                                         <div class="col-sm-12">
                                             <div class="form-group">
                                                 <label class="floating-label" for="jrApiKey">API Key</label>
-                                                <input type="text" class="form-control" id="jrApiKey" name="api_key">
+                                                <div class="input-group">
+                                                    <input type="text" class="form-control" id="jrApiKey" name="api_key">
+                                                    <button type="button" class="btn btn-outline-secondary" id="btnGenerateJrApiKey">Generate</button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -480,6 +483,21 @@
                 } else {
                     $('#userKabkota').val('');
                 }
+            });
+
+            function generateJrApiKey() {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                let key = 'sk-jr-';
+                const bytes = new Uint8Array(24);
+                window.crypto.getRandomValues(bytes);
+                for (let i = 0; i < bytes.length; i++) {
+                    key += chars[bytes[i] % chars.length];
+                }
+                return key;
+            }
+
+            $('#btnGenerateJrApiKey').on('click', function() {
+                $('#jrApiKey').val(generateJrApiKey());
             });
         });
     </script>

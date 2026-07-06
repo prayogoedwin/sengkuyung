@@ -113,14 +113,22 @@ class AuthController extends Controller
     }
 
     /**
-     * Login eksternal Jasa Raharja menggunakan username + API key.
+     * Login eksternal Jasa Raharja: body username + password, header apikey (kolom otp).
      */
     public function loginExternal(Request $request)
     {
         $request->validate([
             'username' => 'required|string|max:255',
-            'api_key' => 'required|string|max:255',
+            'password' => 'required|string',
         ]);
+
+        $apiKey = $this->resolveExternalApiKeyHeader($request);
+        if ($apiKey === '') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Header apikey wajib diisi',
+            ], 401);
+        }
 
         $user = User::query()
             ->where('email', $request->username)
@@ -133,10 +141,17 @@ class AuthController extends Controller
             ], 401);
         }
 
-        if (! hash_equals((string) $user->otp, (string) $request->api_key)) {
+        if (! hash_equals((string) $user->otp, $apiKey)) {
             return response()->json([
                 'status' => false,
                 'message' => 'API key tidak valid',
+            ], 401);
+        }
+
+        if (! Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
             ], 401);
         }
 
@@ -486,6 +501,18 @@ class AuthController extends Controller
         }
 
         return array_values(array_unique($out));
+    }
+
+    private function resolveExternalApiKeyHeader(Request $request): string
+    {
+        foreach (['apikey', 'api-key', 'x-api-key'] as $headerName) {
+            $value = $request->header($headerName);
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        return '';
     }
 
     /**

@@ -39,8 +39,11 @@
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label">API Key</label>
-                                            <input type="text" name="api_key" class="form-control"
-                                                value="{{ old('api_key') }}" required>
+                                            <div class="input-group">
+                                                <input type="text" name="api_key" id="jrApiKeyNew" class="form-control"
+                                                    value="{{ old('api_key') }}" required>
+                                                <button type="button" class="btn btn-outline-secondary" id="btnGenerateJrApiKeyNew">Generate</button>
+                                            </div>
                                         </div>
                                     </div>
                                     <button class="btn btn-primary mt-3" type="submit">Simpan</button>
@@ -74,9 +77,12 @@
                                                             value="{{ $user->email }}" required>
                                                     </td>
                                                     <td>
-                                                        <input form="update-jr-{{ $user->id }}" type="text"
-                                                            name="api_key" class="form-control form-control-sm"
-                                                            value="{{ $user->otp }}" required>
+                                                        <div class="input-group input-group-sm">
+                                                            <input form="update-jr-{{ $user->id }}" type="text"
+                                                                name="api_key" class="form-control form-control-sm jr-api-key-input"
+                                                                value="{{ $user->otp }}" required>
+                                                            <button type="button" class="btn btn-outline-secondary btn-sm btn-generate-jr-api-key">Generate</button>
+                                                        </div>
                                                     </td>
                                                     <td>
                                                         <input form="update-jr-{{ $user->id }}" type="password"
@@ -114,3 +120,31 @@
         </div>
     </div>
 @endsection
+
+@push('js')
+<script>
+    function generateJrApiKey() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let key = 'sk-jr-';
+        const bytes = new Uint8Array(24);
+        window.crypto.getRandomValues(bytes);
+        for (let i = 0; i < bytes.length; i++) {
+            key += chars[bytes[i] % chars.length];
+        }
+        return key;
+    }
+
+    document.getElementById('btnGenerateJrApiKeyNew')?.addEventListener('click', function () {
+        document.getElementById('jrApiKeyNew').value = generateJrApiKey();
+    });
+
+    document.querySelectorAll('.btn-generate-jr-api-key').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const input = this.closest('.input-group')?.querySelector('.jr-api-key-input');
+            if (input) {
+                input.value = generateJrApiKey();
+            }
+        });
+    });
+</script>
+@endpush

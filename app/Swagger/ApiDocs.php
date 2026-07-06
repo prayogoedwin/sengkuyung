@@ -161,15 +161,24 @@ class ApiDocs
     #[OA\Post(
         path: '/api/login-external',
         tags: ['Auth'],
-        summary: 'Login eksternal Jasa Raharja (username + API key)',
-        description: 'Khusus akun role `jasa_raharja`. API key disimpan saat pembuatan akun di dashboard (kolom API Key). Mengembalikan bearer token untuk group middleware `auth-api-jr`.',
+        summary: 'Login eksternal Jasa Raharja (username + password + header apikey)',
+        description: 'Khusus akun role `jasa_raharja`. Kirim `username` dan `password` di body JSON. Header `apikey` wajib dan harus cocok dengan nilai API Key akun (kolom `otp` di database). Mengembalikan bearer token untuk group middleware `auth-api-jr`.',
+        parameters: [
+            new OA\Parameter(
+                name: 'apikey',
+                in: 'header',
+                required: true,
+                schema: new OA\Schema(type: 'string', example: 'sk-jr-abc123xyz'),
+                description: 'API Key akun Jasa Raharja (disimpan di kolom otp saat pembuatan user).'
+            ),
+        ],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['username', 'api_key'],
+                required: ['username', 'password'],
                 properties: [
                     new OA\Property(property: 'username', type: 'string', example: 'jr-purbalingga'),
-                    new OA\Property(property: 'api_key', type: 'string', example: 'sk-jr-abc123xyz'),
+                    new OA\Property(property: 'password', type: 'string', example: 'rahasia123'),
                 ]
             )
         ),
@@ -193,7 +202,7 @@ class ApiDocs
                     ]
                 )
             ),
-            new OA\Response(response: 401, description: 'Unauthorized / API key tidak valid'),
+            new OA\Response(response: 401, description: 'Unauthorized / API key tidak valid / header apikey kosong'),
         ]
     )]
     public function loginExternal()

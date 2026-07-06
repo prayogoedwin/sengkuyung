@@ -177,7 +177,7 @@ class ApiDocs
             content: new OA\JsonContent(
                 required: ['username', 'password'],
                 properties: [
-                    new OA\Property(property: 'username', type: 'string', example: 'jr-purbalingga'),
+                    new OA\Property(property: 'username', type: 'string', format: 'email', example: 'jr-jateng@plasamail.com'),
                     new OA\Property(property: 'password', type: 'string', example: 'rahasia123'),
                 ]
             )

@@ -113,7 +113,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Login eksternal Jasa Raharja: body username + password, header apikey (kolom otp).
+     * Login eksternal Jasa Raharja: body username + password, header apikey (kolom apikey).
      */
     public function loginExternal(Request $request)
     {
@@ -141,7 +141,7 @@ class AuthController extends Controller
             ], 401);
         }
 
-        if (! hash_equals((string) $user->otp, $apiKey)) {
+        if (! hash_equals((string) $user->apikey, $apiKey)) {
             return response()->json([
                 'status' => false,
                 'message' => 'API key tidak valid',
@@ -166,6 +166,7 @@ class AuthController extends Controller
             'otp',
             'otp_expired_at',
             'otp_method',
+            'apikey',
             'password',
         ]);
 

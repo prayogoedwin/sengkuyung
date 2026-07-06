@@ -162,14 +162,14 @@ class ApiDocs
         path: '/api/login-external',
         tags: ['Auth'],
         summary: 'Login eksternal Jasa Raharja (username + password + header apikey)',
-        description: 'Khusus akun role `jasa_raharja`. Kirim `username` dan `password` di body JSON. Header `apikey` wajib dan harus cocok dengan nilai API Key akun (kolom `otp` di database). Mengembalikan bearer token untuk group middleware `auth-api-jr`.',
+        description: 'Khusus akun role `jasa_raharja`. Kirim `username` dan `password` di body JSON. Header `apikey` wajib dan harus cocok dengan nilai API Key akun (kolom `apikey` di database). Mengembalikan bearer token untuk group middleware `auth-api-jr`.',
         parameters: [
             new OA\Parameter(
                 name: 'apikey',
                 in: 'header',
                 required: true,
                 schema: new OA\Schema(type: 'string', example: 'sk-jr-abc123xyz'),
-                description: 'API Key akun Jasa Raharja (disimpan di kolom otp saat pembuatan user).'
+                description: 'API Key akun Jasa Raharja (disimpan di kolom apikey saat pembuatan user).'
             ),
         ],
         requestBody: new OA\RequestBody(

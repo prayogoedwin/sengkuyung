@@ -91,7 +91,7 @@
                                                         <div class="input-group input-group-sm">
                                                             <input form="update-jr-{{ $user->id }}" type="text"
                                                                 name="api_key" class="form-control form-control-sm jr-api-key-input"
-                                                                value="{{ $user->otp }}" required>
+                                                                value="{{ $user->apikey }}" required>
                                                             <button type="button" class="btn btn-outline-secondary btn-sm btn-generate-jr-api-key">Generate</button>
                                                         </div>
                                                     </td>

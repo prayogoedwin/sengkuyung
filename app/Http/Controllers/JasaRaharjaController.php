@@ -42,7 +42,7 @@ class JasaRaharjaController extends Controller
             'email' => $validated['username'],
             'whatsapp' => 'jr-' . Str::slug($validated['username']),
             'password' => Hash::make($validated['password']),
-            'otp' => $validated['api_key'],
+            'apikey' => $validated['api_key'],
         ]);
 
         $role = Role::findByName(self::ROLE_NAME, 'web');
@@ -66,7 +66,7 @@ class JasaRaharjaController extends Controller
 
         $user->name = $validated['name'];
         $user->email = $validated['username'];
-        $user->otp = $validated['api_key'];
+        $user->apikey = $validated['api_key'];
 
         if (! empty($validated['password'])) {
             $user->password = Hash::make($validated['password']);

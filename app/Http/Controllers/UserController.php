@@ -301,8 +301,8 @@ class UserController extends Controller
                     $name = $user->name ? e($user->name) : 'N/A';
                     $roleName = strtolower((string) optional($user->roles->first())->name);
 
-                    if ($roleName === self::JASA_RAHARJA_ROLE && ! empty($user->otp)) {
-                        return $name . '<br><small class="text-muted">API Key: ' . e($user->otp) . '</small>';
+                    if ($roleName === self::JASA_RAHARJA_ROLE && ! empty($user->apikey)) {
+                        return $name . '<br><small class="text-muted">API Key: ' . e($user->apikey) . '</small>';
                     }
 
                     return $name;
@@ -441,7 +441,7 @@ class UserController extends Controller
                 'email' => $request->username,
                 'whatsapp' => 'jr-' . \Illuminate\Support\Str::slug((string) $request->username),
                 'password' => bcrypt($request->password),
-                'otp' => $request->api_key,
+                'apikey' => $request->api_key,
             ]);
 
             $this->assignSelectedRole($user, $selectedRole);

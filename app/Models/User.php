@@ -28,6 +28,7 @@ class User extends Authenticatable
         'otp',                // Kode OTP
         'otp_expired_at',     // Waktu expired OTP
         'otp_method',         // Metode OTP (email/wa)
+        'apikey',             // API key Jasa Raharja (login eksternal)
         'password',
         'uptd_id',
         'provinsi',

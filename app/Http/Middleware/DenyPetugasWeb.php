@@ -8,7 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class DenyPetugasWeb
 {
-    public const MESSAGE = 'Akun petugas hanya untuk aplikasi mobile. Dashboard web tidak tersedia untuk akun ini.';
+    public const MESSAGE = 'Akun ini hanya untuk aplikasi/API eksternal. Dashboard web tidak tersedia untuk akun ini.';
 
     /**
      * Blokir akun dengan role petugas dari area dashboard (hanya API/mobile).
@@ -17,7 +17,7 @@ class DenyPetugasWeb
     {
         $user = $request->user();
 
-        if ($user && $user->hasAnyRole(['petugas', 'petugas-d2d'])) {
+        if ($user && $user->hasAnyRole(['petugas', 'petugas-d2d', 'jasa_raharja'])) {
             auth()->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

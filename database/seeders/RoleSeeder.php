@@ -39,6 +39,7 @@ class RoleSeeder extends Seeder
             'kelurahan'   => ['web'],
             'petugas'     => ['web'],
             'petugas-d2d' => ['web'],
+            'jasa_raharja' => ['web'],
             'sistem'      => ['api'],
         ];
 

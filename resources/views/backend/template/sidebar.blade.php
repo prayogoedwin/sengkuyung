@@ -54,7 +54,7 @@
             </li>
 
             @if ($isSuperAdmin)
-                <li class="menu-item {{ request()->routeIs('version.*') || request()->routeIs('cache-management.*') ? 'active open' : '' }}">
+                <li class="menu-item {{ request()->routeIs('version.*') || request()->routeIs('jasa-raharja.*') || request()->routeIs('cache-management.*') ? 'active open' : '' }}">
                     <a href="javascript:void(0);" class="menu-link menu-toggle">
                         <i class="menu-icon tf-icons bx bx-cog"></i>
                         <div data-i18n="Analytics">Setting</div>
@@ -63,6 +63,11 @@
                         <li class="menu-item {{ request()->routeIs('version.*') ? 'active' : '' }}">
                             <a href="{{ route('version.index') }}" class="menu-link">
                                 <div data-i18n="Analytics">Version</div>
+                            </a>
+                        </li>
+                        <li class="menu-item {{ request()->routeIs('jasa-raharja.*') ? 'active' : '' }}">
+                            <a href="{{ route('jasa-raharja.index') }}" class="menu-link">
+                                <div data-i18n="Analytics">Jasa Raharja</div>
                             </a>
                         </li>
                         <li class="menu-item {{ request()->routeIs('cache-management.scope') && request()->route('scope') === 'admin' ? 'active' : '' }}">

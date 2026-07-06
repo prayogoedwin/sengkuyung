@@ -13,6 +13,7 @@ use App\Http\Controllers\API\RekapController;
 use App\Http\Controllers\API\RekapD2dController;
 use App\Http\Controllers\API\DataTertagihController;
 use App\Http\Controllers\API\DataTertagihD2dController;
+use App\Http\Controllers\API\JrDataTertagihController;
 use App\Http\Controllers\API\AlasanTidakBayarPajakController;
 use App\Http\Controllers\API\CekVersiController;
 use App\Http\Controllers\KebijakanPrivasiController;
@@ -23,6 +24,7 @@ use App\Http\Middleware\LogActivity;
 Route::get('/kebijakan-privasi', [KebijakanPrivasiController::class, 'api']);
 
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login-external', [AuthController::class, 'loginExternal']);
 Route::post('/login_with_otp', [AuthController::class, 'login_otp']);
 Route::post('/verifikasi_otp', [AuthController::class, 'verifyOtp']);
 Route::get('/cek-versi/{id}', [CekVersiController::class, 'show']);
@@ -49,7 +51,7 @@ Route::get('/cek-versi/{id}', [CekVersiController::class, 'show']);
 //     Route::apiResource('status-verifikasi', SengStatusVerifikasiController::class);
 // });
 
-Route::middleware(['auth-api'])->group(function () {
+Route::middleware(['auth-api', 'field-officer.api'])->group(function () {
     Route::middleware([LogActivity::class])->group(function () {
         // Route::apiResource('profil', [AuthController::class, 'show']);
         Route::apiResource('pendataan', SengPendataanKendaraanController::class);
@@ -81,6 +83,11 @@ Route::middleware(['auth-api'])->group(function () {
         
     });
  
+});
+
+Route::middleware(['auth-api-jr', 'jasa-raharja.api'])->group(function () {
+    Route::get('data-tertagih', [JrDataTertagihController::class, 'index']);
+    Route::get('data-tertagih-d2d', [JrDataTertagihController::class, 'indexD2d']);
 });
 
    Route::get('rekap_download', [RekapController::class, 'rekapPreview']);

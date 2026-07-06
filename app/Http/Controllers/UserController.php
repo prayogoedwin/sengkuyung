@@ -24,6 +24,8 @@ class UserController extends Controller
 
     private const PETUGAS_D2D_ROLE = 'petugas-d2d';
 
+    private const JASA_RAHARJA_ROLE = 'jasa_raharja';
+
     /** Role petugas lapangan (mobile); hanya guard web — API memakai token, bukan role guard api. */
     private const FIELD_OFFICER_ROLES = [self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE];
 
@@ -85,6 +87,7 @@ class UserController extends Controller
         return match (strtolower($roleName)) {
             self::PETUGAS_ROLE => 'Petugas',
             self::PETUGAS_D2D_ROLE => 'Petugas D2D',
+            self::JASA_RAHARJA_ROLE => 'Jasa Raharja',
             'uppd' => 'UPPD',
             'uptd' => 'UPTD',
             'adminprov' => 'Admin Prov',
@@ -95,6 +98,11 @@ class UserController extends Controller
     private function isFieldOfficerRoleName(string $roleName): bool
     {
         return in_array(strtolower($roleName), self::FIELD_OFFICER_ROLES, true);
+    }
+
+    private function isJasaRaharjaRoleName(string $roleName): bool
+    {
+        return strtolower($roleName) === self::JASA_RAHARJA_ROLE;
     }
 
     private function assignSelectedRole(User $user, Role $selectedRole): void
@@ -127,7 +135,7 @@ class UserController extends Controller
             'kabkota' => ['kecamatan', 'kelurahan', self::PETUGAS_ROLE],
             'kecamatan' => ['kelurahan', self::PETUGAS_ROLE],
             'kelurahan' => [self::PETUGAS_ROLE],
-            default => ['admin', 'adminprov', 'uptd', 'uppd', 'kabkota', 'kecamatan', 'kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE],
+            default => ['admin', 'adminprov', 'uptd', 'uppd', 'kabkota', 'kecamatan', 'kelurahan', self::PETUGAS_ROLE, self::PETUGAS_D2D_ROLE, self::JASA_RAHARJA_ROLE],
         };
     }
 
@@ -396,6 +404,45 @@ class UserController extends Controller
         $isKabkotaCreator = $creatorRoleName === 'kabkota';
         $isKecamatanCreator = $creatorRoleName === 'kecamatan';
         $isKelurahanCreator = $creatorRoleName === 'kelurahan';
+
+        $selectedRole = Role::find((int) $request->role_id);
+        $selectedRoleName = strtolower($selectedRole->name ?? '');
+        $isJasaRaharjaRole = $this->isJasaRaharjaRoleName($selectedRoleName);
+
+        if ($isJasaRaharjaRole) {
+            $validator = Validator::make($request->all(), [
+                'username' => 'required|string|max:255|unique:users,email',
+                'password' => 'required|string|min:6',
+                'api_key' => 'required|string|min:8|max:255',
+                'role_id' => 'required|exists:roles,id',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()]);
+            }
+
+            if (! in_array((int) $request->role_id, $allowedRoleIds, true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda tidak memiliki akses untuk membuat role ini.',
+                ], 403);
+            }
+
+            $user = User::create([
+                'name' => $request->username,
+                'email' => $request->username,
+                'whatsapp' => 'jr-' . \Illuminate\Support\Str::slug((string) $request->username),
+                'password' => bcrypt($request->password),
+                'otp' => $request->api_key,
+            ]);
+
+            $this->assignSelectedRole($user, $selectedRole);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Akun Jasa Raharja berhasil ditambahkan.',
+            ]);
+        }
 
         // Validasi input
         $validator = Validator::make($request->all(), [

@@ -20,6 +20,7 @@ use App\Http\Controllers\DataTertagihD2dController;
 use App\Http\Controllers\CacheManagementController;
 use App\Http\Controllers\KebijakanPrivasiController;
 use App\Http\Controllers\VersionController;
+use App\Http\Controllers\JasaRaharjaController;
 
 Route::get('/kebijakan-privasi', [KebijakanPrivasiController::class, 'show'])->name('kebijakan-privasi');
 
@@ -121,6 +122,11 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::post('/version', [VersionController::class, 'store'])->name('version.store');
         Route::put('/version/{id}', [VersionController::class, 'update'])->name('version.update');
         Route::delete('/version/{id}', [VersionController::class, 'destroy'])->name('version.destroy');
+
+        Route::get('/jasa-raharja', [JasaRaharjaController::class, 'index'])->name('jasa-raharja.index');
+        Route::post('/jasa-raharja', [JasaRaharjaController::class, 'store'])->name('jasa-raharja.store');
+        Route::put('/jasa-raharja/{id}', [JasaRaharjaController::class, 'update'])->name('jasa-raharja.update');
+        Route::delete('/jasa-raharja/{id}', [JasaRaharjaController::class, 'destroy'])->name('jasa-raharja.destroy');
     });
 });
 

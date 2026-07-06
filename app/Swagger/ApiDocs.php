@@ -159,6 +159,48 @@ class ApiDocs
     }
 
     #[OA\Post(
+        path: '/api/login-external',
+        tags: ['Auth'],
+        summary: 'Login eksternal Jasa Raharja (username + API key)',
+        description: 'Khusus akun role `jasa_raharja`. API key disimpan saat pembuatan akun di dashboard (kolom API Key). Mengembalikan bearer token untuk group middleware `auth-api-jr`.',
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['username', 'api_key'],
+                properties: [
+                    new OA\Property(property: 'username', type: 'string', example: 'jr-purbalingga'),
+                    new OA\Property(property: 'api_key', type: 'string', example: 'sk-jr-abc123xyz'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Login berhasil',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'boolean', example: true),
+                        new OA\Property(property: 'message', type: 'string', example: 'Login successful'),
+                        new OA\Property(property: 'token', type: 'string', example: '1|abcdeFGHIJKLmnOPqrSTUvwxYZ'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'role', type: 'string', example: 'jasa_raharja'),
+                                new OA\Property(property: 'role_label', type: 'string', example: 'Jasa Raharja'),
+                            ]
+                        ),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthorized / API key tidak valid'),
+        ]
+    )]
+    public function loginExternal()
+    {
+    }
+
+    #[OA\Post(
         path: '/api/login_with_otp',
         tags: ['Auth'],
         summary: 'Login dan generate OTP',
@@ -678,6 +720,54 @@ class ApiDocs
         ]
     )]
     public function dataTertagihD2dShow()
+    {
+    }
+
+    #[OA\Get(
+        path: '/api/data-tertagih',
+        tags: ['Jasa Raharja'],
+        summary: 'Daftar data tertagih reguler untuk Jasa Raharja',
+        description: 'Membutuhkan bearer token dari `/api/login-external`. Filter tahun dan status data (`is_terdata`) mengikuti halaman dapur/data-tertagih. Default per_page = 10.',
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'year', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 2026), description: 'Default tahun berjalan'),
+            new OA\Parameter(name: 'is_terdata', in: 'query', required: false, schema: new OA\Schema(type: 'integer', enum: [0, 1]), description: 'Kosong = semua status'),
+            new OA\Parameter(name: 'no_polisi', in: 'query', required: false, schema: new OA\Schema(type: 'string', example: 'H8121QY')),
+            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 1)),
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 10)),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Berhasil'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+            new OA\Response(response: 403, description: 'Bukan role jasa_raharja'),
+            new OA\Response(response: 422, description: 'Validasi gagal'),
+        ]
+    )]
+    public function jrDataTertagihIndex()
+    {
+    }
+
+    #[OA\Get(
+        path: '/api/data-tertagih-d2d',
+        tags: ['Jasa Raharja'],
+        summary: 'Daftar data tertagih D2D untuk Jasa Raharja',
+        description: 'Membutuhkan bearer token dari `/api/login-external`. Filter tahun dan status data (`is_terdata`) mengikuti halaman dapur/data-tertagih-d2d. Default per_page = 10.',
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'year', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 2026)),
+            new OA\Parameter(name: 'is_terdata', in: 'query', required: false, schema: new OA\Schema(type: 'integer', enum: [0, 1])),
+            new OA\Parameter(name: 'no_polisi', in: 'query', required: false, schema: new OA\Schema(type: 'string', example: 'R4126IAC')),
+            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 1)),
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 10)),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Berhasil'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+            new OA\Response(response: 403, description: 'Bukan role jasa_raharja'),
+            new OA\Response(response: 422, description: 'Validasi gagal'),
+        ]
+    )]
+    public function jrDataTertagihD2dIndex()
     {
     }
 

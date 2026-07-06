@@ -76,7 +76,7 @@
                     <div class="modal-body">
                         <form id="registerForm">
                             <div class="row">
-                                <div class="col-sm-12">
+                                <div class="col-sm-12" id="standardUserFields">
                                     <div class="form-group">
                                         <label class="floating-label" for="Name">Nama Lengkap</label>
                                         <input type="text" class="form-control" id="name" name="name"
@@ -84,7 +84,7 @@
                                     </div>
                                 </div>
 
-                                <div class="col-sm-12">
+                                <div class="col-sm-12" id="standardEmailField">
                                     <div class="form-group">
                                         <label class="floating-label" for="email">Email</label>
                                         <input type="text" class="form-control" id="email" name="email"
@@ -92,7 +92,7 @@
                                     </div>
                                 </div>
 
-                                <div class="col-sm-12">
+                                <div class="col-sm-12" id="standardWhatsappField">
                                     <div class="form-group">
                                         <label class="floating-label" for="whatsapp">Whatsapp</label>
                                         <input type="text" class="form-control" id="whatsapp" name="whatsapp"
@@ -109,6 +109,29 @@
                                                 <option value="{{ $role->id }}" data-role-name="{{ $role->name }}">{{ $role->display_name ?? $role->name }}</option>
                                             @endforeach
                                         </select>
+                                    </div>
+                                </div>
+
+                                <div class="col-sm-12" id="jasaRaharjaContainer" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-sm-12">
+                                            <div class="form-group">
+                                                <label class="floating-label" for="jrUsername">Username</label>
+                                                <input type="text" class="form-control" id="jrUsername" name="username">
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-12">
+                                            <div class="form-group">
+                                                <label class="floating-label" for="jrPassword">Password</label>
+                                                <input type="password" class="form-control" id="jrPassword" name="password">
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-12">
+                                            <div class="form-group">
+                                                <label class="floating-label" for="jrApiKey">API Key</label>
+                                                <input type="text" class="form-control" id="jrApiKey" name="api_key">
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -351,6 +374,10 @@
                 return name === 'petugas' || name === 'petugas-d2d';
             }
 
+            function isJasaRaharjaRole() {
+                return selectedRoleName() === 'jasa_raharja';
+            }
+
             function isPetugasRole() {
                 return isFieldOfficerRole();
             }
@@ -383,6 +410,8 @@
             // }
 
             function hideAllElements() {
+                $('#standardUserFields, #standardEmailField, #standardWhatsappField').show();
+                $('#jasaRaharjaContainer').hide().find('input').removeAttr('required');
                 $('#uptdContainer').hide().find('select, input').removeAttr('required');
                 $('#kabkotaContainer').hide().find('select, input').removeAttr('required');
                 $('#districtContainer').hide().find('select, input').removeAttr('required');
@@ -404,14 +433,19 @@
 
             // Handle role change
             $('#userRole').on('change', function() {
-                hideAllElements(); // Hide all elements first
+                hideAllElements();
                 var selectedRole = $(this).val();
                 var petugasSelected = isPetugasRole();
                 var kecamatanSelected = isKecamatanRole();
                 var kelurahanSelected = isKelurahanRole();
                 var uptdSelected = isUptdRole();
+                var jasaRaharjaSelected = isJasaRaharjaRole();
 
-                if (uptdSelected) {
+                if (jasaRaharjaSelected) {
+                    $('#standardUserFields, #standardEmailField, #standardWhatsappField').hide()
+                        .find('input').removeAttr('required');
+                    $('#jasaRaharjaContainer').show().find('input').attr('required', 'required');
+                } else if (uptdSelected) {
                     $('#uptdContainer').show().find('select, input').attr('required', 'required');
                 } else if (petugasSelected) {
                     $('#kabkotaContainer').show().find('select, input').attr('required', 'required');
@@ -465,6 +499,9 @@
                     name: $('#name').val(),
                     email: $('#email').val(),
                     whatsapp: $('#whatsapp').val(),
+                    username: $('#jrUsername').val(),
+                    password: $('#jrPassword').val(),
+                    api_key: $('#jrApiKey').val(),
                     role_id: $('#userRole').val(),
                     uptd_id: $('#userUptd').val(),
                     kabkota_id: $('#userKabkota').val(),

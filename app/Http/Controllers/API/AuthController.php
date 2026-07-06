@@ -112,6 +112,63 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Login eksternal Jasa Raharja menggunakan username + API key.
+     */
+    public function loginExternal(Request $request)
+    {
+        $request->validate([
+            'username' => 'required|string|max:255',
+            'api_key' => 'required|string|max:255',
+        ]);
+
+        $user = User::query()
+            ->where('email', $request->username)
+            ->first();
+
+        if (! $user || ! $user->hasRole('jasa_raharja')) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        if (! hash_equals((string) $user->otp, (string) $request->api_key)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'API key tidak valid',
+            ], 401);
+        }
+
+        $user->load('roles')->makeHidden([
+            'email_verified_at',
+            'created_at',
+            'created_by',
+            'updated_at',
+            'updated_by',
+            'deleted_at',
+            'deleted_by',
+            'otp',
+            'otp_expired_at',
+            'otp_method',
+            'password',
+        ]);
+
+        $token = $user->createToken('jr_external_token')->plainTextToken;
+        $user->update(['remember_token' => $token]);
+
+        $responseData = $user->toArray();
+        $responseData['id'] = Helper::encodeId($user->id);
+        $this->appendRoleToResponse($responseData, $user);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Login successful',
+            'data' => $responseData,
+            'token' => $token,
+        ]);
+    }
+
      public function login_otp(Request $request)
     {
         $request->validate([
@@ -347,6 +404,7 @@ class AuthController extends Controller
         $responseData['role_label'] = match ($roleName) {
             'petugas' => 'Petugas',
             'petugas-d2d' => 'Petugas D2D',
+            'jasa_raharja' => 'Jasa Raharja',
             default => $roleName
                 ? ucwords(str_replace(['-', '_'], ' ', $roleName))
                 : null,

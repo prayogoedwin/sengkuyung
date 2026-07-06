@@ -781,6 +781,80 @@ class ApiDocs
     }
 
     #[OA\Get(
+        path: '/api/master/status-verifikasi',
+        tags: ['Jasa Raharja'],
+        summary: 'Master status verifikasi (khusus Jasa Raharja)',
+        description: 'Endpoint master untuk filter status verifikasi di API verifikasi JR. ID integer (tidak di-encode).',
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Berhasil'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+            new OA\Response(response: 403, description: 'Bukan role jasa_raharja'),
+        ]
+    )]
+    public function jrMasterStatusVerifikasi()
+    {
+    }
+
+    #[OA\Get(
+        path: '/api/verifikasi',
+        tags: ['Jasa Raharja'],
+        summary: 'Daftar verifikasi pendataan reguler untuk Jasa Raharja',
+        description: 'Filter mengikuti halaman dapur/verifikasi. Default status = bucket menunggu verifikasi jika `status_verifikasi_id` kosong. Pencarian `nopol` mengabaikan filter lain.',
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'status_verifikasi_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 1)),
+            new OA\Parameter(name: 'kota', in: 'query', required: false, schema: new OA\Schema(type: 'string', example: '3303'), description: 'Kode dagri kab/kota'),
+            new OA\Parameter(name: 'lokasi_samsat', in: 'query', required: false, schema: new OA\Schema(type: 'string', example: '30')),
+            new OA\Parameter(name: 'kecamatan_samsat', in: 'query', required: false, schema: new OA\Schema(type: 'string', example: '330301')),
+            new OA\Parameter(name: 'kelurahan_samsat', in: 'query', required: false, schema: new OA\Schema(type: 'string', example: '3303012001')),
+            new OA\Parameter(name: 'nopol', in: 'query', required: false, schema: new OA\Schema(type: 'string', example: 'H5000ABG')),
+            new OA\Parameter(name: 'tanggal_start', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date', example: '2026-01-01')),
+            new OA\Parameter(name: 'tanggal_end', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date', example: '2026-12-31')),
+            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 1)),
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 10)),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Berhasil'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+            new OA\Response(response: 403, description: 'Bukan role jasa_raharja'),
+            new OA\Response(response: 422, description: 'Validasi gagal'),
+        ]
+    )]
+    public function jrVerifikasiIndex()
+    {
+    }
+
+    #[OA\Get(
+        path: '/api/verifikasi-d2d',
+        tags: ['Jasa Raharja'],
+        summary: 'Daftar verifikasi pendataan D2D untuk Jasa Raharja',
+        description: 'Filter mengikuti halaman dapur/verifikasi-d2d. Gunakan `/api/master/status-verifikasi` untuk daftar status.',
+        security: [['bearerAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'status_verifikasi_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 1)),
+            new OA\Parameter(name: 'kota', in: 'query', required: false, schema: new OA\Schema(type: 'string', example: '3303')),
+            new OA\Parameter(name: 'lokasi_samsat', in: 'query', required: false, schema: new OA\Schema(type: 'string', example: '30')),
+            new OA\Parameter(name: 'kecamatan_samsat', in: 'query', required: false, schema: new OA\Schema(type: 'string', example: '330301')),
+            new OA\Parameter(name: 'kelurahan_samsat', in: 'query', required: false, schema: new OA\Schema(type: 'string', example: '3303012001')),
+            new OA\Parameter(name: 'nopol', in: 'query', required: false, schema: new OA\Schema(type: 'string', example: 'R4126IAC')),
+            new OA\Parameter(name: 'tanggal_start', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date', example: '2026-01-01')),
+            new OA\Parameter(name: 'tanggal_end', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date', example: '2026-12-31')),
+            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 1)),
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 10)),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Berhasil'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+            new OA\Response(response: 403, description: 'Bukan role jasa_raharja'),
+            new OA\Response(response: 422, description: 'Validasi gagal'),
+        ]
+    )]
+    public function jrVerifikasiD2dIndex()
+    {
+    }
+
+    #[OA\Get(
         path: '/api/pendataan',
         tags: ['Pendataan Kendaraan'],
         summary: 'List pendataan kendaraan milik user login',

@@ -14,6 +14,9 @@ use App\Http\Controllers\API\RekapD2dController;
 use App\Http\Controllers\API\DataTertagihController;
 use App\Http\Controllers\API\DataTertagihD2dController;
 use App\Http\Controllers\API\JrDataTertagihController;
+use App\Http\Controllers\API\JrVerifikasiController;
+use App\Http\Controllers\API\JrVerifikasiD2dController;
+use App\Http\Controllers\API\JrMasterController;
 use App\Http\Controllers\API\AlasanTidakBayarPajakController;
 use App\Http\Controllers\API\CekVersiController;
 use App\Http\Controllers\KebijakanPrivasiController;
@@ -88,6 +91,9 @@ Route::middleware(['auth-api', 'field-officer.api'])->group(function () {
 Route::middleware(['auth-api-jr', 'jasa-raharja.api'])->group(function () {
     Route::get('data-tertagih', [JrDataTertagihController::class, 'index']);
     Route::get('data-tertagih-d2d', [JrDataTertagihController::class, 'indexD2d']);
+    Route::get('verifikasi', [JrVerifikasiController::class, 'index']);
+    Route::get('verifikasi-d2d', [JrVerifikasiD2dController::class, 'index']);
+    Route::get('master/status-verifikasi', [JrMasterController::class, 'statusVerifikasi']);
 });
 
    Route::get('rekap_download', [RekapController::class, 'rekapPreview']);

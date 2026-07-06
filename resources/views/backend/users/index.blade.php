@@ -445,8 +445,9 @@
                 var jasaRaharjaSelected = isJasaRaharjaRole();
 
                 if (jasaRaharjaSelected) {
-                    $('#standardUserFields, #standardEmailField, #standardWhatsappField').hide()
+                    $('#standardEmailField, #standardWhatsappField').hide()
                         .find('input').removeAttr('required');
+                    $('#standardUserFields').show().find('input').attr('required', 'required');
                     $('#jasaRaharjaContainer').show().find('input').attr('required', 'required');
                 } else if (uptdSelected) {
                     $('#uptdContainer').show().find('select, input').attr('required', 'required');

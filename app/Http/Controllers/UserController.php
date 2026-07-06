@@ -418,6 +418,7 @@ class UserController extends Controller
 
         if ($isJasaRaharjaRole) {
             $validator = Validator::make($request->all(), [
+                'name' => 'required|string|max:255',
                 'username' => 'required|string|max:255|unique:users,email',
                 'password' => 'required|string|min:6',
                 'api_key' => 'required|string|min:8|max:255',
@@ -436,7 +437,7 @@ class UserController extends Controller
             }
 
             $user = User::create([
-                'name' => $request->username,
+                'name' => $request->name,
                 'email' => $request->username,
                 'whatsapp' => 'jr-' . \Illuminate\Support\Str::slug((string) $request->username),
                 'password' => bcrypt($request->password),

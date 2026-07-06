@@ -28,16 +28,21 @@
                                 <form method="POST" action="{{ route('jasa-raharja.store') }}">
                                     @csrf
                                     <div class="row g-3">
-                                        <div class="col-md-4">
+                                        <div class="col-md-3">
+                                            <label class="form-label">Nama</label>
+                                            <input type="text" name="name" class="form-control"
+                                                value="{{ old('name') }}" required>
+                                        </div>
+                                        <div class="col-md-3">
                                             <label class="form-label">Username</label>
                                             <input type="text" name="username" class="form-control"
                                                 value="{{ old('username') }}" required>
                                         </div>
-                                        <div class="col-md-4">
+                                        <div class="col-md-3">
                                             <label class="form-label">Password</label>
                                             <input type="password" name="password" class="form-control" required>
                                         </div>
-                                        <div class="col-md-4">
+                                        <div class="col-md-3">
                                             <label class="form-label">API Key</label>
                                             <div class="input-group">
                                                 <input type="text" name="api_key" id="jrApiKeyNew" class="form-control"
@@ -61,6 +66,7 @@
                                         <thead>
                                             <tr>
                                                 <th width="70">ID</th>
+                                                <th>Nama</th>
                                                 <th>Username</th>
                                                 <th>API Key</th>
                                                 <th>Password Baru</th>
@@ -71,6 +77,11 @@
                                             @forelse ($users as $user)
                                                 <tr>
                                                     <td>{{ $user->id }}</td>
+                                                    <td>
+                                                        <input form="update-jr-{{ $user->id }}" type="text"
+                                                            name="name" class="form-control form-control-sm"
+                                                            value="{{ $user->name }}" required>
+                                                    </td>
                                                     <td>
                                                         <input form="update-jr-{{ $user->id }}" type="text"
                                                             name="username" class="form-control form-control-sm"
@@ -106,7 +117,7 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="5" class="text-center">Belum ada akun Jasa Raharja.</td>
+                                                    <td colspan="6" class="text-center">Belum ada akun Jasa Raharja.</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>

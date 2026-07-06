@@ -31,13 +31,14 @@ class JasaRaharjaController extends Controller
         $this->ensureSuperAdmin();
 
         $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6'],
             'api_key' => ['required', 'string', 'min:8', 'max:255'],
         ]);
 
         $user = User::query()->create([
-            'name' => $validated['username'],
+            'name' => $validated['name'],
             'email' => $validated['username'],
             'whatsapp' => 'jr-' . Str::slug($validated['username']),
             'password' => Hash::make($validated['password']),
@@ -57,12 +58,13 @@ class JasaRaharjaController extends Controller
         $user = User::query()->role(self::ROLE_NAME, 'web')->findOrFail($id);
 
         $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:255', 'unique:users,email,' . $user->id],
             'password' => ['nullable', 'string', 'min:6'],
             'api_key' => ['required', 'string', 'min:8', 'max:255'],
         ]);
 
-        $user->name = $validated['username'];
+        $user->name = $validated['name'];
         $user->email = $validated['username'];
         $user->otp = $validated['api_key'];
 

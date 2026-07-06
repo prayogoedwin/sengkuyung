@@ -160,7 +160,7 @@ class ApiDocs
 
     #[OA\Post(
         path: '/api/login-external',
-        tags: ['Auth'],
+        tags: ['Auth', 'Jasa Raharja'],
         summary: 'Login eksternal Jasa Raharja (username + password + header apikey)',
         description: 'Khusus akun role `jasa_raharja`. Kirim `username` dan `password` di body JSON. Header `apikey` wajib dan harus cocok dengan nilai API Key akun (kolom `apikey` di database). Mengembalikan bearer token untuk group middleware `auth-api-jr`.',
         parameters: [
@@ -733,6 +733,22 @@ class ApiDocs
     }
 
     #[OA\Get(
+        path: '/api/master/status-verifikasi',
+        tags: ['Jasa Raharja'],
+        summary: 'Master status verifikasi (khusus Jasa Raharja)',
+        description: 'Endpoint master untuk filter status verifikasi di API verifikasi JR. ID integer (tidak di-encode).',
+        security: [['bearerAuth' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Berhasil'),
+            new OA\Response(response: 401, description: 'Unauthorized'),
+            new OA\Response(response: 403, description: 'Bukan role jasa_raharja'),
+        ]
+    )]
+    public function jrMasterStatusVerifikasi()
+    {
+    }
+
+    #[OA\Get(
         path: '/api/data-tertagih',
         tags: ['Jasa Raharja'],
         summary: 'Daftar data tertagih reguler untuk Jasa Raharja',
@@ -777,22 +793,6 @@ class ApiDocs
         ]
     )]
     public function jrDataTertagihD2dIndex()
-    {
-    }
-
-    #[OA\Get(
-        path: '/api/master/status-verifikasi',
-        tags: ['Jasa Raharja'],
-        summary: 'Master status verifikasi (khusus Jasa Raharja)',
-        description: 'Endpoint master untuk filter status verifikasi di API verifikasi JR. ID integer (tidak di-encode).',
-        security: [['bearerAuth' => []]],
-        responses: [
-            new OA\Response(response: 200, description: 'Berhasil'),
-            new OA\Response(response: 401, description: 'Unauthorized'),
-            new OA\Response(response: 403, description: 'Bukan role jasa_raharja'),
-        ]
-    )]
-    public function jrMasterStatusVerifikasi()
     {
     }
 

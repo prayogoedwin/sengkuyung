@@ -19,6 +19,7 @@ use App\Helpers\FileEncryption;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 use App\Models\ActivityLog;
 use App\Models\User;
@@ -303,18 +304,7 @@ class SengPendataanKendaraanController extends Controller
         // Simpan data
         $data = $this->pendataanModelClass()::create($requestData);
 
-        // Tandai data tertagih sudah terdata jika nopol yang sama ditemukan.
-        $normalizedNopol = strtoupper(preg_replace('/\s+/', '', (string) $request->nopol));
-        if ($normalizedNopol !== '') {
-            $tertagihUpdate = [
-                'is_terdata' => 1,
-                'updated_by' => $user->id,
-                'updated_at' => now(),
-            ];
-
-            $this->dataTertagihModelClass()::whereRaw("REPLACE(UPPER(no_polisi), ' ', '') = ?", [$normalizedNopol])
-                ->update($tertagihUpdate);
-        }
+        $this->markDataTertagihAsTerdata((string) $request->nopol, $user);
 
         $encodedId = Helper::encodeId($data->id);
 
@@ -345,6 +335,46 @@ class SengPendataanKendaraanController extends Controller
         }
 
         return response()->json(['status' => true, 'message' => 'Data berhasil ditambahkan', 'data' => $responseData, 'html' => $html], Response::HTTP_CREATED);
+    }
+
+    protected function markDataTertagihAsTerdata(string $nopol, ?User $user): int
+    {
+        $rawNopol = trim($nopol);
+
+        if ($rawNopol === '') {
+            return 0;
+        }
+
+        $tertagihUpdate = [
+            'is_terdata' => 1,
+            'updated_by' => $user?->id,
+            'updated_at' => now(),
+        ];
+
+        $modelClass = $this->dataTertagihModelClass();
+        $affectedRows = $modelClass::query()
+            ->where('no_polisi', $rawNopol)
+            ->update($tertagihUpdate);
+
+        if ($affectedRows === 0) {
+            $normalizedNopol = strtoupper(preg_replace('/\s+/', '', $rawNopol));
+
+            if ($normalizedNopol !== '') {
+                $affectedRows = $modelClass::query()
+                    ->whereRaw("REPLACE(UPPER(no_polisi), ' ', '') = ?", [$normalizedNopol])
+                    ->update($tertagihUpdate);
+            }
+        }
+
+        if ($affectedRows === 0) {
+            Log::warning('Data tertagih regular tidak ter-update setelah pendataan tersimpan.', [
+                'nopol' => $rawNopol,
+                'user_id' => $user?->id,
+                'model' => $modelClass,
+            ]);
+        }
+
+        return $affectedRows;
     }
 
     public function upload_bak(Request $request, $id)

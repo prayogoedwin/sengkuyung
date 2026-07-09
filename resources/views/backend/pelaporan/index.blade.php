@@ -68,10 +68,12 @@
                                                 <label for="kecamatan">Tipe Pelaporan</label>
                                                 <select class="form-control" id="tipe" name="tipe">
                                                     @if (!empty($isRekapOnlyRole) && $isRekapOnlyRole)
-                                                        <option value="2" selected>Rekap</option>
+                                                        <option value="2" {{ (string) request('tipe', '2') === '2' ? 'selected' : '' }}>Rekap</option>
+                                                        <option value="3" {{ (string) request('tipe') === '3' ? 'selected' : '' }}>Rekap Per Orang</option>
                                                     @else
                                                         <option value="1" {{ (string) request('tipe', '1') === '1' ? 'selected' : '' }}>Jurnal</option>
                                                         <option value="2" {{ (string) request('tipe') === '2' ? 'selected' : '' }}>Rekap</option>
+                                                        <option value="3" {{ (string) request('tipe') === '3' ? 'selected' : '' }}>Rekap Per Orang</option>
                                                     @endif
                                                 </select>
                                             </div>

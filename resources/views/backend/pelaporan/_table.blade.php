@@ -12,7 +12,15 @@
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped table-sm mb-0">
                                 <thead>
-                                    @if (($pelaporanTable['type'] ?? '') === 'rekap')
+                                    @if (($pelaporanTable['type'] ?? '') === 'rekap-per-orang')
+                                        <tr>
+                                            <th>NAMA PETUGAS</th>
+                                            @foreach ($pelaporanTable['statusColumns'] as $status)
+                                                <th class="text-center">{{ $status }}</th>
+                                            @endforeach
+                                            <th class="text-center">Grand Total</th>
+                                        </tr>
+                                    @elseif (($pelaporanTable['type'] ?? '') === 'rekap')
                                         @foreach ($pelaporanTable['headers'] as $headerRow)
                                             <tr>
                                                 @foreach ($headerRow as $header)
@@ -29,13 +37,32 @@
                                     @endif
                                 </thead>
                                 <tbody>
-                                    @foreach ($pelaporanTable['rows'] as $row)
-                                        <tr>
-                                            @foreach ($row as $cell)
-                                                <td>{{ is_numeric($cell) ? number_format((float) $cell, 0, ',', '.') : $cell }}</td>
+                                    @if (($pelaporanTable['type'] ?? '') === 'rekap-per-orang')
+                                        @foreach ($pelaporanTable['rows'] as $row)
+                                            <tr>
+                                                <td>{{ $row['petugas'] }}</td>
+                                                @foreach ($pelaporanTable['statusColumns'] as $status)
+                                                    <td class="text-center">{{ number_format((int) ($row['counts'][$status] ?? 0), 0, ',', '.') }}</td>
+                                                @endforeach
+                                                <td class="text-center fw-bold">{{ number_format((int) $row['total'], 0, ',', '.') }}</td>
+                                            </tr>
+                                        @endforeach
+                                        <tr class="table-secondary fw-bold">
+                                            <td>Grand Total</td>
+                                            @foreach ($pelaporanTable['statusColumns'] as $status)
+                                                <td class="text-center">{{ number_format((int) ($pelaporanTable['totals'][$status] ?? 0), 0, ',', '.') }}</td>
                                             @endforeach
+                                            <td class="text-center">{{ number_format((int) ($pelaporanTable['totals']['grand'] ?? 0), 0, ',', '.') }}</td>
                                         </tr>
-                                    @endforeach
+                                    @else
+                                        @foreach ($pelaporanTable['rows'] as $row)
+                                            <tr>
+                                                @foreach ($row as $cell)
+                                                    <td>{{ is_numeric($cell) ? number_format((float) $cell, 0, ',', '.') : $cell }}</td>
+                                                @endforeach
+                                            </tr>
+                                        @endforeach
+                                    @endif
                                 </tbody>
                             </table>
                         </div>

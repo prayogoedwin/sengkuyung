@@ -535,7 +535,134 @@ class PelaporanController extends Controller
             return $this->buildRekapViewPayload($request);
         }
 
+        if ((int) $request->tipe === 3) {
+            return $this->buildRekapPerOrangViewPayload($request);
+        }
+
         return null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function rekapPerOrangPreferredStatusOrder(): array
+    {
+        return [
+            'DIVERIFIKASI',
+            'TERVERIFIKASI',
+            'MENUNGGU VERIFIKASI',
+            'SUDAH DIPERBAIKI',
+            'REVISI',
+            'DITOLAK',
+            'PERLU REVISI',
+        ];
+    }
+
+    private function rekapPerOrangReportTitle(Request $request): string
+    {
+        $title = 'REKAP JURNAL PER PETUGAS';
+
+        if ($request->tanggal_start && $request->tanggal_end) {
+            $tanggalStart = Carbon::parse($request->tanggal_start)->translatedFormat('d F Y');
+            $tanggalEnd = Carbon::parse($request->tanggal_end)->translatedFormat('d F Y');
+            $title .= " — Periode: {$tanggalStart} s.d. {$tanggalEnd}";
+        }
+
+        return mb_strtoupper($title, 'UTF-8');
+    }
+
+    /**
+     * @return array{type: string, title: string, statusColumns: list<string>, rows: list<array{petugas: string, counts: array<string, int>, total: int}>, totals: array<string, int>}
+     */
+    private function buildRekapPerOrangPayload(Request $request): array
+    {
+        $matrix = [];
+
+        foreach ($this->buildJurnalQuery($request)->cursor() as $row) {
+            $petugas = trim((string) ($row->createdByUser?->name ?? '-'));
+            if ($petugas === '') {
+                $petugas = '-';
+            }
+
+            $status = trim((string) ($row->status_verifikasi_name ?? '-'));
+            if ($status === '') {
+                $status = '-';
+            }
+
+            if (!isset($matrix[$petugas])) {
+                $matrix[$petugas] = [];
+            }
+
+            $matrix[$petugas][$status] = ($matrix[$petugas][$status] ?? 0) + 1;
+        }
+
+        $statusColumns = [];
+        foreach ($this->rekapPerOrangPreferredStatusOrder() as $status) {
+            $statusColumns[] = $status;
+        }
+
+        foreach ($matrix as $counts) {
+            foreach (array_keys($counts) as $status) {
+                if (!in_array($status, $statusColumns, true)) {
+                    $statusColumns[] = $status;
+                }
+            }
+        }
+
+        $rows = [];
+        $totals = array_fill_keys($statusColumns, 0);
+        $grandTotal = 0;
+
+        $petugasNames = array_keys($matrix);
+        natcasesort($petugasNames);
+
+        foreach ($petugasNames as $petugas) {
+            $counts = [];
+            $rowTotal = 0;
+
+            foreach ($statusColumns as $status) {
+                $value = (int) ($matrix[$petugas][$status] ?? 0);
+                $counts[$status] = $value;
+                $totals[$status] += $value;
+                $rowTotal += $value;
+            }
+
+            $rows[] = [
+                'petugas' => $petugas,
+                'counts' => $counts,
+                'total' => $rowTotal,
+            ];
+            $grandTotal += $rowTotal;
+        }
+
+        $totals['grand'] = $grandTotal;
+
+        return [
+            'type' => 'rekap-per-orang',
+            'title' => $this->rekapPerOrangReportTitle($request),
+            'statusColumns' => $statusColumns,
+            'rows' => $rows,
+            'totals' => $totals,
+        ];
+    }
+
+    private function buildRekapPerOrangViewPayload(Request $request): array
+    {
+        return $this->buildRekapPerOrangPayload($request);
+    }
+
+    /**
+     * @return list<int|string>
+     */
+    private function mapRekapPerOrangDataRow(array $row, array $statusColumns): array
+    {
+        $line = [$row['petugas']];
+        foreach ($statusColumns as $status) {
+            $line[] = $row['counts'][$status] ?? 0;
+        }
+        $line[] = $row['total'];
+
+        return $line;
     }
 
     /**
@@ -1029,6 +1156,8 @@ class PelaporanController extends Controller
             return $this->jurnalCsv($request);  // Kirim request ke fungsi
         } elseif ($tipe == 2) {
             return $this->rekapCsv($request);  // Kirim request ke fungsi
+        } elseif ($tipe == 3) {
+            return $this->rekapPerOrangCsv($request);
         }
     
         return response()->json(['message' => 'Tipe tidak valid'], 400);
@@ -1044,6 +1173,8 @@ class PelaporanController extends Controller
             return $this->jurnalExcel($request);
         } elseif ($tipe == 2) {
             return $this->rekapExcel($request);
+        } elseif ($tipe == 3) {
+            return $this->rekapPerOrangExcel($request);
         }
 
         return response()->json(['message' => 'Tipe tidak valid'], 400);
@@ -1125,6 +1256,44 @@ class PelaporanController extends Controller
         return response()->stream($callback, 200, $responseHeaders);
     }
 
+    public function rekapPerOrangCsv(Request $request)
+    {
+        $payload = $this->buildRekapPerOrangPayload($request);
+        $statusColumns = $payload['statusColumns'];
+        $headers = array_merge(['NAMA PETUGAS'], $statusColumns, ['Grand Total']);
+
+        $filename = $this->exportFilenamePrefix() . 'rekap_per_orang_' . date('YmdHis') . '.csv';
+        $responseHeaders = [
+            'Content-Type' => 'text/csv',
+            "Content-Disposition" => "attachment; filename=$filename",
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+        ];
+
+        $callback = function () use ($payload, $headers, $statusColumns) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['']);
+            fputcsv($file, [$payload['title']]);
+            fputcsv($file, ['']);
+            fputcsv($file, $headers);
+
+            foreach ($payload['rows'] as $row) {
+                fputcsv($file, $this->mapRekapPerOrangDataRow($row, $statusColumns));
+            }
+
+            $totalRow = ['Grand Total'];
+            foreach ($statusColumns as $status) {
+                $totalRow[] = $payload['totals'][$status] ?? 0;
+            }
+            $totalRow[] = $payload['totals']['grand'] ?? 0;
+            fputcsv($file, $totalRow);
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $responseHeaders);
+    }
+
     public function jurnalExcel(Request $request)
     {
         $verifikasis = $this->buildJurnalQuery($request);
@@ -1189,6 +1358,63 @@ class PelaporanController extends Controller
         ]);
     }
 
+    public function rekapPerOrangExcel(Request $request)
+    {
+        $payload = $this->buildRekapPerOrangPayload($request);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $this->writeRekapPerOrangExcelSheet($sheet, $payload);
+
+        $filename = $this->exportFilenamePrefix() . 'rekap_per_orang_' . date('YmdHis') . '.xlsx';
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new XlsxWriter($spreadsheet);
+            $writer->save('php://output');
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet);
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    private function writeRekapPerOrangExcelSheet(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet, array $payload): void
+    {
+        $statusColumns = $payload['statusColumns'];
+        $lastColIndex = 1 + count($statusColumns) + 1;
+        $lastCol = Coordinate::stringFromColumnIndex($lastColIndex);
+
+        $sheet->setCellValue('A2', $payload['title']);
+        $sheet->mergeCells("A2:{$lastCol}2");
+        $sheet->getStyle('A2')->getFont()->setBold(true);
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        $headers = array_merge(['NAMA PETUGAS'], $statusColumns, ['Grand Total']);
+        $sheet->fromArray($headers, null, 'A4');
+        $sheet->getStyle("A4:{$lastCol}4")->getFont()->setBold(true);
+        $sheet->getStyle("A4:{$lastCol}4")->getFill()
+            ->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('D9D9D9');
+
+        $rowNumber = 5;
+        foreach ($payload['rows'] as $row) {
+            $sheet->fromArray([$this->mapRekapPerOrangDataRow($row, $statusColumns)], null, 'A' . $rowNumber);
+            $rowNumber++;
+        }
+
+        $totalRow = ['Grand Total'];
+        foreach ($statusColumns as $status) {
+            $totalRow[] = $payload['totals'][$status] ?? 0;
+        }
+        $totalRow[] = $payload['totals']['grand'] ?? 0;
+        $sheet->fromArray([$totalRow], null, 'A' . $rowNumber);
+        $sheet->getStyle("A{$rowNumber}:{$lastCol}{$rowNumber}")->getFont()->setBold(true);
+
+        for ($i = 1; $i <= $lastColIndex; $i++) {
+            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i))->setAutoSize(true);
+        }
+    }
+
 
     public function pelaporanPdf(Request $request){
         $user = auth()->user();
@@ -1199,6 +1425,8 @@ class PelaporanController extends Controller
             return $this->jurnalPdf($request);  // Kirim request ke fungsi
         } elseif ($tipe == 2) {
             return $this->rekapPdf($request);  // Kirim request ke fungsi
+        } elseif ($tipe == 3) {
+            return $this->rekapPerOrangPdf($request);
         }
     
         return response()->json(['message' => 'Tipe tidak valid'], 400);
@@ -1277,6 +1505,67 @@ class PelaporanController extends Controller
         return response($dompdf->output(), 200)
             ->header('Content-Type', 'application/pdf')
             ->header('Content-Disposition', "attachment; filename=\"$fileName\"");
+    }
+
+    public function rekapPerOrangPdf(Request $request)
+    {
+        $payload = $this->buildRekapPerOrangPayload($request);
+        $html = $this->buildRekapPerOrangPdfHtml($payload);
+
+        $options = new Options();
+        $options->set('isRemoteEnabled', true);
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'landscape');
+        $dompdf->render();
+
+        $fileName = $this->exportFilenamePrefix() . 'rekap_per_orang_' . date('YmdHis') . '.pdf';
+
+        return response($dompdf->output(), 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', "attachment; filename=\"$fileName\"");
+    }
+
+    private function buildRekapPerOrangPdfHtml(array $payload): string
+    {
+        $statusColumns = $payload['statusColumns'];
+        $title = htmlspecialchars($payload['title'], ENT_QUOTES, 'UTF-8');
+
+        $head = '<tr><th>NAMA PETUGAS</th>';
+        foreach ($statusColumns as $status) {
+            $head .= '<th>' . htmlspecialchars($status, ENT_QUOTES, 'UTF-8') . '</th>';
+        }
+        $head .= '<th>Grand Total</th></tr>';
+
+        $body = '';
+        foreach ($payload['rows'] as $row) {
+            $cells = '';
+            foreach ($this->mapRekapPerOrangDataRow($row, $statusColumns) as $cell) {
+                $cells .= '<td>' . htmlspecialchars((string) $cell, ENT_QUOTES, 'UTF-8') . '</td>';
+            }
+            $body .= "<tr>{$cells}</tr>";
+        }
+
+        $totalCells = '';
+        foreach ($this->mapRekapPerOrangDataRow([
+            'petugas' => 'Grand Total',
+            'counts' => array_intersect_key($payload['totals'], array_flip($statusColumns)),
+            'total' => $payload['totals']['grand'] ?? 0,
+        ], $statusColumns) as $cell) {
+            $totalCells .= '<td>' . htmlspecialchars((string) $cell, ENT_QUOTES, 'UTF-8') . '</td>';
+        }
+        $body .= "<tr>{$totalCells}</tr>";
+
+        return "<html><head><style>
+            body{font-family:Arial,sans-serif;font-size:9px;}
+            h2{font-size:12px;text-align:center;}
+            table{width:100%;border-collapse:collapse;}
+            th,td{border:1px solid #000;padding:4px;text-align:left;}
+            th{background:#d9d9d9;}
+        </style></head><body>
+            <h2>{$title}</h2>
+            <table><thead>{$head}</thead><tbody>{$body}</tbody></table>
+        </body></html>";
     }
 
 }

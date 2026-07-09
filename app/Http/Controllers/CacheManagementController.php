@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\ApiCacheManager;
+use App\Support\MaintenanceManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -24,6 +25,7 @@ class CacheManagementController extends Controller
         'admin:data-tertagih:' => 'Admin Data Tertagih',
         'admin:data-tertagih-d2d:' => 'Admin Data Tertagih D2D',
         'admin:master:' => 'Admin Master Data',
+        'system:maintenance' => 'System Maintenance',
     ];
 
     private const SCOPE_PREFIXES = [
@@ -48,6 +50,11 @@ class CacheManagementController extends Controller
             static fn (string $key) => str_starts_with($key, $prefix)
         ));
 
+        if ($scope === 'admin' && MaintenanceManager::isActive()) {
+            $trackedKeys[] = MaintenanceManager::REDIS_KEY;
+        }
+        $trackedKeys = array_values(array_unique($trackedKeys));
+
         return view('backend.cache-management.index', [
             'trackedKeys' => $trackedKeys,
             'cacheGroups' => $cacheGroups,
@@ -69,6 +76,11 @@ class CacheManagementController extends Controller
 
         $deletedCount = 0;
         foreach ($validated['keys'] as $key) {
+            if ($scope === 'admin' && $key === MaintenanceManager::REDIS_KEY) {
+                $deletedCount += MaintenanceManager::clearRedisKey();
+                continue;
+            }
+
             if (!str_starts_with($key, $prefix)) {
                 continue;
             }
@@ -99,7 +111,11 @@ class CacheManagementController extends Controller
                 ->with('error', 'Prefix cache tidak valid.');
         }
 
-        $deletedCount = ApiCacheManager::forgetByPrefix($validated['prefix']);
+        if ($validated['prefix'] === MaintenanceManager::REDIS_KEY) {
+            $deletedCount = MaintenanceManager::clearRedisKey();
+        } else {
+            $deletedCount = ApiCacheManager::forgetByPrefix($validated['prefix']);
+        }
 
         return redirect()
             ->route('cache-management.scope', ['scope' => $scope])
@@ -113,6 +129,9 @@ class CacheManagementController extends Controller
         $prefix = self::SCOPE_PREFIXES[$scope];
 
         $deletedCount = ApiCacheManager::forgetByPrefix($prefix);
+        if ($scope === 'admin') {
+            $deletedCount += MaintenanceManager::clearRedisKey();
+        }
 
         $label = strtoupper($scope);
 

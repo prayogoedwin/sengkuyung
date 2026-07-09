@@ -54,7 +54,7 @@
             </li>
 
             @if ($isSuperAdmin)
-                <li class="menu-item {{ request()->routeIs('version.*') || request()->routeIs('jasa-raharja.*') || request()->routeIs('cache-management.*') ? 'active open' : '' }}">
+                <li class="menu-item {{ request()->routeIs('version.*') || request()->routeIs('jasa-raharja.*') || request()->routeIs('cache-management.*') || request()->routeIs('maintenance-status.*') ? 'active open' : '' }}">
                     <a href="javascript:void(0);" class="menu-link menu-toggle">
                         <i class="menu-icon tf-icons bx bx-cog"></i>
                         <div data-i18n="Analytics">Setting</div>
@@ -78,6 +78,11 @@
                         <li class="menu-item {{ request()->routeIs('cache-management.scope') && request()->route('scope') === 'api' ? 'active' : '' }}">
                             <a href="{{ route('cache-management.scope', ['scope' => 'api']) }}" class="menu-link">
                                 <div data-i18n="Analytics">Cache API</div>
+                            </a>
+                        </li>
+                        <li class="menu-item {{ request()->routeIs('maintenance-status.*') ? 'active' : '' }}">
+                            <a href="{{ route('maintenance-status.index') }}" class="menu-link">
+                                <div data-i18n="Analytics">Status Maintenance</div>
                             </a>
                         </li>
                     </ul>

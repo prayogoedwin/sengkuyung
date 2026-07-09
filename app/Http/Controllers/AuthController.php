@@ -9,6 +9,8 @@ use App\Helpers\Helper;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Session;
 use App\Http\Middleware\DenyPetugasWeb;
+use App\Http\Middleware\EnsureNotInMaintenance;
+use App\Support\MaintenanceManager;
 
 class AuthController extends Controller
 {
@@ -235,6 +237,16 @@ class AuthController extends Controller
         ]);
 
         // Login user
+        if (
+            MaintenanceManager::isActive()
+            && !($user->hasRole('super-admin') || $user->hasRole('superadmin'))
+        ) {
+            Session::forget('otp_user_id');
+
+            return redirect()->route('login.form')
+                ->withErrors(['login_error' => EnsureNotInMaintenance::MESSAGE]);
+        }
+
         Auth::login($user);
         Session::forget('otp_user_id');
 

@@ -21,6 +21,7 @@ use App\Http\Controllers\CacheManagementController;
 use App\Http\Controllers\KebijakanPrivasiController;
 use App\Http\Controllers\VersionController;
 use App\Http\Controllers\JasaRaharjaController;
+use App\Http\Controllers\MaintenanceStatusController;
 
 Route::get('/kebijakan-privasi', [KebijakanPrivasiController::class, 'show'])->name('kebijakan-privasi');
 
@@ -117,6 +118,9 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::post('/cache-management/{scope}/clear-all', [CacheManagementController::class, 'clearAll'])
             ->whereIn('scope', ['admin', 'api'])
             ->name('cache-management.clear-all');
+
+        Route::get('/maintenance-status', [MaintenanceStatusController::class, 'index'])->name('maintenance-status.index');
+        Route::post('/maintenance-status', [MaintenanceStatusController::class, 'update'])->name('maintenance-status.update');
 
         Route::get('/version', [VersionController::class, 'index'])->name('version.index');
         Route::post('/version', [VersionController::class, 'store'])->name('version.store');

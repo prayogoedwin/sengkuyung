@@ -23,6 +23,15 @@ return Application::configure(basePath: dirname(__DIR__))
             'petugas.api' => \App\Http\Middleware\EnsurePetugasApi::class,
             'petugas-d2d.api' => \App\Http\Middleware\EnsurePetugasD2dApi::class,
             'jasa-raharja.api' => \App\Http\Middleware\EnsureJasaRaharjaApi::class,
+            'maintenance.check' => \App\Http\Middleware\EnsureNotInMaintenance::class,
+        ]);
+
+        $middleware->web(append: [
+            \App\Http\Middleware\EnsureNotInMaintenance::class,
+        ]);
+
+        $middleware->api(append: [
+            \App\Http\Middleware\EnsureNotInMaintenance::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -21,7 +21,13 @@ class EnsureNotInMaintenance
             return $next($request);
         }
 
-        if ($request->is('otp') || $request->is('otp/*') || $request->is('act_login')) {
+        if (
+            $request->is('otp')
+            || $request->is('otp/*')
+            || $request->is('act_login')
+            || $request->is('captcha')
+            || $request->is('captcha/*')
+        ) {
             return $next($request);
         }
 

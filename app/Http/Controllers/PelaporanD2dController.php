@@ -80,6 +80,11 @@ class PelaporanD2dController extends PelaporanController
         return 'pelaporan-d2d.pdf';
     }
 
+    protected function pelaporanRouteIndex(): string
+    {
+        return 'pelaporan-d2d.index';
+    }
+
     protected function exportFilenamePrefix(): string
     {
         return 'd2d_';

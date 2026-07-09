@@ -62,6 +62,11 @@ class PelaporanController extends Controller
         return 'pelaporan.pdf';
     }
 
+    protected function pelaporanRouteIndex(): string
+    {
+        return 'pelaporan.index';
+    }
+
     protected function exportFilenamePrefix(): string
     {
         return '';
@@ -475,6 +480,64 @@ class PelaporanController extends Controller
         return $line;
     }
 
+    private function buildJurnalViewPayload(Request $request): array
+    {
+        $rows = [];
+        $no = 1;
+
+        foreach ($this->buildJurnalQuery($request)->cursor() as $row) {
+            $rows[] = $this->mapJurnalRow($row, $no++);
+        }
+
+        return [
+            'type' => 'jurnal',
+            'title' => $this->jurnalReportTitle($request),
+            'headers' => $this->jurnalColumnHeaders(),
+            'rows' => $rows,
+        ];
+    }
+
+    private function buildRekapViewPayload(Request $request): array
+    {
+        $payload = $this->buildRekapExportPayload($request);
+        $statusDefs = $this->rekapStatusColumnDefs();
+        $headers = $this->rekapHeaderMatrix($payload['layout']);
+        $rows = [];
+        $no = 1;
+
+        foreach ($payload['rows'] as $row) {
+            $rows[] = $this->mapRekapDataRow($row, $no++, $statusDefs);
+        }
+
+        $rows[] = $this->mapRekapDataRow([
+            'wilayah' => 'JUMLAH',
+            'potensi' => $payload['totals']['potensi'],
+            'belum' => $payload['totals']['belum'],
+            'sudah' => $payload['totals']['sudah'],
+            'statuses' => $payload['totals']['statuses'],
+        ], 0, $statusDefs);
+
+        return [
+            'type' => 'rekap',
+            'title' => $payload['title'],
+            'headers' => $headers,
+            'rows' => $rows,
+        ];
+    }
+
+    private function buildPelaporanViewPayload(Request $request): ?array
+    {
+        if ((int) $request->tipe === 1) {
+            return $this->buildJurnalViewPayload($request);
+        }
+
+        if ((int) $request->tipe === 2) {
+            return $this->buildRekapViewPayload($request);
+        }
+
+        return null;
+    }
+
     /**
      * @return list<list<string>>
      */
@@ -882,9 +945,27 @@ class PelaporanController extends Controller
         $request->merge(['tipe' => 2]);
     }
 
+    private function applyPelaporanScopes(Request $request, $user): void
+    {
+        $this->applyUppdScope($request, $user);
+        $this->applyKecamatanScope($request, $user);
+        $this->applyKelurahanScope($request, $user);
+
+        if ($user && $user->hasRole('kabkota') && !empty($user->kota)) {
+            $request->merge(['kabkota_id' => $user->kota]);
+        }
+    }
+
     public function index(Request $request)
     {
         $user = User::findOrFail(auth()->id());
+        $pelaporanTable = null;
+
+        if ($request->boolean('tampilkan')) {
+            $this->applyPelaporanScopes($request, $user);
+            $pelaporanTable = $this->buildPelaporanViewPayload($request);
+        }
+
         $isKabkota = $user->hasRole('kabkota');
         $isUppd = $user->hasRole('uppd');
         $isKecamatan = $user->hasRole('kecamatan');
@@ -929,22 +1010,19 @@ class PelaporanController extends Controller
             'isLokasiSamsatLocked',
             'isKecamatanSamsatLocked',
             'isKelurahanSamsatLocked',
-            'isRekapOnlyRole'
+            'isRekapOnlyRole',
+            'pelaporanTable'
         ) + [
             'pelaporanRouteCsv' => $this->pelaporanRouteCsv(),
             'pelaporanRouteExcel' => $this->pelaporanRouteExcel(),
             'pelaporanRoutePdf' => $this->pelaporanRoutePdf(),
+            'pelaporanRouteIndex' => $this->pelaporanRouteIndex(),
         ]);
     }
 
     public function pelaporanCsv(Request $request){
         $user = auth()->user();
-        $this->applyUppdScope($request, $user);
-        $this->applyKecamatanScope($request, $user);
-        $this->applyKelurahanScope($request, $user);
-        if ($user && $user->hasRole('kabkota') && !empty($user->kota)) {
-            $request->merge(['kabkota_id' => $user->kota]);
-        }
+        $this->applyPelaporanScopes($request, $user);
 
         $tipe = $request->tipe;
         if ($tipe == 1) {
@@ -959,12 +1037,7 @@ class PelaporanController extends Controller
     public function pelaporanExcel(Request $request)
     {
         $user = auth()->user();
-        $this->applyUppdScope($request, $user);
-        $this->applyKecamatanScope($request, $user);
-        $this->applyKelurahanScope($request, $user);
-        if ($user && $user->hasRole('kabkota') && !empty($user->kota)) {
-            $request->merge(['kabkota_id' => $user->kota]);
-        }
+        $this->applyPelaporanScopes($request, $user);
 
         $tipe = $request->tipe;
         if ($tipe == 1) {
@@ -1119,12 +1192,7 @@ class PelaporanController extends Controller
 
     public function pelaporanPdf(Request $request){
         $user = auth()->user();
-        $this->applyUppdScope($request, $user);
-        $this->applyKecamatanScope($request, $user);
-        $this->applyKelurahanScope($request, $user);
-        if ($user && $user->hasRole('kabkota') && !empty($user->kota)) {
-            $request->merge(['kabkota_id' => $user->kota]);
-        }
+        $this->applyPelaporanScopes($request, $user);
 
         $tipe = $request->tipe;
         if ($tipe == 1) {

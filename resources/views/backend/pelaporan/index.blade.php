@@ -28,7 +28,7 @@
                                                 <select class="form-control" id="userKabkota" name="kabkota_id" {{ !empty($isScopedKabkota) && $isScopedKabkota ? 'disabled' : '' }}>
                                                     <option value="">Pilih Kabkota</option>
                                                     @foreach ($kabkotas as $kbkt)
-                                                        <option value="{{ $kbkt->id }}" {{ (string) ($selectedKabkotaId ?? '') === (string) $kbkt->id ? 'selected' : '' }}>{{ $kbkt->nama }}</option>
+                                                        <option value="{{ $kbkt->id }}" {{ (string) (request('kabkota_id', $selectedKabkotaId ?? '')) === (string) $kbkt->id ? 'selected' : '' }}>{{ $kbkt->nama }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
@@ -56,12 +56,12 @@
 
                                             <div class="col-md-6">
                                                 <label for="tanggal_start">Tanggal Pendataan Start</label>
-                                                <input type="date" id="tanggal_start" name="tanggal_start" class="form-control">
+                                                <input type="date" id="tanggal_start" name="tanggal_start" class="form-control" value="{{ request('tanggal_start') }}">
                                             </div>
 
                                             <div class="col-md-6">
                                                 <label for="tanggal_end">Tanggal Pendataan End</label>
-                                                <input type="date" id="tanggal_end" name="tanggal_end" class="form-control">
+                                                <input type="date" id="tanggal_end" name="tanggal_end" class="form-control" value="{{ request('tanggal_end') }}">
                                             </div>
 
                                             <div class="col-md-12 mt-2 mb-2">
@@ -70,8 +70,8 @@
                                                     @if (!empty($isRekapOnlyRole) && $isRekapOnlyRole)
                                                         <option value="2" selected>Rekap</option>
                                                     @else
-                                                        <option value="1">Jurnal</option>
-                                                        <option value="2">Rekap</option>
+                                                        <option value="1" {{ (string) request('tipe', '1') === '1' ? 'selected' : '' }}>Jurnal</option>
+                                                        <option value="2" {{ (string) request('tipe') === '2' ? 'selected' : '' }}>Rekap</option>
                                                     @endif
                                                 </select>
                                             </div>
@@ -80,6 +80,7 @@
                                                 <button class="btn btn-primary mt-2" id="submitFilter">Download CSV</button>
                                                 <button class="btn btn-info mt-2" id="submitFilterExcel">Download Excel</button>
                                                 <button class="btn btn-success mt-2" id="submitFilterPdf">Download PDF</button>
+                                                <button class="btn btn-warning mt-2" id="submitFilterView">Tampilkan</button>
                                                 <button class="btn btn-secondary mt-2" id="resetFilter">Reset</button>
                                             </div>
                                         </div>
@@ -91,6 +92,7 @@
                                 </div>
                             </div>
                         </div>
+                        @include('backend.pelaporan._table')
                     </div>
                     <!-- / Content -->
 
@@ -113,9 +115,9 @@
         var lockLokasiSamsat = @json((bool) ($isLokasiSamsatLocked ?? false));
         var forcedKecamatanSamsat = '{{ $selectedKecamatanSamsatId ?? '' }}';
         var forcedKelurahanSamsat = '{{ $selectedKelurahanSamsatId ?? '' }}';
-        var selectedLokasiSamsat = '';
-        var selectedKecamatanSamsat = forcedKecamatanSamsat || '';
-        var selectedKelurahanSamsat = forcedKelurahanSamsat || '';
+        var selectedLokasiSamsat = @json(request('lokasi_samsat', ''));
+        var selectedKecamatanSamsat = @json(request('kecamatan_samsat', '')) || forcedKecamatanSamsat || '';
+        var selectedKelurahanSamsat = @json(request('kelurahan_samsat', '')) || forcedKelurahanSamsat || '';
 
         function samsatMatchesProfile(samsat) {
             if (!profileLokasiSamsat) {
@@ -304,18 +306,14 @@
             window.location.href = `{{ route($pelaporanRoutePdf ?? 'pelaporan.pdf') }}?${buildQuery()}`;
         });
 
+        document.getElementById("submitFilterView").addEventListener("click", function (e) {
+            e.preventDefault();
+            window.location.href = `{{ route($pelaporanRouteIndex ?? 'pelaporan.index') }}?${buildQuery()}&tampilkan=1`;
+        });
+
         document.getElementById("resetFilter").addEventListener("click", function (e) {
             e.preventDefault();
-            document.getElementById("pelaporanFilterForm").reset();
-            if (isRekapOnlyRole) {
-                document.getElementById("tipe").value = '2';
-            }
-            if (isKabkotaLocked && lockedKabkotaId) {
-                document.getElementById("userKabkota").value = lockedKabkotaId;
-            }
-            document.getElementById("lokasiSamsat").innerHTML = '<option value="">Pilih Lokasi Samsat</option>';
-            document.getElementById("kecamatanSamsat").innerHTML = '<option value="">Pilih Kecamatan Samsat</option>';
-            document.getElementById("kelurahanSamsat").innerHTML = '<option value="">Pilih Kelurahan Samsat</option>';
+            window.location.href = `{{ route($pelaporanRouteIndex ?? 'pelaporan.index') }}`;
         });
     });
 </script>

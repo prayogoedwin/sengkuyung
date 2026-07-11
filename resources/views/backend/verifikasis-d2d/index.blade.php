@@ -350,5 +350,47 @@
     });
 </script>
 
+<script>
+    function forceDeleteVerifikasi(id) {
+        Swal.fire({
+            title: 'Force Delete?',
+            html: 'Data akan diarsipkan ke tabel <code>_del</code>, lalu dihapus dari pendataan D2D dan data tertagih D2D terkait (nopol sama).<br><b>Hanya super admin.</b>',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, Force Delete',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            $.ajax({
+                url: "{{ route($verifikasiForceDestroyRoute ?? 'verifikasi-d2d.force-destroy', ':id') }}".replace(':id', id),
+                type: 'DELETE',
+                data: {
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(response) {
+                    Swal.fire({
+                        title: 'Berhasil',
+                        text: response.message,
+                        icon: 'success'
+                    });
+                    $('#simpletable').DataTable().ajax.reload();
+                },
+                error: function(xhr) {
+                    Swal.fire({
+                        title: 'Gagal',
+                        text: xhr.responseJSON?.message || 'Terjadi kesalahan.',
+                        icon: 'error'
+                    });
+                }
+            });
+        });
+    }
+</script>
+
  
 @endpush

@@ -50,6 +50,16 @@ class VerifikasiD2dController extends VerifikasiController
         return 'verifikasi-d2d.status';
     }
 
+    protected function verifikasiRouteForceDestroy(): string
+    {
+        return 'verifikasi-d2d.force-destroy';
+    }
+
+    protected function isD2dForceDelete(): bool
+    {
+        return true;
+    }
+
     protected function verifikasiViewIndex(): string
     {
         return 'backend.verifikasis-d2d.index';

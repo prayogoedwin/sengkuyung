@@ -24,6 +24,7 @@ use App\Models\ActivityLog;
 use App\Support\ApiCacheManager;
 use App\Support\PendataanWilayahFilter;
 use App\Support\VerifikasiStatusGroups;
+use App\Services\ForceDeletePendataanService;
 
 class VerifikasiController extends Controller
 {
@@ -48,6 +49,16 @@ class VerifikasiController extends Controller
     protected function verifikasiRouteStatus(): string
     {
         return 'verifikasi.status';
+    }
+
+    protected function verifikasiRouteForceDestroy(): string
+    {
+        return 'verifikasi.force-destroy';
+    }
+
+    protected function isD2dForceDelete(): bool
+    {
+        return false;
     }
 
     protected function verifikasiViewIndex(): string
@@ -169,11 +180,14 @@ class VerifikasiController extends Controller
 
                 // Tambahkan kolom options berdasarkan role
                 if ($isSuperAdmin || $isAdminProv || $isUptd) {
-                    $datatable->addColumn('options', function ($verifikasi) {
-                        return '
-                            <a href="' . route($this->verifikasiRouteDetail(), ['id' => Helper::encodeId($verifikasi->id)]) . '" class="btn btn-primary btn-sm">Verif</a>
-                            <button hidden class="btn btn-danger btn-sm" onclick="confirmDelete(' . Helper::encodeId($verifikasi->id) . ')">Delete</button>
-                        ';
+                    $datatable->addColumn('options', function ($verifikasi) use ($isSuperAdmin) {
+                        $buttons = '<a href="' . route($this->verifikasiRouteDetail(), ['id' => Helper::encodeId($verifikasi->id)]) . '" class="btn btn-primary btn-sm">Verif</a>';
+
+                        if ($isSuperAdmin) {
+                            $buttons .= ' <button type="button" class="btn btn-danger btn-sm" onclick="forceDeleteVerifikasi(' . (int) $verifikasi->id . ')">Force Delete</button>';
+                        }
+
+                        return $buttons;
                     });
                 } elseif ($isKabkota) {
                     $datatable->addColumn('options', function ($verifikasi) {
@@ -229,6 +243,27 @@ class VerifikasiController extends Controller
         ))->with([
             'verifikasiIndexRoute' => $this->verifikasiRouteIndex(),
             'verifikasiPageTitle' => $this->verifikasiPageTitle(),
+            'verifikasiForceDestroyRoute' => $this->verifikasiRouteForceDestroy(),
+            'isSuperAdmin' => $user && ($user->hasRole('super-admin') || $user->hasRole('superadmin')),
+        ]);
+    }
+
+    public function forceDestroy(int $id, ForceDeletePendataanService $service)
+    {
+        $user = Auth::user();
+        $isSuperAdmin = $user && ($user->hasRole('super-admin') || $user->hasRole('superadmin'));
+        abort_unless($isSuperAdmin, 403, 'Akses hanya untuk superadmin.');
+
+        $result = $service->forceDeleteFromPendataan($id, $this->isD2dForceDelete());
+
+        return response()->json([
+            'success' => true,
+            'message' => sprintf(
+                'Force delete berhasil. Pendataan: %d, Tertagih: %d (sudah diarsipkan ke tabel _del).',
+                $result['pendataan'],
+                $result['tertagih']
+            ),
+            'result' => $result,
         ]);
     }
 

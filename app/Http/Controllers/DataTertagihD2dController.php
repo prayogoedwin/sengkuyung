@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\HandlesChunkedTertagihImport;
 use App\Models\DataTertagihD2d;
+use App\Services\ForceDeletePendataanService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -49,12 +50,13 @@ class DataTertagihD2dController extends Controller
             $year = $request->filled('year') ? (int) $request->year : $currentYear;
             $isTerdata = $request->filled('is_terdata') ? (string) $request->is_terdata : 'all';
             $noPolisi = trim((string) $request->input('no_polisi', ''));
+            $isSuperAdmin = $this->isSuperAdmin();
             $queryParams = $request->query();
             ksort($queryParams);
             $cacheHash = md5(json_encode($queryParams));
-            $cacheKey = "admin:data-tertagih-d2d:index:{$year}:{$isTerdata}:" . md5($noPolisi) . ":{$cacheHash}";
+            $cacheKey = "admin:data-tertagih-d2d:index:{$year}:{$isTerdata}:" . md5($noPolisi) . ':sa-' . ($isSuperAdmin ? '1' : '0') . ":{$cacheHash}";
 
-            $payload = ApiCacheManager::remember($cacheKey, ApiCacheManager::dataTtl(), static function () use ($year, $request) {
+            $payload = ApiCacheManager::remember($cacheKey, ApiCacheManager::dataTtl(), static function () use ($year, $request, $isSuperAdmin) {
                 $query = DataTertagihD2d::query()->where('year', $year);
 
                 if ($request->filled('is_terdata')) {
@@ -81,15 +83,12 @@ class DataTertagihD2dController extends Controller
                     ->addColumn('status_terdata', function ($row) {
                         return (int) $row->is_terdata === 1 ? 'Terdata' : 'Belum Terdata';
                     })
-                    ->addColumn('actions', function ($row) {
-                        $toggleTo = (int) $row->is_terdata === 1 ? 0 : 1;
-                        $toggleText = $toggleTo === 1 ? 'Set Terdata' : 'Set Belum';
+                    ->addColumn('actions', function ($row) use ($isSuperAdmin) {
+                        if (!$isSuperAdmin) {
+                            return '';
+                        }
 
-                        // return '
-                        //     <button class="btn btn-sm btn-warning" onclick="toggleTertagihStatus(' . $row->id . ', ' . $toggleTo . ')">' . $toggleText . '</button>
-                        //     <button class="btn btn-sm btn-danger" onclick="deleteTertagih(' . $row->id . ')">Delete</button>
-                        // ';
-                        return $row->id;
+                        return '<button type="button" class="btn btn-sm btn-danger" onclick="forceDeleteTertagih(' . (int) $row->id . ')">Force Delete</button>';
                     })
                     ->rawColumns(['actions'])
                     ->make(true)
@@ -113,8 +112,16 @@ class DataTertagihD2dController extends Controller
         }
 
         $years = array_values(array_unique($years));
+        $isSuperAdmin = $this->isSuperAdmin();
 
-        return view('backend.data-tertagih-d2d.index', compact('defaultYear', 'years'));
+        return view('backend.data-tertagih-d2d.index', compact('defaultYear', 'years', 'isSuperAdmin'));
+    }
+
+    private function isSuperAdmin(): bool
+    {
+        $user = Auth::user();
+
+        return $user && ($user->hasRole('super-admin') || $user->hasRole('superadmin'));
     }
 
     protected function importStorageDir(): string
@@ -183,6 +190,23 @@ class DataTertagihD2dController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Data berhasil dihapus.',
+        ]);
+    }
+
+    public function forceDestroy(int $id, ForceDeletePendataanService $service)
+    {
+        abort_unless($this->isSuperAdmin(), 403, 'Akses hanya untuk superadmin.');
+
+        $result = $service->forceDeleteFromTertagih($id, true);
+
+        return response()->json([
+            'success' => true,
+            'message' => sprintf(
+                'Force delete berhasil. Tertagih D2D: %d, Pendataan D2D: %d (sudah diarsipkan ke tabel _del).',
+                $result['tertagih'],
+                $result['pendataan']
+            ),
+            'result' => $result,
         ]);
     }
 

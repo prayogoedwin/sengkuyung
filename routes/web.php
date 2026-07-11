@@ -46,10 +46,12 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::get('/verifikasi', [VerifikasiController::class, 'index'])->name('verifikasi.index');
         Route::get('/verifikasi-detail/{id}', [VerifikasiController::class, 'show'])->name('verifikasi-detail.index');
         Route::post('/verifikasi-status/{id}', [VerifikasiController::class, 'verif'])->name('verifikasi.status');
+        Route::delete('/verifikasi/{id}/force', [VerifikasiController::class, 'forceDestroy'])->name('verifikasi.force-destroy');
 
         Route::get('/verifikasi-d2d', [VerifikasiD2dController::class, 'index'])->name('verifikasi-d2d.index');
         Route::get('/verifikasi-d2d-detail/{id}', [VerifikasiD2dController::class, 'show'])->name('verifikasi-d2d-detail.index');
         Route::post('/verifikasi-d2d-status/{id}', [VerifikasiD2dController::class, 'verif'])->name('verifikasi-d2d.status');
+        Route::delete('/verifikasi-d2d/{id}/force', [VerifikasiD2dController::class, 'forceDestroy'])->name('verifikasi-d2d.force-destroy');
 
         Route::get('/download', [DownloadController::class, 'index'])->name('download.index');
         Route::get('/download-csv', [DownloadController::class, 'downloadCsv'])->name('download.csv');
@@ -94,6 +96,7 @@ Route::middleware([LogActivity::class])->group(function () {
             ->name('data-tertagih.template');
         Route::post('/data-tertagih/{id}/status', [DataTertagihController::class, 'updateStatus'])->name('data-tertagih.update-status');
         Route::delete('/data-tertagih/{id}', [DataTertagihController::class, 'destroy'])->name('data-tertagih.destroy');
+        Route::delete('/data-tertagih/{id}/force', [DataTertagihController::class, 'forceDestroy'])->name('data-tertagih.force-destroy');
 
         Route::get('/data-tertagih-d2d', [DataTertagihD2dController::class, 'index'])->name('data-tertagih-d2d.index');
         Route::post('/data-tertagih-d2d/import/upload', [DataTertagihD2dController::class, 'importUpload'])->name('data-tertagih-d2d.import.upload');
@@ -104,6 +107,7 @@ Route::middleware([LogActivity::class])->group(function () {
             ->name('data-tertagih-d2d.template');
         Route::post('/data-tertagih-d2d/{id}/status', [DataTertagihD2dController::class, 'updateStatus'])->name('data-tertagih-d2d.update-status');
         Route::delete('/data-tertagih-d2d/{id}', [DataTertagihD2dController::class, 'destroy'])->name('data-tertagih-d2d.destroy');
+        Route::delete('/data-tertagih-d2d/{id}/force', [DataTertagihD2dController::class, 'forceDestroy'])->name('data-tertagih-d2d.force-destroy');
 
         Route::get('/cache-management', [CacheManagementController::class, 'index'])->name('cache-management.index');
         Route::get('/cache-management/{scope}', [CacheManagementController::class, 'scope'])

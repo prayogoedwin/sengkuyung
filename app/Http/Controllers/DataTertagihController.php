@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\HandlesChunkedTertagihImport;
 use App\Models\DataTertagih;
+use App\Services\ForceDeletePendataanService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -49,12 +50,13 @@ class DataTertagihController extends Controller
             $year = $request->filled('year') ? (int) $request->year : $currentYear;
             $isTerdata = $request->filled('is_terdata') ? (string) $request->is_terdata : 'all';
             $noPolisi = trim((string) $request->input('no_polisi', ''));
+            $isSuperAdmin = $this->isSuperAdmin();
             $queryParams = $request->query();
             ksort($queryParams);
             $cacheHash = md5(json_encode($queryParams));
-            $cacheKey = "admin:data-tertagih:index:{$year}:{$isTerdata}:" . md5($noPolisi) . ":{$cacheHash}";
+            $cacheKey = "admin:data-tertagih:index:{$year}:{$isTerdata}:" . md5($noPolisi) . ':sa-' . ($isSuperAdmin ? '1' : '0') . ":{$cacheHash}";
 
-            $payload = ApiCacheManager::remember($cacheKey, ApiCacheManager::dataTtl(), static function () use ($year, $request) {
+            $payload = ApiCacheManager::remember($cacheKey, ApiCacheManager::dataTtl(), static function () use ($year, $request, $isSuperAdmin) {
                 $query = DataTertagih::query()->where('year', $year);
 
                 if ($request->filled('is_terdata')) {
@@ -81,15 +83,12 @@ class DataTertagihController extends Controller
                     ->addColumn('status_terdata', function ($row) {
                         return (int) $row->is_terdata === 1 ? 'Terdata' : 'Belum Terdata';
                     })
-                    ->addColumn('actions', function ($row) {
-                        $toggleTo = (int) $row->is_terdata === 1 ? 0 : 1;
-                        $toggleText = $toggleTo === 1 ? 'Set Terdata' : 'Set Belum';
+                    ->addColumn('actions', function ($row) use ($isSuperAdmin) {
+                        if (!$isSuperAdmin) {
+                            return '';
+                        }
 
-                        // return '
-                        //     <button class="btn btn-sm btn-warning" onclick="toggleTertagihStatus(' . $row->id . ', ' . $toggleTo . ')">' . $toggleText . '</button>
-                        //     <button class="btn btn-sm btn-danger" onclick="deleteTertagih(' . $row->id . ')">Delete</button>
-                        // ';
-                        return $row->id;
+                        return '<button type="button" class="btn btn-sm btn-danger" onclick="forceDeleteTertagih(' . (int) $row->id . ')">Force Delete</button>';
                     })
                     ->rawColumns(['actions'])
                     ->make(true)
@@ -113,8 +112,31 @@ class DataTertagihController extends Controller
         }
 
         $years = array_values(array_unique($years));
+        $isSuperAdmin = $this->isSuperAdmin();
 
-        return view('backend.data-tertagih.index', compact('defaultYear', 'years'));
+        return view('backend.data-tertagih.index', compact('defaultYear', 'years', 'isSuperAdmin'));
+    }
+
+    protected function isSuperAdmin(): bool
+    {
+        $user = Auth::user();
+
+        return $user && ($user->hasRole('super-admin') || $user->hasRole('superadmin'));
+    }
+
+    protected function ensureSuperAdmin(): void
+    {
+        abort_unless($this->isSuperAdmin(), 403, 'Akses hanya untuk superadmin.');
+    }
+
+    protected function isD2dForceDelete(): bool
+    {
+        return false;
+    }
+
+    protected function forceDeleteRouteName(): string
+    {
+        return 'data-tertagih.force-destroy';
     }
 
     protected function importStorageDir(): string
@@ -183,6 +205,23 @@ class DataTertagihController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Data berhasil dihapus.',
+        ]);
+    }
+
+    public function forceDestroy(int $id, ForceDeletePendataanService $service)
+    {
+        $this->ensureSuperAdmin();
+
+        $result = $service->forceDeleteFromTertagih($id, $this->isD2dForceDelete());
+
+        return response()->json([
+            'success' => true,
+            'message' => sprintf(
+                'Force delete berhasil. Tertagih: %d, Pendataan: %d (sudah diarsipkan ke tabel _del).',
+                $result['tertagih'],
+                $result['pendataan']
+            ),
+            'result' => $result,
         ]);
     }
 

@@ -20,8 +20,6 @@ class SuperAdminLocalhostSeeder extends Seeder
             ]
         );
 
-        if (!$user->hasRole('super-admin')) {
-            $user->assignRole('super-admin');
-        }
+        $user->syncRoles([Role::findByName('super-admin', 'web')]);
     }
 }

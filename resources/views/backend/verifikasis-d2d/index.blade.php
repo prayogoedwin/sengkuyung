@@ -224,7 +224,20 @@
 
 <script>
     $(document).ready(function() {
-        const forcedLokasiSamsat = "{{ Auth::user()->lokasi_samsat ?? '' }}";
+        const profileLokasiSamsat = "{{ $userLokasiSamsat ?? '' }}";
+        const lockLokasiSamsat = @json($lockLokasiSamsat ?? false);
+
+        function samsatMatchesProfile(samsat) {
+            if (!profileLokasiSamsat) {
+                return true;
+            }
+            var id = String(samsat.id ?? '');
+            var wilayahId = String(samsat.id_wilayah_samsat ?? '');
+            var profile = String(profileLokasiSamsat);
+            return profile === id || profile === wilayahId
+                || (profile.replace(/^0+/, '') !== '' && profile.replace(/^0+/, '') === id.replace(/^0+/, ''))
+                || (profile.replace(/^0+/, '') !== '' && profile.replace(/^0+/, '') === wilayahId.replace(/^0+/, ''));
+        }
 
         function loadKecamatanByKabkota(kabkotaId) {
             if (!kabkotaId) {
@@ -270,22 +283,19 @@
                             var samsats = response.samsats;
                             var options = '<option value="">Pilih Lokasi Samsat</option>';
                             $.each(samsats, function(index, samsat) {
-                                var value = String(samsat.id || samsat.id_wilayah_samsat || '');
-                                var label = (samsat.lokasi ?? '-') + ' [' + value + ']';
-                                var wilayahId = String(samsat.id_wilayah_samsat || '');
-                                var forced = String(forcedLokasiSamsat || '');
-                                var matchesForced = !forced
-                                    || forced === value
-                                    || forced === wilayahId
-                                    || (forced.replace(/^0+/, '') !== '' && forced.replace(/^0+/, '') === value.replace(/^0+/, ''));
-                                if (matchesForced) {
-                                    options += '<option value="' + value + '">' + label + '</option>';
+                                if (!lockLokasiSamsat || samsatMatchesProfile(samsat)) {
+                                    var value = String(samsat.id || samsat.id_wilayah_samsat || '');
+                                    var label = (samsat.lokasi ?? '-') + ' [' + value + ']';
+                                    var isSelected = profileLokasiSamsat && samsatMatchesProfile(samsat) ? 'selected' : '';
+                                    options += '<option value="' + value + '" ' + isSelected + '>' + label + '</option>';
                                 }
                             });
                             $('#lokasiSamsat').html(options);
 
-                            if (forcedLokasiSamsat) {
-                                $('#lokasiSamsat').val(String(forcedLokasiSamsat)).prop('disabled', true).trigger('change');
+                            if (lockLokasiSamsat && profileLokasiSamsat) {
+                                $('#lokasiSamsat').val(String(profileLokasiSamsat)).prop('disabled', true).trigger('change');
+                            } else if (profileLokasiSamsat) {
+                                $('#lokasiSamsat').val(String(profileLokasiSamsat)).prop('disabled', false).trigger('change');
                             } else {
                                 $('#lokasiSamsat').prop('disabled', false);
                             }
@@ -343,9 +353,9 @@
 
         if ($('#userKabkota').val()) {
             $('#userKabkota').trigger('change');
-        } else if (forcedLokasiSamsat) {
-            $('#lokasiSamsat').html('<option value="' + forcedLokasiSamsat + '">' + forcedLokasiSamsat + '</option>');
-            $('#lokasiSamsat').val(String(forcedLokasiSamsat)).prop('disabled', true).trigger('change');
+        } else if (profileLokasiSamsat && lockLokasiSamsat) {
+            $('#lokasiSamsat').html('<option value="' + profileLokasiSamsat + '">' + profileLokasiSamsat + '</option>');
+            $('#lokasiSamsat').val(String(profileLokasiSamsat)).prop('disabled', true).trigger('change');
         }
     });
 </script>

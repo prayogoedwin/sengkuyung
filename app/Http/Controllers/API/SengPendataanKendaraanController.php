@@ -535,10 +535,25 @@ class SengPendataanKendaraanController extends Controller
         // Decode ID dari request
         $decodedId = Helper::decodeId($id);
 
+        $uploadErrorMessage = $this->resolveUploadFileErrorMessage($request);
+        if ($uploadErrorMessage !== null) {
+            return response()->json([
+                'status' => false,
+                'message' => ['file' => [$uploadErrorMessage]],
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
         $validator = Validator::make($request->all(), [
             'file_ke' => 'required|string|in:file0,file1,file2,file3,file4,file5,file6,file7,file8,file9',
             'file' => 'required|file|max:2048', // Maksimum 2MB
-            'keterangan' => 'required'
+            'keterangan' => 'required',
+        ], [
+            'file.required' => 'File wajib diunggah.',
+            'file.file' => 'File tidak valid. Pastikan dikirim sebagai multipart/form-data dengan field "file".',
+            'file.max' => 'Ukuran file maksimal 2 MB. Kompres foto lalu coba lagi.',
+            'file_ke.required' => 'Parameter file_ke wajib diisi (file0–file9).',
+            'file_ke.in' => 'Parameter file_ke tidak valid. Gunakan file0 sampai file9.',
+            'keterangan.required' => 'Keterangan file wajib diisi.',
         ]);
 
         if ($validator->fails()) {
@@ -580,27 +595,55 @@ class SengPendataanKendaraanController extends Controller
         }
 
         // Proses file
-        if ($isKTP) {
-            // Streaming encryption agar memory tidak meledak untuk file besar.
-            // php://temp menahan data di memory hingga 2 MB, kelebihannya spill ke disk.
-            $in = fopen($file->getRealPath(), 'rb');
-            $tempEncrypted = fopen('php://temp/maxmemory:' . (2 * 1024 * 1024), 'w+b');
-
-            try {
-                FileEncryption::encryptToStream($in, $tempEncrypted);
-                rewind($tempEncrypted);
-                Storage::disk('public')->writeStream("uploads/$tahun/$bulan/$nama_file", $tempEncrypted);
-            } finally {
-                if (is_resource($in)) {
-                    fclose($in);
+        try {
+            if ($isKTP) {
+                // Streaming encryption agar memory tidak meledak untuk file besar.
+                // php://temp menahan data di memory hingga 2 MB, kelebihannya spill ke disk.
+                $in = fopen($file->getRealPath(), 'rb');
+                if ($in === false) {
+                    throw new \RuntimeException('Gagal membaca file sementara upload.');
                 }
-                if (is_resource($tempEncrypted)) {
-                    fclose($tempEncrypted);
+
+                $tempEncrypted = fopen('php://temp/maxmemory:' . (2 * 1024 * 1024), 'w+b');
+                if ($tempEncrypted === false) {
+                    fclose($in);
+                    throw new \RuntimeException('Gagal membuat buffer enkripsi file.');
+                }
+
+                try {
+                    FileEncryption::encryptToStream($in, $tempEncrypted);
+                    rewind($tempEncrypted);
+                    Storage::disk('public')->writeStream("uploads/$tahun/$bulan/$nama_file", $tempEncrypted);
+                } finally {
+                    if (is_resource($in)) {
+                        fclose($in);
+                    }
+                    if (is_resource($tempEncrypted)) {
+                        fclose($tempEncrypted);
+                    }
+                }
+            } else {
+                // Simpan file biasa
+                $stored = $file->storeAs("uploads/$tahun/$bulan", $nama_file, 'public');
+                if ($stored === false) {
+                    throw new \RuntimeException('Gagal menyimpan file ke storage.');
                 }
             }
-        } else {
-            // Simpan file biasa
-            $file->storeAs("uploads/$tahun/$bulan", $nama_file, 'public');
+        } catch (\Throwable $e) {
+            Log::error('Upload pendataan gagal disimpan.', [
+                'pendataan_id' => $decodedId,
+                'file_ke' => $file_ke,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => [
+                    'file' => [
+                        'Gagal menyimpan file di server: ' . $e->getMessage(),
+                    ],
+                ],
+            ], Response::HTTP_BAD_REQUEST);
         }
 
         // Update database - tambah field untuk track file type
@@ -926,6 +969,43 @@ class SengPendataanKendaraanController extends Controller
         }
 
         return array_values(array_unique($out));
+    }
+
+    /**
+     * Pesan jelas untuk kegagalan upload di level PHP (sebelum validasi Laravel).
+     */
+    private function resolveUploadFileErrorMessage(Request $request): ?string
+    {
+        $file = $request->file('file');
+
+        if ($file === null) {
+            if (empty($request->all()) && empty($request->allFiles())) {
+                $postMax = ini_get('post_max_size') ?: 'tidak diketahui';
+
+                return "Request upload kosong. Kemungkinan ukuran file/request melebihi post_max_size server ({$postMax}), atau Content-Type bukan multipart/form-data.";
+            }
+
+            return null;
+        }
+
+        if ($file->isValid()) {
+            return null;
+        }
+
+        $code = $file->getError();
+        $uploadMax = ini_get('upload_max_filesize') ?: 'tidak diketahui';
+        $postMax = ini_get('post_max_size') ?: 'tidak diketahui';
+
+        return match ($code) {
+            UPLOAD_ERR_INI_SIZE => "File terlalu besar. Melebihi batas upload_max_filesize server ({$uploadMax}). Kode: {$code}.",
+            UPLOAD_ERR_FORM_SIZE => "File terlalu besar menurut batas form HTML. Kode: {$code}.",
+            UPLOAD_ERR_PARTIAL => "File hanya terunggah sebagian (koneksi terputus). Silakan coba lagi. Kode: {$code}.",
+            UPLOAD_ERR_NO_FILE => 'Tidak ada file yang diterima. Pastikan field "file" terisi.',
+            UPLOAD_ERR_NO_TMP_DIR => "Folder temporary server tidak tersedia. Hubungi admin. Kode: {$code}.",
+            UPLOAD_ERR_CANT_WRITE => "Gagal menulis file ke temporary server (/tmp). Hubungi admin. Kode: {$code}.",
+            UPLOAD_ERR_EXTENSION => "Upload dihentikan oleh ekstensi PHP. Kode: {$code}.",
+            default => "File gagal diunggah (kode PHP: {$code}). Batas server: upload_max={$uploadMax}, post_max={$postMax}.",
+        };
     }
 }
 

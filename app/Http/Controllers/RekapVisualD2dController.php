@@ -59,6 +59,6 @@ class RekapVisualD2dController extends RekapVisualController
 
     protected function cachePrefix(): string
     {
-        return 'admin:rekap-visual-d2d:v6:';
+        return 'admin:rekap-visual-d2d:v7:';
     }
 }

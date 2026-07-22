@@ -67,7 +67,7 @@ class RekapVisualController extends Controller
 
     protected function cachePrefix(): string
     {
-        return 'admin:rekap-visual:v6:';
+        return 'admin:rekap-visual:v7:';
     }
 
     public function index(Request $request)
@@ -76,7 +76,6 @@ class RekapVisualController extends Controller
 
         $year = $request->filled('year') ? (int) $request->year : (int) date('Y');
 
-        // HTML saja — tanpa query berat (hindari 504 nginx).
         return view($this->viewName(), [
             'year' => $year,
             'pageTitle' => $this->pageTitle(),
@@ -152,7 +151,6 @@ class RekapVisualController extends Controller
         $yearStart = sprintf('%04d-01-01 00:00:00', $year);
         $yearEnd = sprintf('%04d-12-31 23:59:59', $year);
 
-        // Satu query untuk 3 counter tertagih.
         $tertagihAgg = DB::table($tertagihTable)
             ->where('year', $year)
             ->selectRaw('COUNT(*) as jumlah_tunggakan')
@@ -188,76 +186,23 @@ class RekapVisualController extends Controller
             ? round(($stats['verifikasi'] / $stats['jumlah_sudah_pendataan']) * 100, 2)
             : 0;
 
-        // Drive dari bayar (~118k) + EXISTS ke tertagih — jangan DISTINCT 1–2 juta baris.
-        $bayarAgg = DB::table('seng_bayar_pajak as b')
-            ->where('b.year', $year)
-            ->whereNotNull('b.nopol_')
-            ->where('b.nopol_', '!=', '')
-            ->whereExists(function ($q) use ($tertagihTable, $year) {
-                $q->select(DB::raw(1))
-                    ->from("{$tertagihTable} as t")
-                    ->whereColumn('t.no_polisi', 'b.nopol_')
-                    ->where('t.year', $year)
-                    ->limit(1);
-            })
-            ->selectRaw('COUNT(*) as jumlah_terbayar')
-            ->selectRaw('COUNT(DISTINCT b.nopol_) as jumlah_nopol_bayar')
-            ->selectRaw('COALESCE(SUM(b.pkb_provinsi_jalan),0) + COALESCE(SUM(b.pkb_provinsi_tunggakan),0) as nominal_provinsi')
-            ->selectRaw('COALESCE(SUM(b.pkb_opsen_jalan),0) + COALESCE(SUM(b.pkb_opsen_tunggakan),0) as nominal_opsen')
-            ->first();
-
-        $nominalProvinsi = (int) ($bayarAgg->nominal_provinsi ?? 0);
-        $nominalOpsen = (int) ($bayarAgg->nominal_opsen ?? 0);
-
-        $timing = $this->bayarSebelumSesudah($year, $pendataanTable, $tertagihTable);
-
-        $sebelumTotal = $timing['sebelum'] + $timing['tanpa'];
-        $sebelumTotalNominal = $timing['sebelum_nominal'] + $timing['tanpa_nominal'];
-
-        $bayar = [
-            'jumlah_terbayar' => (int) ($bayarAgg->jumlah_terbayar ?? 0),
-            'jumlah_nopol_bayar' => (int) ($bayarAgg->jumlah_nopol_bayar ?? 0),
-            'nominal_provinsi' => $nominalProvinsi,
-            'nominal_opsen' => $nominalOpsen,
-            'nominal_total' => $nominalProvinsi + $nominalOpsen,
-            'nominal_provinsi_fmt' => MoneyShortFormatter::format($nominalProvinsi),
-            'nominal_opsen_fmt' => MoneyShortFormatter::format($nominalOpsen),
-            'nominal_total_fmt' => MoneyShortFormatter::format($nominalProvinsi + $nominalOpsen),
-            'sebelum_pendataan' => $sebelumTotal,
-            'sebelum_pendataan_murni' => $timing['sebelum'],
-            'tanpa_pendataan' => $timing['tanpa'],
-            'sesudah_pendataan' => $timing['sesudah'],
-            'sebelum_pendataan_nominal' => $sebelumTotalNominal,
-            'sebelum_pendataan_murni_nominal' => $timing['sebelum_nominal'],
-            'tanpa_pendataan_nominal' => $timing['tanpa_nominal'],
-            'sesudah_pendataan_nominal' => $timing['sesudah_nominal'],
-            'sebelum_pendataan_nominal_fmt' => MoneyShortFormatter::format($sebelumTotalNominal),
-            'sebelum_pendataan_murni_nominal_fmt' => MoneyShortFormatter::format($timing['sebelum_nominal']),
-            'tanpa_pendataan_nominal_fmt' => MoneyShortFormatter::format($timing['tanpa_nominal']),
-            'sesudah_pendataan_nominal_fmt' => MoneyShortFormatter::format($timing['sesudah_nominal']),
-        ];
+        $bayar = $this->buildBayarStats($year, $tertagihTable, $pendataanTable, $yearStart, $yearEnd);
 
         return compact('stats', 'bayar');
     }
 
     /**
-     * @return array{sebelum:int,sesudah:int,tanpa:int,sebelum_nominal:int,sesudah_nominal:int,tanpa_nominal:int}
+     * Agregasi bayar di PHP: hindari LEFT JOIN SQL bayar×pendataan yang 50–100+ detik.
+     *
+     * @return array<string, mixed>
      */
-    protected function bayarSebelumSesudah(int $year, string $pendataanTable, string $tertagihTable): array
-    {
-        $yearStart = sprintf('%04d-01-01 00:00:00', $year);
-        $yearEnd = sprintf('%04d-12-31 23:59:59', $year);
-
-        $pendataanSub = "
-            SELECT pd.nopol AS nopol, MIN(DATE(pd.created_at)) AS tgl_pendataan
-            FROM {$pendataanTable} pd
-            WHERE pd.deleted_at IS NULL
-              AND pd.created_at BETWEEN '{$yearStart}' AND '{$yearEnd}'
-              AND pd.nopol IS NOT NULL
-              AND pd.nopol != ''
-            GROUP BY pd.nopol
-        ";
-
+    protected function buildBayarStats(
+        int $year,
+        string $tertagihTable,
+        string $pendataanTable,
+        string $yearStart,
+        string $yearEnd
+    ): array {
         $rows = DB::table('seng_bayar_pajak as b')
             ->where('b.year', $year)
             ->whereNotNull('b.nopol_')
@@ -269,30 +214,88 @@ class RekapVisualController extends Controller
                     ->where('t.year', $year)
                     ->limit(1);
             })
-            ->leftJoin(DB::raw("({$pendataanSub}) as p"), 'b.nopol_', '=', 'p.nopol')
-            ->selectRaw('
-                SUM(CASE WHEN p.tgl_pendataan IS NULL THEN 1 ELSE 0 END) AS tanpa,
-                SUM(CASE WHEN p.tgl_pendataan IS NOT NULL AND b.tgl_bayar < p.tgl_pendataan THEN 1 ELSE 0 END) AS sebelum,
-                SUM(CASE WHEN p.tgl_pendataan IS NOT NULL AND b.tgl_bayar >= p.tgl_pendataan THEN 1 ELSE 0 END) AS sesudah,
-                COALESCE(SUM(CASE WHEN p.tgl_pendataan IS NULL
-                    THEN COALESCE(b.pkb_provinsi_jalan,0)+COALESCE(b.pkb_provinsi_tunggakan,0)+COALESCE(b.pkb_opsen_jalan,0)+COALESCE(b.pkb_opsen_tunggakan,0)
-                    ELSE 0 END),0) AS tanpa_nominal,
-                COALESCE(SUM(CASE WHEN p.tgl_pendataan IS NOT NULL AND b.tgl_bayar < p.tgl_pendataan
-                    THEN COALESCE(b.pkb_provinsi_jalan,0)+COALESCE(b.pkb_provinsi_tunggakan,0)+COALESCE(b.pkb_opsen_jalan,0)+COALESCE(b.pkb_opsen_tunggakan,0)
-                    ELSE 0 END),0) AS sebelum_nominal,
-                COALESCE(SUM(CASE WHEN p.tgl_pendataan IS NOT NULL AND b.tgl_bayar >= p.tgl_pendataan
-                    THEN COALESCE(b.pkb_provinsi_jalan,0)+COALESCE(b.pkb_provinsi_tunggakan,0)+COALESCE(b.pkb_opsen_jalan,0)+COALESCE(b.pkb_opsen_tunggakan,0)
-                    ELSE 0 END),0) AS sesudah_nominal
-            ')
-            ->first();
+            ->get([
+                'b.nopol_',
+                'b.tgl_bayar',
+                'b.pkb_provinsi_jalan',
+                'b.pkb_provinsi_tunggakan',
+                'b.pkb_opsen_jalan',
+                'b.pkb_opsen_tunggakan',
+            ]);
+
+        $pendataanMap = DB::table($pendataanTable)
+            ->whereNull('deleted_at')
+            ->whereBetween('created_at', [$yearStart, $yearEnd])
+            ->whereNotNull('nopol')
+            ->where('nopol', '!=', '')
+            ->groupBy('nopol')
+            ->selectRaw('nopol, MIN(DATE(created_at)) as tgl_pendataan')
+            ->pluck('tgl_pendataan', 'nopol');
+
+        $jumlahTerbayar = 0;
+        $nopolUnik = [];
+        $nominalProvinsi = 0;
+        $nominalOpsen = 0;
+        $sebelum = 0;
+        $sesudah = 0;
+        $tanpa = 0;
+        $sebelumNominal = 0;
+        $sesudahNominal = 0;
+        $tanpaNominal = 0;
+
+        foreach ($rows as $row) {
+            $jumlahTerbayar++;
+            $nopol = (string) $row->nopol_;
+            $nopolUnik[$nopol] = true;
+
+            $prov = (int) ($row->pkb_provinsi_jalan ?? 0) + (int) ($row->pkb_provinsi_tunggakan ?? 0);
+            $ops = (int) ($row->pkb_opsen_jalan ?? 0) + (int) ($row->pkb_opsen_tunggakan ?? 0);
+            $nominal = $prov + $ops;
+            $nominalProvinsi += $prov;
+            $nominalOpsen += $ops;
+
+            $tglPendataan = $pendataanMap[$nopol] ?? null;
+            $tglBayar = $row->tgl_bayar ? substr((string) $row->tgl_bayar, 0, 10) : null;
+
+            if ($tglPendataan === null || $tglPendataan === '') {
+                $tanpa++;
+                $tanpaNominal += $nominal;
+                continue;
+            }
+
+            if ($tglBayar !== null && $tglBayar < $tglPendataan) {
+                $sebelum++;
+                $sebelumNominal += $nominal;
+            } else {
+                $sesudah++;
+                $sesudahNominal += $nominal;
+            }
+        }
+
+        $sebelumTotal = $sebelum + $tanpa;
+        $sebelumTotalNominal = $sebelumNominal + $tanpaNominal;
 
         return [
-            'sebelum' => (int) ($rows->sebelum ?? 0),
-            'sesudah' => (int) ($rows->sesudah ?? 0),
-            'tanpa' => (int) ($rows->tanpa ?? 0),
-            'sebelum_nominal' => (int) ($rows->sebelum_nominal ?? 0),
-            'sesudah_nominal' => (int) ($rows->sesudah_nominal ?? 0),
-            'tanpa_nominal' => (int) ($rows->tanpa_nominal ?? 0),
+            'jumlah_terbayar' => $jumlahTerbayar,
+            'jumlah_nopol_bayar' => count($nopolUnik),
+            'nominal_provinsi' => $nominalProvinsi,
+            'nominal_opsen' => $nominalOpsen,
+            'nominal_total' => $nominalProvinsi + $nominalOpsen,
+            'nominal_provinsi_fmt' => MoneyShortFormatter::format($nominalProvinsi),
+            'nominal_opsen_fmt' => MoneyShortFormatter::format($nominalOpsen),
+            'nominal_total_fmt' => MoneyShortFormatter::format($nominalProvinsi + $nominalOpsen),
+            'sebelum_pendataan' => $sebelumTotal,
+            'sebelum_pendataan_murni' => $sebelum,
+            'tanpa_pendataan' => $tanpa,
+            'sesudah_pendataan' => $sesudah,
+            'sebelum_pendataan_nominal' => $sebelumTotalNominal,
+            'sebelum_pendataan_murni_nominal' => $sebelumNominal,
+            'tanpa_pendataan_nominal' => $tanpaNominal,
+            'sesudah_pendataan_nominal' => $sesudahNominal,
+            'sebelum_pendataan_nominal_fmt' => MoneyShortFormatter::format($sebelumTotalNominal),
+            'sebelum_pendataan_murni_nominal_fmt' => MoneyShortFormatter::format($sebelumNominal),
+            'tanpa_pendataan_nominal_fmt' => MoneyShortFormatter::format($tanpaNominal),
+            'sesudah_pendataan_nominal_fmt' => MoneyShortFormatter::format($sesudahNominal),
         ];
     }
 

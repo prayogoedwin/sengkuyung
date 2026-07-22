@@ -91,6 +91,10 @@ class DataTertagihCsvImporter
 
         $processedInChunk = 0;
         $batch = [];
+        $hasNopolKey = \Illuminate\Support\Facades\Schema::hasColumn(
+            (new $this->modelClass)->getTable(),
+            'nopol_key'
+        );
 
         while ($processedInChunk < self::CHUNK_SIZE && ($row = fgetcsv($handle, 0, $delimiter)) !== false) {
             $stats['total_rows']++;
@@ -130,7 +134,7 @@ class DataTertagihCsvImporter
             }
 
             $tracker->markFile($lookupKey);
-            $batch[] = [
+            $rowData = [
                 'no_polisi' => $formattedNoPolisi,
                 'id_lokasi_samsat' => trim((string) ($row[1] ?? '')),
                 'lokasi_layanan' => trim((string) ($row[2] ?? '')),
@@ -148,6 +152,10 @@ class DataTertagihCsvImporter
                 'updated_at' => $now,
                 'updated_by' => $userId,
             ];
+            if ($hasNopolKey) {
+                $rowData['nopol_key'] = NopolFormatter::matchKey($formattedNoPolisi);
+            }
+            $batch[] = $rowData;
 
             if (count($batch) >= self::BATCH_SIZE) {
                 $this->insertBatch($batch);

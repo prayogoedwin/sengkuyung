@@ -2,17 +2,20 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SyncsNopolKey;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class DataTertagih extends Model
 {
     use HasFactory;
+    use SyncsNopolKey;
 
     protected $table = 'data_tertagih';
 
     protected $fillable = [
         'no_polisi',
+        'nopol_key',
         'id_lokasi_samsat',
         'lokasi_layanan',
         'id_kecamatan',

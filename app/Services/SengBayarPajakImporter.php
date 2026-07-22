@@ -126,6 +126,7 @@ class SengBayarPajakImporter
 
         $processedInChunk = 0;
         $batch = [];
+        $hasNopolKey = \Illuminate\Support\Facades\Schema::hasColumn('seng_bayar_pajak', 'nopol_key');
 
         while ($processedInChunk < self::CHUNK_SIZE && ($row = fgetcsv($handle, 0, $delimiter)) !== false) {
             $stats['total_rows']++;
@@ -178,7 +179,7 @@ class SengBayarPajakImporter
             $tracker->markFile($lookupKey);
 
             $nopolLamaRaw = trim((string) ($row[1] ?? ''));
-            $batch[] = [
+            $rowData = [
                 'nopol' => $rawNopol,
                 'nopol_' => $nopolNormalized,
                 'nopol_lama' => $nopolLamaRaw !== '' ? $nopolLamaRaw : null,
@@ -193,6 +194,10 @@ class SengBayarPajakImporter
                 'updated_at' => $now,
                 'updated_by' => $userId,
             ];
+            if ($hasNopolKey) {
+                $rowData['nopol_key'] = NopolFormatter::matchKey($nopolNormalized);
+            }
+            $batch[] = $rowData;
 
             if (count($batch) >= self::BATCH_SIZE) {
                 $this->insertBatch($batch);

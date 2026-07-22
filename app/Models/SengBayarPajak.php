@@ -2,15 +2,19 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SyncsNopolKey;
 use Illuminate\Database\Eloquent\Model;
 
 class SengBayarPajak extends Model
 {
+    use SyncsNopolKey;
+
     protected $table = 'seng_bayar_pajak';
 
     protected $fillable = [
         'nopol',
         'nopol_',
+        'nopol_key',
         'nopol_lama',
         'tgl_bayar',
         'pkb_provinsi_jalan',

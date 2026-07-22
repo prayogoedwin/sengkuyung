@@ -5,11 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Concerns\SyncsNopolKey;
 use Carbon\Carbon;
 
 class SengPendataanKendaraan extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, SyncsNopolKey;
 
     protected $table = 'seng_pendataan_kendaraan';
 
@@ -22,7 +23,7 @@ class SengPendataanKendaraan extends Model
     ];
 
     protected $fillable = [
-        'nohp', 'email', 'nik', 'tgl_ctk', 'nopol', 'nama', 'alamat',
+        'nohp', 'email', 'nik', 'tgl_ctk', 'nopol', 'nopol_key', 'nama', 'alamat',
         'desa_name', 'kec_name', 'kota_name', 'prov_name', 
         'desa', 'kel_dagri',
         'kec', 'kec_dagri',

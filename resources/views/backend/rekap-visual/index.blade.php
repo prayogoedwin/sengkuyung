@@ -333,35 +333,40 @@
             'Channel ' + channelLabel + ' · Diperbarui ' + (payload.refreshedAt || '');
     }
 
-    // Bounding box Jawa Tengah (approx) — agar view fokus Jateng, bukan seluruh Jawa.
+    // Target zoom seperti yang Anda zoom manual (gb2).
+    const jatengCenter = [-7.05, 110.15];
+    const jatengZoom = 9;
     const jatengBounds = L.latLngBounds(
-        L.latLng(-8.35, 108.55),
-        L.latLng(-5.70, 111.85)
+        L.latLng(-8.25, 108.70),
+        L.latLng(-5.85, 111.70)
     );
 
     const map = L.map('rvMap', {
-        maxBounds: jatengBounds.pad(0.15),
-        maxBoundsViscosity: 0.85,
-        minZoom: 7,
-    }).fitBounds(jatengBounds, { padding: [8, 8], maxZoom: 9 });
+        maxBounds: jatengBounds.pad(0.35),
+        maxBoundsViscosity: 0.7,
+        minZoom: 8,
+    }).setView(jatengCenter, jatengZoom);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 18, attribution: '&copy; OpenStreetMap'
     }).addTo(map);
 
     function focusJateng(bounds) {
-        map.invalidateSize();
-        const target = bounds && bounds.isValid && bounds.isValid()
-            ? bounds
-            : jatengBounds;
-        requestAnimationFrame(function () {
+        const apply = function () {
             map.invalidateSize();
-            map.fitBounds(target, { padding: [10, 10], maxZoom: 9 });
-            setTimeout(function () {
-                map.invalidateSize();
-                map.fitBounds(target, { padding: [10, 10], maxZoom: 9 });
-            }, 120);
-        });
+            if (bounds && bounds.isValid && bounds.isValid()) {
+                map.fitBounds(bounds, { padding: [4, 4], maxZoom: 10 });
+                // Kalau container lebar membuat zoom terlalu jauh, paksa level seperti gb2.
+                if (map.getZoom() < jatengZoom) {
+                    map.setView(bounds.getCenter(), jatengZoom);
+                }
+            } else {
+                map.setView(jatengCenter, jatengZoom);
+            }
+        };
+        apply();
+        requestAnimationFrame(apply);
+        setTimeout(apply, 150);
     }
 
     function renderTable(mapData) {

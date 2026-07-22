@@ -71,7 +71,6 @@
                                                 <th>No</th>
                                                 <th>Nopol</th>
                                                 <th>Nopol_</th>
-                                                <th>Nopol Lama</th>
                                                 <th>Tgl Bayar</th>
                                                 <th>PKB Prov Jalan</th>
                                                 <th>PKB Prov Tunggakan</th>
@@ -120,7 +119,6 @@
                     },
                     { data: 'nopol' },
                     { data: 'nopol_' },
-                    { data: 'nopol_lama' },
                     { data: 'tgl_bayar_fmt' },
                     { data: 'pkb_provinsi_jalan_fmt' },
                     { data: 'pkb_provinsi_tunggakan_fmt' },

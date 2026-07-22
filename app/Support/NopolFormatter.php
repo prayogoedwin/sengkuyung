@@ -3,7 +3,7 @@
 namespace App\Support;
 
 /**
- * Normalisasi nopol Indonesia ke format AA-1234-XYZ.
+ * Match key nopol tanpa spasi/strip untuk join antar tabel.
  */
 class NopolFormatter
 {
@@ -21,5 +21,10 @@ class NopolFormatter
         }
 
         return $cleaned;
+    }
+
+    public static function matchKey(string $rawValue): string
+    {
+        return strtoupper(preg_replace('/[^A-Z0-9]/i', '', trim($rawValue)) ?? '');
     }
 }

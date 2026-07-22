@@ -18,6 +18,8 @@ use App\Http\Controllers\PerbandinganKodeWilayahController;
 use App\Http\Controllers\DataTertagihController;
 use App\Http\Controllers\DataTertagihD2dController;
 use App\Http\Controllers\SengBayarPajakController;
+use App\Http\Controllers\RekapVisualController;
+use App\Http\Controllers\RekapVisualD2dController;
 use App\Http\Controllers\CacheManagementController;
 use App\Http\Controllers\KebijakanPrivasiController;
 use App\Http\Controllers\VersionController;
@@ -113,6 +115,9 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::get('/bayar-pajak', [SengBayarPajakController::class, 'index'])->name('bayar-pajak.index');
         Route::post('/bayar-pajak/import/upload', [SengBayarPajakController::class, 'importUpload'])->name('bayar-pajak.import.upload');
         Route::post('/bayar-pajak/import/chunk', [SengBayarPajakController::class, 'importChunk'])->name('bayar-pajak.import.chunk');
+
+        Route::get('/rekap-visual', [RekapVisualController::class, 'index'])->name('rekap-visual.index');
+        Route::get('/rekap-visual-d2d', [RekapVisualD2dController::class, 'index'])->name('rekap-visual-d2d.index');
 
         Route::get('/cache-management', [CacheManagementController::class, 'index'])->name('cache-management.index');
         Route::get('/cache-management/{scope}', [CacheManagementController::class, 'scope'])

@@ -333,10 +333,36 @@
             'Channel ' + channelLabel + ' · Diperbarui ' + (payload.refreshedAt || '');
     }
 
-    const map = L.map('rvMap').setView([-7.15, 110.14], 8);
+    // Bounding box Jawa Tengah (approx) — agar view fokus Jateng, bukan seluruh Jawa.
+    const jatengBounds = L.latLngBounds(
+        L.latLng(-8.35, 108.55),
+        L.latLng(-5.70, 111.85)
+    );
+
+    const map = L.map('rvMap', {
+        maxBounds: jatengBounds.pad(0.15),
+        maxBoundsViscosity: 0.85,
+        minZoom: 7,
+    }).fitBounds(jatengBounds, { padding: [8, 8], maxZoom: 9 });
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 18, attribution: '&copy; OpenStreetMap'
     }).addTo(map);
+
+    function focusJateng(bounds) {
+        map.invalidateSize();
+        const target = bounds && bounds.isValid && bounds.isValid()
+            ? bounds
+            : jatengBounds;
+        requestAnimationFrame(function () {
+            map.invalidateSize();
+            map.fitBounds(target, { padding: [10, 10], maxZoom: 9 });
+            setTimeout(function () {
+                map.invalidateSize();
+                map.fitBounds(target, { padding: [10, 10], maxZoom: 9 });
+            }, 120);
+        });
+    }
 
     function renderTable(mapData) {
         const tbody = document.getElementById('kabTableBody');
@@ -373,8 +399,7 @@
                         '<br>Bayar: ' + fmt(row.bayar) + '<br>Sisa: ' + Number(row.sisa_pct).toFixed(1) + '%');
                 }
             }).addTo(map);
-            map.invalidateSize();
-            map.fitBounds(layer.getBounds(), { padding: [16, 16] });
+            focusJateng(layer.getBounds());
         }).catch(function () {
             const bounds = [];
             mapData.forEach(function (row) {
@@ -385,8 +410,7 @@
                 }).addTo(map).bindPopup('<strong>' + row.nama + '</strong>');
                 bounds.push([row.lat, row.lng]);
             });
-            map.invalidateSize();
-            if (bounds.length) map.fitBounds(bounds, { padding: [16, 16] });
+            focusJateng(bounds.length ? L.latLngBounds(bounds) : null);
         });
     }
 

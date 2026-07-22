@@ -35,6 +35,11 @@ class RekapVisualController extends Controller
         return 'rekap-visual.index';
     }
 
+    protected function routeStats(): string
+    {
+        return 'rekap-visual.stats';
+    }
+
     protected function routeMap(): string
     {
         return 'rekap-visual.map';
@@ -62,35 +67,46 @@ class RekapVisualController extends Controller
 
     protected function cachePrefix(): string
     {
-        return 'admin:rekap-visual:v5:';
+        return 'admin:rekap-visual:v6:';
     }
 
     public function index(Request $request)
     {
         $this->authorizeAccess();
-        @set_time_limit(180);
 
         $year = $request->filled('year') ? (int) $request->year : (int) date('Y');
 
-        // TTL data (bukan 60s dashboard) — rebuild statistik/peta mahal untuk reguler & D2D.
-        $payload = ApiCacheManager::remember(
-            $this->cachePrefix() . 'stats:y:' . $year,
-            ApiCacheManager::dataTtl(),
-            fn () => $this->buildStatsPayload($year)
-        );
-
+        // HTML saja — tanpa query berat (hindari 504 nginx).
         return view($this->viewName(), [
             'year' => $year,
             'pageTitle' => $this->pageTitle(),
             'channelLabel' => $this->channelLabel(),
             'isD2d' => $this->isD2d(),
             'routeIndex' => $this->routeIndex(),
-            'routeMap' => $this->routeMap(),
             'routeSibling' => $this->routeSibling(),
+            'statsUrl' => route($this->routeStats(), ['year' => $year]),
+            'mapUrl' => route($this->routeMap(), ['year' => $year]),
+            'refreshedAt' => now()->format('d/m/Y H:i:s'),
+        ]);
+    }
+
+    public function stats(Request $request)
+    {
+        $this->authorizeAccess();
+        @set_time_limit(300);
+
+        $year = $request->filled('year') ? (int) $request->year : (int) date('Y');
+
+        $payload = ApiCacheManager::remember(
+            $this->cachePrefix() . 'stats:y:' . $year,
+            ApiCacheManager::dataTtl(),
+            fn () => $this->buildStatsPayload($year)
+        );
+
+        return response()->json([
+            'year' => $year,
             'stats' => $payload['stats'],
             'bayar' => $payload['bayar'],
-            'mapKabkota' => [],
-            'mapUrl' => route($this->routeMap(), ['year' => $year]),
             'refreshedAt' => now()->format('d/m/Y H:i:s'),
         ]);
     }
@@ -98,7 +114,7 @@ class RekapVisualController extends Controller
     public function map(Request $request)
     {
         $this->authorizeAccess();
-        @set_time_limit(180);
+        @set_time_limit(300);
 
         $year = $request->filled('year') ? (int) $request->year : (int) date('Y');
         $tertagihTable = (new ($this->dataTertagihModelClass()))->getTable();
@@ -133,20 +149,36 @@ class RekapVisualController extends Controller
         $statusGroups = VerifikasiStatusGroups::all();
         $tertagihTable = (new ($this->dataTertagihModelClass()))->getTable();
         $pendataanTable = (new ($this->pendataanModelClass()))->getTable();
-
-        $tertagihBase = $this->dataTertagihModelClass()::query()->where('year', $year);
         $yearStart = sprintf('%04d-01-01 00:00:00', $year);
         $yearEnd = sprintf('%04d-12-31 23:59:59', $year);
-        $pendataanBase = $this->pendataanModelClass()::query()
-            ->whereBetween('created_at', [$yearStart, $yearEnd]);
+
+        // Satu query untuk 3 counter tertagih.
+        $tertagihAgg = DB::table($tertagihTable)
+            ->where('year', $year)
+            ->selectRaw('COUNT(*) as jumlah_tunggakan')
+            ->selectRaw('SUM(CASE WHEN is_terdata = 1 THEN 1 ELSE 0 END) as jumlah_sudah_pendataan')
+            ->selectRaw('SUM(CASE WHEN is_terdata = 0 THEN 1 ELSE 0 END) as jumlah_belum_pendataan')
+            ->first();
+
+        $menunggu = implode(',', array_map('intval', $statusGroups['menunggu']));
+        $verifikasi = implode(',', array_map('intval', $statusGroups['verifikasi']));
+        $ditolak = implode(',', array_map('intval', $statusGroups['ditolak']));
+
+        $pendataanAgg = DB::table($pendataanTable)
+            ->whereNull('deleted_at')
+            ->whereBetween('created_at', [$yearStart, $yearEnd])
+            ->selectRaw("SUM(CASE WHEN status_verifikasi IN ({$menunggu}) THEN 1 ELSE 0 END) as menunggu_verifikasi")
+            ->selectRaw("SUM(CASE WHEN status_verifikasi IN ({$verifikasi}) THEN 1 ELSE 0 END) as verifikasi")
+            ->selectRaw("SUM(CASE WHEN status_verifikasi IN ({$ditolak}) THEN 1 ELSE 0 END) as ditolak")
+            ->first();
 
         $stats = [
-            'jumlah_tunggakan' => (clone $tertagihBase)->count(),
-            'jumlah_sudah_pendataan' => (clone $tertagihBase)->where('is_terdata', 1)->count(),
-            'jumlah_belum_pendataan' => (clone $tertagihBase)->where('is_terdata', 0)->count(),
-            'menunggu_verifikasi' => (clone $pendataanBase)->whereIn('status_verifikasi', $statusGroups['menunggu'])->count(),
-            'verifikasi' => (clone $pendataanBase)->whereIn('status_verifikasi', $statusGroups['verifikasi'])->count(),
-            'ditolak' => (clone $pendataanBase)->whereIn('status_verifikasi', $statusGroups['ditolak'])->count(),
+            'jumlah_tunggakan' => (int) ($tertagihAgg->jumlah_tunggakan ?? 0),
+            'jumlah_sudah_pendataan' => (int) ($tertagihAgg->jumlah_sudah_pendataan ?? 0),
+            'jumlah_belum_pendataan' => (int) ($tertagihAgg->jumlah_belum_pendataan ?? 0),
+            'menunggu_verifikasi' => (int) ($pendataanAgg->menunggu_verifikasi ?? 0),
+            'verifikasi' => (int) ($pendataanAgg->verifikasi ?? 0),
+            'ditolak' => (int) ($pendataanAgg->ditolak ?? 0),
         ];
 
         $stats['pct_dikunjungi'] = $stats['jumlah_tunggakan'] > 0
@@ -156,20 +188,18 @@ class RekapVisualController extends Controller
             ? round(($stats['verifikasi'] / $stats['jumlah_sudah_pendataan']) * 100, 2)
             : 0;
 
-        // Channel filter: distinct nopol tertagih sekali, lalu join ke bayar (lebih aman di tabel D2D besar).
-        $channelNopolSub = "
-            SELECT DISTINCT t.no_polisi AS nopol
-            FROM {$tertagihTable} t
-            WHERE t.year = " . (int) $year . "
-              AND t.no_polisi IS NOT NULL
-              AND t.no_polisi != ''
-        ";
-
+        // Drive dari bayar (~118k) + EXISTS ke tertagih — jangan DISTINCT 1–2 juta baris.
         $bayarAgg = DB::table('seng_bayar_pajak as b')
-            ->join(DB::raw("({$channelNopolSub}) as ch"), 'ch.nopol', '=', 'b.nopol_')
             ->where('b.year', $year)
             ->whereNotNull('b.nopol_')
             ->where('b.nopol_', '!=', '')
+            ->whereExists(function ($q) use ($tertagihTable, $year) {
+                $q->select(DB::raw(1))
+                    ->from("{$tertagihTable} as t")
+                    ->whereColumn('t.no_polisi', 'b.nopol_')
+                    ->where('t.year', $year)
+                    ->limit(1);
+            })
             ->selectRaw('COUNT(*) as jumlah_terbayar')
             ->selectRaw('COUNT(DISTINCT b.nopol_) as jumlah_nopol_bayar')
             ->selectRaw('COALESCE(SUM(b.pkb_provinsi_jalan),0) + COALESCE(SUM(b.pkb_provinsi_tunggakan),0) as nominal_provinsi')
@@ -179,7 +209,7 @@ class RekapVisualController extends Controller
         $nominalProvinsi = (int) ($bayarAgg->nominal_provinsi ?? 0);
         $nominalOpsen = (int) ($bayarAgg->nominal_opsen ?? 0);
 
-        $timing = $this->bayarSebelumSesudah($year, $pendataanTable, $channelNopolSub);
+        $timing = $this->bayarSebelumSesudah($year, $pendataanTable, $tertagihTable);
 
         $sebelumTotal = $timing['sebelum'] + $timing['tanpa'];
         $sebelumTotalNominal = $timing['sebelum_nominal'] + $timing['tanpa_nominal'];
@@ -213,7 +243,7 @@ class RekapVisualController extends Controller
     /**
      * @return array{sebelum:int,sesudah:int,tanpa:int,sebelum_nominal:int,sesudah_nominal:int,tanpa_nominal:int}
      */
-    protected function bayarSebelumSesudah(int $year, string $pendataanTable, string $channelNopolSub): array
+    protected function bayarSebelumSesudah(int $year, string $pendataanTable, string $tertagihTable): array
     {
         $yearStart = sprintf('%04d-01-01 00:00:00', $year);
         $yearEnd = sprintf('%04d-12-31 23:59:59', $year);
@@ -229,11 +259,17 @@ class RekapVisualController extends Controller
         ";
 
         $rows = DB::table('seng_bayar_pajak as b')
-            ->join(DB::raw("({$channelNopolSub}) as ch"), 'ch.nopol', '=', 'b.nopol_')
-            ->leftJoin(DB::raw("({$pendataanSub}) as p"), 'b.nopol_', '=', 'p.nopol')
             ->where('b.year', $year)
             ->whereNotNull('b.nopol_')
             ->where('b.nopol_', '!=', '')
+            ->whereExists(function ($q) use ($tertagihTable, $year) {
+                $q->select(DB::raw(1))
+                    ->from("{$tertagihTable} as t")
+                    ->whereColumn('t.no_polisi', 'b.nopol_')
+                    ->where('t.year', $year)
+                    ->limit(1);
+            })
+            ->leftJoin(DB::raw("({$pendataanSub}) as p"), 'b.nopol_', '=', 'p.nopol')
             ->selectRaw('
                 SUM(CASE WHEN p.tgl_pendataan IS NULL THEN 1 ELSE 0 END) AS tanpa,
                 SUM(CASE WHEN p.tgl_pendataan IS NOT NULL AND b.tgl_bayar < p.tgl_pendataan THEN 1 ELSE 0 END) AS sebelum,
@@ -292,7 +328,6 @@ class RekapVisualController extends Controller
             ->groupBy('id_lokasi_samsat')
             ->pluck('c', 'id_lokasi_samsat');
 
-        // Satu lokasi per nopol bayar (hindari COUNT DISTINCT di join besar).
         $bayarByLokasi = DB::table(DB::raw("(
             SELECT x.nopol_, MIN(t.id_lokasi_samsat) AS id_lokasi_samsat
             FROM (

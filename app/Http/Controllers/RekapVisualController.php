@@ -57,7 +57,7 @@ class RekapVisualController extends Controller
 
     protected function cachePrefix(): string
     {
-        return 'admin:rekap-visual:v3:';
+        return 'admin:rekap-visual:v4:';
     }
 
     public function index(Request $request)
@@ -141,6 +141,10 @@ class RekapVisualController extends Controller
 
         $timing = $this->bayarSebelumSesudah($year, $pendataanTable, $tertagihTable);
 
+        // "Bayar sebelum pendataan" = bayar sebelum tanggal pendataan + bayar tanpa catatan pendataan.
+        $sebelumTotal = $timing['sebelum'] + $timing['tanpa'];
+        $sebelumTotalNominal = $timing['sebelum_nominal'] + $timing['tanpa_nominal'];
+
         $bayar = [
             'jumlah_terbayar' => (int) ($bayarAgg->jumlah_terbayar ?? 0),
             'jumlah_nopol_bayar' => (int) ($bayarAgg->jumlah_nopol_bayar ?? 0),
@@ -150,12 +154,17 @@ class RekapVisualController extends Controller
             'nominal_provinsi_fmt' => MoneyShortFormatter::format($nominalProvinsi),
             'nominal_opsen_fmt' => MoneyShortFormatter::format($nominalOpsen),
             'nominal_total_fmt' => MoneyShortFormatter::format($nominalProvinsi + $nominalOpsen),
-            'sebelum_pendataan' => $timing['sebelum'],
-            'sesudah_pendataan' => $timing['sesudah'],
+            'sebelum_pendataan' => $sebelumTotal,
+            'sebelum_pendataan_murni' => $timing['sebelum'],
             'tanpa_pendataan' => $timing['tanpa'],
-            'sebelum_pendataan_nominal' => $timing['sebelum_nominal'],
+            'sesudah_pendataan' => $timing['sesudah'],
+            'sebelum_pendataan_nominal' => $sebelumTotalNominal,
+            'sebelum_pendataan_murni_nominal' => $timing['sebelum_nominal'],
+            'tanpa_pendataan_nominal' => $timing['tanpa_nominal'],
             'sesudah_pendataan_nominal' => $timing['sesudah_nominal'],
-            'sebelum_pendataan_nominal_fmt' => MoneyShortFormatter::format($timing['sebelum_nominal']),
+            'sebelum_pendataan_nominal_fmt' => MoneyShortFormatter::format($sebelumTotalNominal),
+            'sebelum_pendataan_murni_nominal_fmt' => MoneyShortFormatter::format($timing['sebelum_nominal']),
+            'tanpa_pendataan_nominal_fmt' => MoneyShortFormatter::format($timing['tanpa_nominal']),
             'sesudah_pendataan_nominal_fmt' => MoneyShortFormatter::format($timing['sesudah_nominal']),
         ];
 
@@ -165,7 +174,7 @@ class RekapVisualController extends Controller
     }
 
     /**
-     * @return array{sebelum:int,sesudah:int,tanpa:int,sebelum_nominal:int,sesudah_nominal:int}
+     * @return array{sebelum:int,sesudah:int,tanpa:int,sebelum_nominal:int,sesudah_nominal:int,tanpa_nominal:int}
      */
     protected function bayarSebelumSesudah(int $year, string $pendataanTable, string $tertagihTable): array
     {
@@ -198,6 +207,9 @@ class RekapVisualController extends Controller
                 SUM(CASE WHEN p.tgl_pendataan IS NULL THEN 1 ELSE 0 END) AS tanpa,
                 SUM(CASE WHEN p.tgl_pendataan IS NOT NULL AND b.tgl_bayar < p.tgl_pendataan THEN 1 ELSE 0 END) AS sebelum,
                 SUM(CASE WHEN p.tgl_pendataan IS NOT NULL AND b.tgl_bayar >= p.tgl_pendataan THEN 1 ELSE 0 END) AS sesudah,
+                COALESCE(SUM(CASE WHEN p.tgl_pendataan IS NULL
+                    THEN COALESCE(b.pkb_provinsi_jalan,0)+COALESCE(b.pkb_provinsi_tunggakan,0)+COALESCE(b.pkb_opsen_jalan,0)+COALESCE(b.pkb_opsen_tunggakan,0)
+                    ELSE 0 END),0) AS tanpa_nominal,
                 COALESCE(SUM(CASE WHEN p.tgl_pendataan IS NOT NULL AND b.tgl_bayar < p.tgl_pendataan
                     THEN COALESCE(b.pkb_provinsi_jalan,0)+COALESCE(b.pkb_provinsi_tunggakan,0)+COALESCE(b.pkb_opsen_jalan,0)+COALESCE(b.pkb_opsen_tunggakan,0)
                     ELSE 0 END),0) AS sebelum_nominal,
@@ -213,6 +225,7 @@ class RekapVisualController extends Controller
             'tanpa' => (int) ($rows->tanpa ?? 0),
             'sebelum_nominal' => (int) ($rows->sebelum_nominal ?? 0),
             'sesudah_nominal' => (int) ($rows->sesudah_nominal ?? 0),
+            'tanpa_nominal' => (int) ($rows->tanpa_nominal ?? 0),
         ];
     }
 

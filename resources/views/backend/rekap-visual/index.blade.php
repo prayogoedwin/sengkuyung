@@ -209,6 +209,16 @@
         .money-box .title { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
         .money-box .big { font-size: 1.6rem; font-weight: 700; margin: 6px 0; color: var(--accent-2); }
         .money-box .sub { font-size: 0.9rem; color: var(--ink-soft); }
+        .money-box .break {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed rgba(15,28,46,0.15);
+            font-size: 0.82rem;
+            color: var(--muted);
+            display: grid;
+            gap: 4px;
+        }
+        .money-box .break strong { color: var(--ink-soft); font-weight: 600; }
 
         #rvMap {
             height: 420px;
@@ -372,16 +382,15 @@
                 <div class="title">Bayar sebelum pendataan</div>
                 <div class="big" style="color:var(--warn);">{{ number_format($bayar['sebelum_pendataan'], 0, ',', '.') }}</div>
                 <div class="sub">Nominal: {{ $bayar['sebelum_pendataan_nominal_fmt'] }}</div>
+                <div class="break">
+                    <div>Sebelum tanggal pendataan: <strong>{{ number_format($bayar['sebelum_pendataan_murni'], 0, ',', '.') }}</strong> ({{ $bayar['sebelum_pendataan_murni_nominal_fmt'] }})</div>
+                    <div>Belum ada pendataan: <strong>{{ number_format($bayar['tanpa_pendataan'], 0, ',', '.') }}</strong> ({{ $bayar['tanpa_pendataan_nominal_fmt'] }})</div>
+                </div>
             </div>
             <div class="money-box">
                 <div class="title">Bayar sesudah pendataan</div>
                 <div class="big" style="color:var(--good);">{{ number_format($bayar['sesudah_pendataan'], 0, ',', '.') }}</div>
-                <div class="sub">
-                    Nominal: {{ $bayar['sesudah_pendataan_nominal_fmt'] }}
-                    @if ($bayar['tanpa_pendataan'] > 0)
-                        · Tanpa pendataan: {{ number_format($bayar['tanpa_pendataan'], 0, ',', '.') }}
-                    @endif
-                </div>
+                <div class="sub">Nominal: {{ $bayar['sesudah_pendataan_nominal_fmt'] }}</div>
             </div>
         </div>
     </div>

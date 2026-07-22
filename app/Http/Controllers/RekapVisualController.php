@@ -12,7 +12,6 @@ use App\Support\VerifikasiStatusGroups;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class RekapVisualController extends Controller
 {
@@ -58,7 +57,7 @@ class RekapVisualController extends Controller
 
     protected function cachePrefix(): string
     {
-        return 'admin:rekap-visual:v2:';
+        return 'admin:rekap-visual:v3:';
     }
 
     public function index(Request $request)
@@ -97,8 +96,6 @@ class RekapVisualController extends Controller
         $statusGroups = VerifikasiStatusGroups::all();
         $tertagihTable = (new ($this->dataTertagihModelClass()))->getTable();
         $pendataanTable = (new ($this->pendataanModelClass()))->getTable();
-        $useNopolKey = Schema::hasColumn('seng_bayar_pajak', 'nopol_key')
-            && Schema::hasColumn($tertagihTable, 'nopol_key');
 
         $tertagihBase = $this->dataTertagihModelClass()::query()->where('year', $year);
         $yearStart = sprintf('%04d-01-01 00:00:00', $year);
@@ -122,17 +119,19 @@ class RekapVisualController extends Controller
             ? round(($stats['verifikasi'] / $stats['jumlah_sudah_pendataan']) * 100, 2)
             : 0;
 
+        // Join exact: seng_bayar_pajak.nopol_ = data_tertagih.no_polisi (format sama)
         $bayarAgg = DB::table('seng_bayar_pajak as b')
             ->where('b.year', $year)
-            ->whereNotNull($useNopolKey ? 'b.nopol_key' : 'b.nopol_')
-            ->whereExists(function ($q) use ($tertagihTable, $year, $useNopolKey) {
+            ->whereNotNull('b.nopol_')
+            ->where('b.nopol_', '!=', '')
+            ->whereExists(function ($q) use ($tertagihTable, $year) {
                 $q->select(DB::raw(1))
                     ->from("{$tertagihTable} as t")
+                    ->whereColumn('b.nopol_', 't.no_polisi')
                     ->where('t.year', $year);
-                $this->applyNopolMatch($q, $useNopolKey, 'b', 't');
             })
             ->selectRaw('COUNT(*) as jumlah_terbayar')
-            ->selectRaw('COUNT(DISTINCT ' . ($useNopolKey ? 'b.nopol_key' : 'b.nopol_') . ') as jumlah_nopol_bayar')
+            ->selectRaw('COUNT(DISTINCT b.nopol_) as jumlah_nopol_bayar')
             ->selectRaw('COALESCE(SUM(b.pkb_provinsi_jalan),0) + COALESCE(SUM(b.pkb_provinsi_tunggakan),0) as nominal_provinsi')
             ->selectRaw('COALESCE(SUM(b.pkb_opsen_jalan),0) + COALESCE(SUM(b.pkb_opsen_tunggakan),0) as nominal_opsen')
             ->first();
@@ -140,7 +139,7 @@ class RekapVisualController extends Controller
         $nominalProvinsi = (int) ($bayarAgg->nominal_provinsi ?? 0);
         $nominalOpsen = (int) ($bayarAgg->nominal_opsen ?? 0);
 
-        $timing = $this->bayarSebelumSesudah($year, $pendataanTable, $tertagihTable, $useNopolKey);
+        $timing = $this->bayarSebelumSesudah($year, $pendataanTable, $tertagihTable);
 
         $bayar = [
             'jumlah_terbayar' => (int) ($bayarAgg->jumlah_terbayar ?? 0),
@@ -160,7 +159,7 @@ class RekapVisualController extends Controller
             'sesudah_pendataan_nominal_fmt' => MoneyShortFormatter::format($timing['sesudah_nominal']),
         ];
 
-        $mapKabkota = $this->buildMapKabkota($year, $tertagihTable, $useNopolKey);
+        $mapKabkota = $this->buildMapKabkota($year, $tertagihTable);
 
         return compact('stats', 'bayar', 'mapKabkota');
     }
@@ -168,43 +167,33 @@ class RekapVisualController extends Controller
     /**
      * @return array{sebelum:int,sesudah:int,tanpa:int,sebelum_nominal:int,sesudah_nominal:int}
      */
-    protected function bayarSebelumSesudah(int $year, string $pendataanTable, string $tertagihTable, bool $useNopolKey): array
+    protected function bayarSebelumSesudah(int $year, string $pendataanTable, string $tertagihTable): array
     {
-        $pendataanHasKey = $useNopolKey && Schema::hasColumn($pendataanTable, 'nopol_key');
-        $pendataanKeyExpr = $pendataanHasKey
-            ? 'pd.nopol_key'
-            : $this->nopolExpr('pd.nopol');
-        $bayarJoinKey = $useNopolKey ? 'b.nopol_key' : $this->nopolExpr('b.nopol_');
-
         $yearStart = sprintf('%04d-01-01 00:00:00', $year);
         $yearEnd = sprintf('%04d-12-31 23:59:59', $year);
 
+        // Join exact: nopol_ = pendataan.nopol
         $pendataanSub = "
-            SELECT {$pendataanKeyExpr} AS nopol_key, MIN(DATE(created_at)) AS tgl_pendataan
+            SELECT pd.nopol AS nopol, MIN(DATE(pd.created_at)) AS tgl_pendataan
             FROM {$pendataanTable} pd
             WHERE pd.deleted_at IS NULL
               AND pd.created_at BETWEEN '{$yearStart}' AND '{$yearEnd}'
-              " . ($pendataanHasKey ? 'AND pd.nopol_key IS NOT NULL' : '') . "
-            GROUP BY {$pendataanKeyExpr}
+              AND pd.nopol IS NOT NULL
+              AND pd.nopol != ''
+            GROUP BY pd.nopol
         ";
 
-        $query = DB::table('seng_bayar_pajak as b')
+        $rows = DB::table('seng_bayar_pajak as b')
             ->where('b.year', $year)
-            ->whereNotNull($useNopolKey ? 'b.nopol_key' : 'b.nopol_')
-            ->whereExists(function ($q) use ($tertagihTable, $year, $useNopolKey) {
+            ->whereNotNull('b.nopol_')
+            ->where('b.nopol_', '!=', '')
+            ->whereExists(function ($q) use ($tertagihTable, $year) {
                 $q->select(DB::raw(1))
                     ->from("{$tertagihTable} as t")
+                    ->whereColumn('b.nopol_', 't.no_polisi')
                     ->where('t.year', $year);
-                $this->applyNopolMatch($q, $useNopolKey, 'b', 't');
-            });
-
-        if ($useNopolKey) {
-            $query->leftJoin(DB::raw("({$pendataanSub}) as p"), 'b.nopol_key', '=', 'p.nopol_key');
-        } else {
-            $query->leftJoin(DB::raw("({$pendataanSub}) as p"), DB::raw($bayarJoinKey), '=', 'p.nopol_key');
-        }
-
-        $rows = $query
+            })
+            ->leftJoin(DB::raw("({$pendataanSub}) as p"), 'b.nopol_', '=', 'p.nopol')
             ->selectRaw('
                 SUM(CASE WHEN p.tgl_pendataan IS NULL THEN 1 ELSE 0 END) AS tanpa,
                 SUM(CASE WHEN p.tgl_pendataan IS NOT NULL AND b.tgl_bayar < p.tgl_pendataan THEN 1 ELSE 0 END) AS sebelum,
@@ -230,13 +219,12 @@ class RekapVisualController extends Controller
     /**
      * @return list<array<string, mixed>>
      */
-    protected function buildMapKabkota(int $year, string $tertagihTable, bool $useNopolKey): array
+    protected function buildMapKabkota(int $year, string $tertagihTable): array
     {
         $kabkotas = SengWilayah::query()
             ->where('id_up', 33)
             ->get(['id', 'nama', 'lat', 'lng']);
 
-        // lokasi_samsat variant -> kabkota id (sekali saja, tanpa N+1 query)
         $lokasiToKabkota = [];
         $samsats = SengSaamsat::query()->get(['id', 'id_wilayah_samsat', 'kabkota']);
         foreach ($samsats as $samsat) {
@@ -260,20 +248,17 @@ class RekapVisualController extends Controller
             ->groupBy('id_lokasi_samsat')
             ->pluck('c', 'id_lokasi_samsat');
 
-        $distinctCol = $useNopolKey ? 'b.nopol_key' : 'b.nopol_';
-
-        $bayarJoin = DB::table('seng_bayar_pajak as b')
-            ->join("{$tertagihTable} as t", function ($join) use ($year, $useNopolKey) {
-                $join->where('t.year', $year);
-                $this->applyNopolMatch($join, $useNopolKey, 'b', 't');
+        $bayarByLokasi = DB::table('seng_bayar_pajak as b')
+            ->join("{$tertagihTable} as t", function ($join) use ($year) {
+                $join->on('b.nopol_', '=', 't.no_polisi')
+                    ->where('t.year', $year);
             })
             ->where('b.year', $year)
-            ->when($useNopolKey, fn ($q) => $q->whereNotNull('b.nopol_key'))
-            ->selectRaw("t.id_lokasi_samsat, COUNT(DISTINCT {$distinctCol}) as c")
+            ->whereNotNull('b.nopol_')
+            ->where('b.nopol_', '!=', '')
+            ->selectRaw('t.id_lokasi_samsat, COUNT(DISTINCT b.nopol_) as c')
             ->groupBy('t.id_lokasi_samsat')
             ->pluck('c', 'id_lokasi_samsat');
-
-        $bayarByLokasi = $bayarJoin;
 
         $tagihanByKab = [];
         $bayarByKab = [];
@@ -291,8 +276,6 @@ class RekapVisualController extends Controller
             if ($kabId === null) {
                 continue;
             }
-            // Hati-hati: satu nopol bisa muncul di beberapa lokasi jika data kotor.
-            // Ambil max per lokasi lalu jumlahkan per kab — cukup akurat untuk sisa % warna.
             $bayarByKab[$kabId] = ($bayarByKab[$kabId] ?? 0) + (int) $count;
         }
 
@@ -320,25 +303,6 @@ class RekapVisualController extends Controller
         usort($out, static fn ($a, $b) => $b['sisa_pct'] <=> $a['sisa_pct']);
 
         return $out;
-    }
-
-    protected function applyNopolMatch(mixed $query, bool $useNopolKey, string $bayarAlias, string $tertagihAlias): void
-    {
-        if ($useNopolKey) {
-            $query->whereColumn("{$bayarAlias}.nopol_key", "{$tertagihAlias}.nopol_key")
-                ->whereNotNull("{$tertagihAlias}.nopol_key");
-
-            return;
-        }
-
-        $query->whereRaw(
-            $this->nopolExpr("{$bayarAlias}.nopol_") . ' = ' . $this->nopolExpr("{$tertagihAlias}.no_polisi")
-        );
-    }
-
-    protected function nopolExpr(string $column): string
-    {
-        return "UPPER(REGEXP_REPLACE(COALESCE({$column}, ''), '[^A-Za-z0-9]', ''))";
     }
 
     protected function sisaColor(float $sisaPct): string

@@ -398,7 +398,7 @@
     <div class="rv-grid">
         <div class="rv-card">
             <h2>Peta Kab/Kota Jawa Tengah</h2>
-            <div id="rvMap"></div>
+            <div id="rvMap"><div id="rvMapLoading" style="padding:24px;color:#64748b;font-size:0.9rem;">Memuat peta…</div></div>
             <div class="legend">
                 <span><i class="swatch" style="background:#22c55e"></i> Sisa ≤ 25%</span>
                 <span><i class="swatch" style="background:#eab308"></i> 26–50%</span>
@@ -422,15 +422,8 @@
                             <th>Sisa %</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @foreach ($mapKabkota as $row)
-                            <tr>
-                                <td><span class="dot" style="background:{{ $row['color'] }}"></span>{{ $row['nama'] }}</td>
-                                <td>{{ number_format($row['tagihan'], 0, ',', '.') }}</td>
-                                <td>{{ number_format($row['bayar'], 0, ',', '.') }}</td>
-                                <td>{{ number_format($row['sisa_pct'], 1, ',', '.') }}%</td>
-                            </tr>
-                        @endforeach
+                    <tbody id="kabTableBody">
+                        <tr><td colspan="4" style="color:#64748b;">Memuat ringkasan kab/kota…</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -440,69 +433,107 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    const mapData = @json($mapKabkota);
-    const byId = {};
-    mapData.forEach(function (row) { byId[String(row.id)] = row; });
-
+    const mapUrl = @json($mapUrl);
+    const geoUrl = @json(asset('geo/jateng-kabkota.geojson'));
     const map = L.map('rvMap').setView([-7.15, 110.14], 8);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 18,
         attribution: '&copy; OpenStreetMap'
     }).addTo(map);
 
-    fetch(@json(asset('geo/jateng-kabkota.geojson')))
-        .then(function (r) { return r.json(); })
-        .then(function (geo) {
-            const layer = L.geoJSON(geo, {
-                style: function (feature) {
-                    const id = String(feature.properties.id || '');
-                    const row = byId[id];
-                    return {
+    function renderTable(mapData) {
+        const tbody = document.getElementById('kabTableBody');
+        if (!mapData.length) {
+            tbody.innerHTML = '<tr><td colspan="4">Tidak ada data</td></tr>';
+            return;
+        }
+        tbody.innerHTML = mapData.map(function (row) {
+            return '<tr>' +
+                '<td><span class="dot" style="background:' + row.color + '"></span>' + row.nama + '</td>' +
+                '<td>' + Number(row.tagihan).toLocaleString('id-ID') + '</td>' +
+                '<td>' + Number(row.bayar).toLocaleString('id-ID') + '</td>' +
+                '<td>' + Number(row.sisa_pct).toFixed(1).replace('.', ',') + '%</td>' +
+                '</tr>';
+        }).join('');
+    }
+
+    function paintMap(mapData) {
+        const loading = document.getElementById('rvMapLoading');
+        if (loading) loading.remove();
+
+        const byId = {};
+        mapData.forEach(function (row) { byId[String(row.id)] = row; });
+
+        fetch(geoUrl)
+            .then(function (r) { return r.json(); })
+            .then(function (geo) {
+                const layer = L.geoJSON(geo, {
+                    style: function (feature) {
+                        const id = String(feature.properties.id || '');
+                        const row = byId[id];
+                        return {
+                            color: '#0f1c2e',
+                            weight: 1,
+                            fillColor: row ? row.color : '#94a3b8',
+                            fillOpacity: 0.78,
+                        };
+                    },
+                    onEachFeature: function (feature, lyr) {
+                        const id = String(feature.properties.id || '');
+                        const row = byId[id];
+                        const nama = row ? row.nama : (feature.properties.nama || id);
+                        if (!row) {
+                            lyr.bindPopup('<strong>' + nama + '</strong><br>Tidak ada data tagihan');
+                            return;
+                        }
+                        lyr.bindPopup(
+                            '<strong>' + nama + '</strong><br>' +
+                            'Tagihan: ' + Number(row.tagihan).toLocaleString('id-ID') + '<br>' +
+                            'Bayar: ' + Number(row.bayar).toLocaleString('id-ID') + '<br>' +
+                            'Sisa: ' + Number(row.sisa_pct).toFixed(1) + '%'
+                        );
+                    }
+                }).addTo(map);
+                map.fitBounds(layer.getBounds(), { padding: [24, 24] });
+            })
+            .catch(function () {
+                const bounds = [];
+                mapData.forEach(function (row) {
+                    if (row.lat == null || row.lng == null) return;
+                    const radius = Math.max(8, Math.min(28, 8 + Math.sqrt(row.tagihan || 0) / 8));
+                    L.circleMarker([row.lat, row.lng], {
+                        radius: radius,
                         color: '#0f1c2e',
                         weight: 1,
-                        fillColor: row ? row.color : '#94a3b8',
-                        fillOpacity: 0.78,
-                    };
-                },
-                onEachFeature: function (feature, lyr) {
-                    const id = String(feature.properties.id || '');
-                    const row = byId[id];
-                    const nama = row ? row.nama : (feature.properties.nama || id);
-                    if (!row) {
-                        lyr.bindPopup('<strong>' + nama + '</strong><br>Tidak ada data tagihan');
-                        return;
-                    }
-                    lyr.bindPopup(
-                        '<strong>' + nama + '</strong><br>' +
+                        fillColor: row.color,
+                        fillOpacity: 0.85,
+                    }).addTo(map).bindPopup(
+                        '<strong>' + row.nama + '</strong><br>' +
                         'Tagihan: ' + Number(row.tagihan).toLocaleString('id-ID') + '<br>' +
                         'Bayar: ' + Number(row.bayar).toLocaleString('id-ID') + '<br>' +
                         'Sisa: ' + Number(row.sisa_pct).toFixed(1) + '%'
                     );
-                }
-            }).addTo(map);
-            map.fitBounds(layer.getBounds(), { padding: [24, 24] });
+                    bounds.push([row.lat, row.lng]);
+                });
+                if (bounds.length) map.fitBounds(bounds, { padding: [24, 24] });
+            });
+    }
+
+    fetch(mapUrl, { headers: { 'Accept': 'application/json' } })
+        .then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
+        .then(function (payload) {
+            const mapData = payload.mapKabkota || [];
+            renderTable(mapData);
+            paintMap(mapData);
         })
         .catch(function () {
-            // Fallback titik jika GeoJSON gagal dimuat
-            const bounds = [];
-            mapData.forEach(function (row) {
-                if (row.lat == null || row.lng == null) return;
-                const radius = Math.max(8, Math.min(28, 8 + Math.sqrt(row.tagihan || 0) / 8));
-                L.circleMarker([row.lat, row.lng], {
-                    radius: radius,
-                    color: '#0f1c2e',
-                    weight: 1,
-                    fillColor: row.color,
-                    fillOpacity: 0.85,
-                }).addTo(map).bindPopup(
-                    '<strong>' + row.nama + '</strong><br>' +
-                    'Tagihan: ' + Number(row.tagihan).toLocaleString('id-ID') + '<br>' +
-                    'Bayar: ' + Number(row.bayar).toLocaleString('id-ID') + '<br>' +
-                    'Sisa: ' + Number(row.sisa_pct).toFixed(1) + '%'
-                );
-                bounds.push([row.lat, row.lng]);
-            });
-            if (bounds.length) map.fitBounds(bounds, { padding: [24, 24] });
+            document.getElementById('kabTableBody').innerHTML =
+                '<tr><td colspan="4" style="color:#b91c1c;">Gagal memuat peta/ringkasan. Coba refresh.</td></tr>';
+            const loading = document.getElementById('rvMapLoading');
+            if (loading) loading.textContent = 'Gagal memuat data peta. Statistik di atas tetap bisa dipakai.';
         });
 </script>
 </body>

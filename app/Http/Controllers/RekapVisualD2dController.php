@@ -27,6 +27,11 @@ class RekapVisualD2dController extends RekapVisualController
         return 'rekap-visual-d2d.index';
     }
 
+    protected function routeMap(): string
+    {
+        return 'rekap-visual-d2d.map';
+    }
+
     protected function routeSibling(): string
     {
         return 'rekap-visual.index';
@@ -49,6 +54,6 @@ class RekapVisualD2dController extends RekapVisualController
 
     protected function cachePrefix(): string
     {
-        return 'admin:rekap-visual-d2d:v4:';
+        return 'admin:rekap-visual-d2d:v5:';
     }
 }

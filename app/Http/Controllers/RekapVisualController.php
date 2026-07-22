@@ -35,6 +35,11 @@ class RekapVisualController extends Controller
         return 'rekap-visual.index';
     }
 
+    protected function routeMap(): string
+    {
+        return 'rekap-visual.map';
+    }
+
     protected function routeSibling(): string
     {
         return 'rekap-visual-d2d.index';
@@ -57,24 +62,21 @@ class RekapVisualController extends Controller
 
     protected function cachePrefix(): string
     {
-        return 'admin:rekap-visual:v4:';
+        return 'admin:rekap-visual:v5:';
     }
 
     public function index(Request $request)
     {
-        $user = Auth::user();
-        abort_unless(
-            $user && $user->hasAnyRole(['super-admin', 'superadmin', 'admin', 'adminprov', 'uptd', 'uppd'], 'web'),
-            403,
-            'Akses terbatas.'
-        );
+        $this->authorizeAccess();
+        @set_time_limit(180);
 
         $year = $request->filled('year') ? (int) $request->year : (int) date('Y');
 
+        // TTL data (bukan 60s dashboard) — rebuild statistik/peta mahal untuk reguler & D2D.
         $payload = ApiCacheManager::remember(
-            $this->cachePrefix() . 'y:' . $year,
-            ApiCacheManager::dashboardTtl(),
-            fn () => $this->buildPayload($year)
+            $this->cachePrefix() . 'stats:y:' . $year,
+            ApiCacheManager::dataTtl(),
+            fn () => $this->buildStatsPayload($year)
         );
 
         return view($this->viewName(), [
@@ -83,15 +85,50 @@ class RekapVisualController extends Controller
             'channelLabel' => $this->channelLabel(),
             'isD2d' => $this->isD2d(),
             'routeIndex' => $this->routeIndex(),
+            'routeMap' => $this->routeMap(),
             'routeSibling' => $this->routeSibling(),
             'stats' => $payload['stats'],
             'bayar' => $payload['bayar'],
-            'mapKabkota' => $payload['mapKabkota'],
+            'mapKabkota' => [],
+            'mapUrl' => route($this->routeMap(), ['year' => $year]),
             'refreshedAt' => now()->format('d/m/Y H:i:s'),
         ]);
     }
 
-    protected function buildPayload(int $year): array
+    public function map(Request $request)
+    {
+        $this->authorizeAccess();
+        @set_time_limit(180);
+
+        $year = $request->filled('year') ? (int) $request->year : (int) date('Y');
+        $tertagihTable = (new ($this->dataTertagihModelClass()))->getTable();
+
+        $mapKabkota = ApiCacheManager::remember(
+            $this->cachePrefix() . 'map:y:' . $year,
+            ApiCacheManager::dataTtl(),
+            fn () => $this->buildMapKabkota($year, $tertagihTable)
+        );
+
+        return response()->json([
+            'year' => $year,
+            'mapKabkota' => $mapKabkota,
+        ]);
+    }
+
+    protected function authorizeAccess(): void
+    {
+        $user = Auth::user();
+        abort_unless(
+            $user && $user->hasAnyRole(['super-admin', 'superadmin', 'admin', 'adminprov', 'uptd', 'uppd'], 'web'),
+            403,
+            'Akses terbatas.'
+        );
+    }
+
+    /**
+     * @return array{stats: array<string, mixed>, bayar: array<string, mixed>}
+     */
+    protected function buildStatsPayload(int $year): array
     {
         $statusGroups = VerifikasiStatusGroups::all();
         $tertagihTable = (new ($this->dataTertagihModelClass()))->getTable();
@@ -119,17 +156,20 @@ class RekapVisualController extends Controller
             ? round(($stats['verifikasi'] / $stats['jumlah_sudah_pendataan']) * 100, 2)
             : 0;
 
-        // Join exact: seng_bayar_pajak.nopol_ = data_tertagih.no_polisi (format sama)
+        // Channel filter: distinct nopol tertagih sekali, lalu join ke bayar (lebih aman di tabel D2D besar).
+        $channelNopolSub = "
+            SELECT DISTINCT t.no_polisi AS nopol
+            FROM {$tertagihTable} t
+            WHERE t.year = " . (int) $year . "
+              AND t.no_polisi IS NOT NULL
+              AND t.no_polisi != ''
+        ";
+
         $bayarAgg = DB::table('seng_bayar_pajak as b')
+            ->join(DB::raw("({$channelNopolSub}) as ch"), 'ch.nopol', '=', 'b.nopol_')
             ->where('b.year', $year)
             ->whereNotNull('b.nopol_')
             ->where('b.nopol_', '!=', '')
-            ->whereExists(function ($q) use ($tertagihTable, $year) {
-                $q->select(DB::raw(1))
-                    ->from("{$tertagihTable} as t")
-                    ->whereColumn('b.nopol_', 't.no_polisi')
-                    ->where('t.year', $year);
-            })
             ->selectRaw('COUNT(*) as jumlah_terbayar')
             ->selectRaw('COUNT(DISTINCT b.nopol_) as jumlah_nopol_bayar')
             ->selectRaw('COALESCE(SUM(b.pkb_provinsi_jalan),0) + COALESCE(SUM(b.pkb_provinsi_tunggakan),0) as nominal_provinsi')
@@ -139,9 +179,8 @@ class RekapVisualController extends Controller
         $nominalProvinsi = (int) ($bayarAgg->nominal_provinsi ?? 0);
         $nominalOpsen = (int) ($bayarAgg->nominal_opsen ?? 0);
 
-        $timing = $this->bayarSebelumSesudah($year, $pendataanTable, $tertagihTable);
+        $timing = $this->bayarSebelumSesudah($year, $pendataanTable, $channelNopolSub);
 
-        // "Bayar sebelum pendataan" = bayar sebelum tanggal pendataan + bayar tanpa catatan pendataan.
         $sebelumTotal = $timing['sebelum'] + $timing['tanpa'];
         $sebelumTotalNominal = $timing['sebelum_nominal'] + $timing['tanpa_nominal'];
 
@@ -168,20 +207,17 @@ class RekapVisualController extends Controller
             'sesudah_pendataan_nominal_fmt' => MoneyShortFormatter::format($timing['sesudah_nominal']),
         ];
 
-        $mapKabkota = $this->buildMapKabkota($year, $tertagihTable);
-
-        return compact('stats', 'bayar', 'mapKabkota');
+        return compact('stats', 'bayar');
     }
 
     /**
      * @return array{sebelum:int,sesudah:int,tanpa:int,sebelum_nominal:int,sesudah_nominal:int,tanpa_nominal:int}
      */
-    protected function bayarSebelumSesudah(int $year, string $pendataanTable, string $tertagihTable): array
+    protected function bayarSebelumSesudah(int $year, string $pendataanTable, string $channelNopolSub): array
     {
         $yearStart = sprintf('%04d-01-01 00:00:00', $year);
         $yearEnd = sprintf('%04d-12-31 23:59:59', $year);
 
-        // Join exact: nopol_ = pendataan.nopol
         $pendataanSub = "
             SELECT pd.nopol AS nopol, MIN(DATE(pd.created_at)) AS tgl_pendataan
             FROM {$pendataanTable} pd
@@ -193,16 +229,11 @@ class RekapVisualController extends Controller
         ";
 
         $rows = DB::table('seng_bayar_pajak as b')
+            ->join(DB::raw("({$channelNopolSub}) as ch"), 'ch.nopol', '=', 'b.nopol_')
+            ->leftJoin(DB::raw("({$pendataanSub}) as p"), 'b.nopol_', '=', 'p.nopol')
             ->where('b.year', $year)
             ->whereNotNull('b.nopol_')
             ->where('b.nopol_', '!=', '')
-            ->whereExists(function ($q) use ($tertagihTable, $year) {
-                $q->select(DB::raw(1))
-                    ->from("{$tertagihTable} as t")
-                    ->whereColumn('b.nopol_', 't.no_polisi')
-                    ->where('t.year', $year);
-            })
-            ->leftJoin(DB::raw("({$pendataanSub}) as p"), 'b.nopol_', '=', 'p.nopol')
             ->selectRaw('
                 SUM(CASE WHEN p.tgl_pendataan IS NULL THEN 1 ELSE 0 END) AS tanpa,
                 SUM(CASE WHEN p.tgl_pendataan IS NOT NULL AND b.tgl_bayar < p.tgl_pendataan THEN 1 ELSE 0 END) AS sebelum,
@@ -261,16 +292,23 @@ class RekapVisualController extends Controller
             ->groupBy('id_lokasi_samsat')
             ->pluck('c', 'id_lokasi_samsat');
 
-        $bayarByLokasi = DB::table('seng_bayar_pajak as b')
-            ->join("{$tertagihTable} as t", function ($join) use ($year) {
-                $join->on('b.nopol_', '=', 't.no_polisi')
-                    ->where('t.year', $year);
-            })
-            ->where('b.year', $year)
-            ->whereNotNull('b.nopol_')
-            ->where('b.nopol_', '!=', '')
-            ->selectRaw('t.id_lokasi_samsat, COUNT(DISTINCT b.nopol_) as c')
-            ->groupBy('t.id_lokasi_samsat')
+        // Satu lokasi per nopol bayar (hindari COUNT DISTINCT di join besar).
+        $bayarByLokasi = DB::table(DB::raw("(
+            SELECT x.nopol_, MIN(t.id_lokasi_samsat) AS id_lokasi_samsat
+            FROM (
+                SELECT DISTINCT b.nopol_
+                FROM seng_bayar_pajak b
+                WHERE b.year = " . (int) $year . "
+                  AND b.nopol_ IS NOT NULL
+                  AND b.nopol_ != ''
+            ) x
+            INNER JOIN {$tertagihTable} t
+                ON t.no_polisi = x.nopol_
+               AND t.year = " . (int) $year . "
+            GROUP BY x.nopol_
+        ) as paid"))
+            ->selectRaw('id_lokasi_samsat, COUNT(*) as c')
+            ->groupBy('id_lokasi_samsat')
             ->pluck('c', 'id_lokasi_samsat');
 
         $tagihanByKab = [];

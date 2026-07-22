@@ -117,7 +117,9 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::post('/bayar-pajak/import/chunk', [SengBayarPajakController::class, 'importChunk'])->name('bayar-pajak.import.chunk');
 
         Route::get('/rekap-visual', [RekapVisualController::class, 'index'])->name('rekap-visual.index');
+        Route::get('/rekap-visual/map', [RekapVisualController::class, 'map'])->name('rekap-visual.map');
         Route::get('/rekap-visual-d2d', [RekapVisualD2dController::class, 'index'])->name('rekap-visual-d2d.index');
+        Route::get('/rekap-visual-d2d/map', [RekapVisualD2dController::class, 'map'])->name('rekap-visual-d2d.map');
 
         Route::get('/cache-management', [CacheManagementController::class, 'index'])->name('cache-management.index');
         Route::get('/cache-management/{scope}', [CacheManagementController::class, 'scope'])

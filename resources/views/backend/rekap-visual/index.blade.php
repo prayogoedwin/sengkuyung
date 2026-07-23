@@ -248,6 +248,9 @@
             border-radius: 999px;
             background: rgba(15, 28, 46, 0.06);
             flex-shrink: 0;
+            position: relative;
+            z-index: 5;
+            pointer-events: auto;
         }
         .map-tabs button {
             border: 0;
@@ -262,6 +265,7 @@
             border-radius: 999px;
             cursor: pointer;
             white-space: nowrap;
+            pointer-events: auto;
         }
         .map-tabs button.active {
             background: var(--ink);
@@ -553,6 +557,12 @@
     let geojsonCache = null;
 
     function successRatePct(row) {
+        // Warna tab "Sukses Rate Kegiatan": bayar / sudah pendataan (agar sebaran warna bermakna).
+        return ratioPct(row.bayar, row.pendataan);
+    }
+
+    function suksesRateVsPotensi(row) {
+        // Angka Sukses Rate di detail popup: bayar / potensi (revisi).
         return ratioPct(row.bayar, row.tagihan);
     }
 
@@ -574,7 +584,7 @@
         if (!el) return;
         if (mapMode === 'sukses') {
             el.innerHTML =
-                '<span><i class="swatch" style="background:#22c55e"></i> ≥10%</span>' +
+                '<span><i class="swatch" style="background:#22c55e"></i> ≥10% (bayar/pendataan)</span>' +
                 '<span><i class="swatch" style="background:#eab308"></i> 5–10%</span>' +
                 '<span><i class="swatch" style="background:#ef4444"></i> &lt;5%</span>';
             return;
@@ -587,12 +597,17 @@
     }
 
     function popupHtml(row, nama) {
-        const sukses = successRatePct(row);
-        return '<strong>' + nama + '</strong>' +
+        const vsPotensi = suksesRateVsPotensi(row);
+        const vsPendataan = successRatePct(row);
+        let html = '<strong>' + nama + '</strong>' +
             '<br>Obyek Potensi: ' + fmt(row.tagihan) +
             '<br>Sudah Pendataan: ' + fmt(row.pendataan) +
             '<br>Sudah Bayar: ' + fmt(row.bayar) +
-            '<br>Sukses Rate: <strong>' + fmtPct(sukses, 1) + '</strong> (bayar / potensi)';
+            '<br>Sukses Rate: <strong>' + fmtPct(vsPotensi, 1) + '</strong> (bayar / potensi)';
+        if (mapMode === 'sukses') {
+            html += '<br>Rate vs Pendataan: ' + fmtPct(vsPendataan, 1) + ' (warna peta)';
+        }
+        return html;
     }
 
     function renderTable(mapData) {
@@ -741,12 +756,17 @@
         });
     }
 
-    document.querySelectorAll('.map-tabs button').forEach(function (btn) {
-        btn.addEventListener('click', function () {
+    const mapTabs = document.querySelector('.map-tabs');
+    if (mapTabs) {
+        mapTabs.addEventListener('click', function (e) {
+            const btn = e.target.closest('button[data-map-tab]');
+            if (!btn || !mapTabs.contains(btn)) return;
+            e.preventDefault();
+            e.stopPropagation();
             const next = btn.getAttribute('data-map-tab') || 'kinerja';
             if (next === mapMode) return;
             mapMode = next;
-            document.querySelectorAll('.map-tabs button').forEach(function (b) {
+            mapTabs.querySelectorAll('button[data-map-tab]').forEach(function (b) {
                 const on = b === btn;
                 b.classList.toggle('active', on);
                 b.setAttribute('aria-selected', on ? 'true' : 'false');
@@ -754,7 +774,7 @@
             applyMapColors();
             requestAnimationFrame(function () { map.invalidateSize(); });
         });
-    });
+    }
 
     renderLegend();
 

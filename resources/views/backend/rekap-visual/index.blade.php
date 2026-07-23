@@ -121,27 +121,108 @@
 
         .pay-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            grid-template-rows: auto auto;
-            gap: 6px;
+            grid-template-columns: 0.85fr 1.35fr;
+            grid-template-rows: auto auto auto;
+            gap: 5px;
             flex: 1;
             min-height: 0;
+            align-content: start;
         }
         .money-box {
-            border: 1px dashed rgba(15,28,46,0.18);
+            border: 1px solid rgba(15,28,46,0.12);
             border-radius: 8px;
-            padding: 6px 8px;
+            padding: 5px 8px;
             background: #f8fafc;
             min-height: 0;
         }
-        .money-box .title { font-size: 0.62rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
-        .money-box .big { font-size: 1rem; font-weight: 700; margin: 2px 0; color: var(--accent-2); line-height: 1.15; }
-        .money-box .sub { font-size: 0.68rem; color: var(--ink-soft); line-height: 1.25; }
-        .money-box .break {
-            margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(15,28,46,0.12);
-            font-size: 0.62rem; color: var(--muted); display: grid; gap: 1px;
+        .money-box .title {
+            font-size: 0.58rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            font-weight: 600;
         }
-        .money-box .break strong { color: var(--ink-soft); font-weight: 600; }
+        .money-box .big {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin: 1px 0 0;
+            color: var(--accent-2);
+            line-height: 1.15;
+        }
+        .money-box .big .unit {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--muted);
+            margin-left: 2px;
+        }
+        .money-box.warn .big { color: var(--warn); }
+        .money-box.good .big { color: var(--good); }
+        .money-box.nominal {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 2px;
+        }
+        .nominal-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 4px;
+            align-items: end;
+        }
+        .nominal-cell .k {
+            font-size: 0.55rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+        .nominal-cell .v {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--ink);
+            line-height: 1.2;
+        }
+        .pay-lines {
+            display: grid;
+            gap: 1px;
+            margin-top: 3px;
+            font-size: 0.68rem;
+            color: var(--ink-soft);
+            line-height: 1.25;
+        }
+        .pay-lines strong { color: var(--ink); font-weight: 700; }
+        .pay-ratio {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px;
+            align-items: center;
+            border: 1px solid rgba(15,28,46,0.12);
+            border-radius: 8px;
+            padding: 6px 10px;
+            background: linear-gradient(90deg, rgba(13,148,136,0.08), #f8fafc);
+        }
+        .pay-ratio .pct {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--accent);
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+        .pay-ratio .meta {
+            display: grid;
+            gap: 1px;
+            font-size: 0.68rem;
+            color: var(--ink-soft);
+            line-height: 1.25;
+        }
+        .pay-ratio .meta strong { color: var(--ink); }
+        .pay-note {
+            grid-column: 1 / -1;
+            font-size: 0.58rem;
+            color: var(--muted);
+            line-height: 1.3;
+            padding: 0 2px;
+        }
+        .pay-note strong { color: var(--ink-soft); font-weight: 600; }
 
         #rvMap {
             flex: 1;
@@ -277,31 +358,45 @@
             </div>
         </div>
         <div class="rv-card">
-            <h2>Pembayaran Pajak</h2>
+            <h2>Pembayaran</h2>
             <div class="pay-grid">
                 <div class="money-box">
                     <div class="title">Transaksi Terbayar</div>
-                    <div class="big" id="vTrx">…</div>
-                    <div class="sub" id="vTrxSub">Nopol unik: …</div>
+                    <div class="big" id="vTrx">…<span class="unit">Obyek</span></div>
                 </div>
-                <div class="money-box">
-                    <div class="title">Nominal Total</div>
-                    <div class="big" id="vNominal">…</div>
-                    <div class="sub" id="vNominalSub">Provinsi: … · Opsen: …</div>
-                </div>
-                <div class="money-box">
-                    <div class="title">Bayar sebelum pendataan</div>
-                    <div class="big" id="vSebelum" style="color:var(--warn);">…</div>
-                    <div class="sub" id="vSebelumSub">Nominal: …</div>
-                    <div class="break" id="vSebelumBreak">
-                        <div>Sebelum tgl pendataan: <strong>…</strong></div>
-                        <div>Belum ada pendataan: <strong>…</strong></div>
+                <div class="money-box nominal">
+                    <div class="title">Nominal</div>
+                    <div class="nominal-row">
+                        <div class="nominal-cell"><div class="k">Provinsi</div><div class="v" id="vNomProv">…</div></div>
+                        <div class="nominal-cell"><div class="k">Opsen</div><div class="v" id="vNomOps">…</div></div>
+                        <div class="nominal-cell"><div class="k">Total</div><div class="v" id="vNominal">…</div></div>
                     </div>
                 </div>
-                <div class="money-box">
+                <div class="money-box warn">
+                    <div class="title">Bayar sebelum pendataan</div>
+                    <div class="pay-lines">
+                        <div>Provinsi : <strong id="vSebelumProv">…</strong></div>
+                        <div>Opsen : <strong id="vSebelumOps">…</strong></div>
+                        <div>Obyek : <strong id="vSebelum">…</strong></div>
+                    </div>
+                </div>
+                <div class="money-box good">
                     <div class="title">Bayar sesudah pendataan</div>
-                    <div class="big" id="vSesudah" style="color:var(--good);">…</div>
-                    <div class="sub" id="vSesudahSub">Nominal: …</div>
+                    <div class="pay-lines">
+                        <div>Provinsi : <strong id="vSesudahProv">…</strong></div>
+                        <div>Opsen : <strong id="vSesudahOps">…</strong></div>
+                        <div>Obyek : <strong id="vSesudah">…</strong></div>
+                    </div>
+                </div>
+                <div class="pay-ratio">
+                    <div class="pct" id="vBayarPct">…</div>
+                    <div class="meta">
+                        <div>Total Bayar ( <strong id="vBayarTotal">…</strong> )</div>
+                        <div>Total Potensi ( <strong id="vPotensiTotal">…</strong> )</div>
+                    </div>
+                </div>
+                <div class="pay-note">
+                    <strong>Catatan:</strong> TOTAL POTENSI adalah PKB provinsi ditambah dengan PKB opsen dari obyek potensi.
                 </div>
             </div>
         </div>
@@ -397,18 +492,21 @@
         document.getElementById('vVerifikasi').textContent = fmt(s.verifikasi);
         document.getElementById('vDitolak').textContent = fmt(s.ditolak);
         document.getElementById('vPct').textContent = pct(s.pct_dikunjungi) + '%';
-        document.getElementById('vTrx').textContent = fmt(b.jumlah_terbayar);
-        document.getElementById('vTrxSub').textContent = 'Nopol unik: ' + fmt(b.jumlah_nopol_bayar);
+
+        document.getElementById('vTrx').innerHTML = fmt(b.jumlah_terbayar) + ' <span class="unit">Obyek</span>';
+        document.getElementById('vNomProv').textContent = b.nominal_provinsi_fmt || '0';
+        document.getElementById('vNomOps').textContent = b.nominal_opsen_fmt || '0';
         document.getElementById('vNominal').textContent = b.nominal_total_fmt || '0';
-        document.getElementById('vNominalSub').innerHTML =
-            'Provinsi: <strong>' + (b.nominal_provinsi_fmt || '0') + '</strong> · Opsen: <strong>' + (b.nominal_opsen_fmt || '0') + '</strong>';
-        document.getElementById('vSebelum').textContent = fmt(b.sebelum_pendataan);
-        document.getElementById('vSebelumSub').textContent = 'Nominal: ' + (b.sebelum_pendataan_nominal_fmt || '0');
-        document.getElementById('vSebelumBreak').innerHTML =
-            '<div>Sebelum tanggal pendataan: <strong>' + fmt(b.sebelum_pendataan_murni) + '</strong> (' + (b.sebelum_pendataan_murni_nominal_fmt || '0') + ')</div>' +
-            '<div>Belum ada pendataan: <strong>' + fmt(b.tanpa_pendataan) + '</strong> (' + (b.tanpa_pendataan_nominal_fmt || '0') + ')</div>';
-        document.getElementById('vSesudah').textContent = fmt(b.sesudah_pendataan);
-        document.getElementById('vSesudahSub').textContent = 'Nominal: ' + (b.sesudah_pendataan_nominal_fmt || '0');
+        document.getElementById('vSebelumProv').textContent = b.sebelum_pendataan_provinsi_fmt || '0';
+        document.getElementById('vSebelumOps').textContent = b.sebelum_pendataan_opsen_fmt || '0';
+        document.getElementById('vSebelum').textContent = fmt(b.sebelum_pendataan) + ' Obyek';
+        document.getElementById('vSesudahProv').textContent = b.sesudah_pendataan_provinsi_fmt || '0';
+        document.getElementById('vSesudahOps').textContent = b.sesudah_pendataan_opsen_fmt || '0';
+        document.getElementById('vSesudah').textContent = fmt(b.sesudah_pendataan) + ' Obyek';
+        document.getElementById('vBayarPct').textContent = fmtPct(b.pct_bayar_vs_potensi, 0);
+        document.getElementById('vBayarTotal').textContent = b.nominal_total_fmt || '0';
+        document.getElementById('vPotensiTotal').textContent = b.potensi_total_fmt || '0';
+
         document.getElementById('rvMeta').textContent =
             'Channel ' + channelLabel + ' · Diperbarui ' + (payload.refreshedAt || '');
     }

@@ -187,8 +187,61 @@ class RekapVisualController extends Controller
             : 0;
 
         $bayar = $this->buildBayarStats($year, $tertagihTable, $pendataanTable, $yearStart, $yearEnd);
+        $bayar = array_merge($bayar, $this->buildPotensiNominal($pendataanTable, $yearStart, $yearEnd, $stats['jumlah_tunggakan']));
+
+        $totalBayar = (int) ($bayar['nominal_total'] ?? 0);
+        $totalPotensi = (int) ($bayar['potensi_total'] ?? 0);
+        $bayar['pct_bayar_vs_potensi'] = $totalPotensi > 0
+            ? round(($totalBayar / $totalPotensi) * 100, 2)
+            : 0.0;
 
         return compact('stats', 'bayar');
+    }
+
+    /**
+     * TOTAL POTENSI = PKB provinsi + opsen dari obyek potensi.
+     * Karena data_tertagih tidak punya nominal, diestimasi dari rata-rata pendataan × jumlah obyek potensi.
+     *
+     * @return array<string, mixed>
+     */
+    protected function buildPotensiNominal(
+        string $pendataanTable,
+        string $yearStart,
+        string $yearEnd,
+        int $jumlahTunggakan
+    ): array {
+        $agg = DB::table($pendataanTable)
+            ->whereNull('deleted_at')
+            ->whereBetween('created_at', [$yearStart, $yearEnd])
+            ->selectRaw('COUNT(*) as c')
+            ->selectRaw('SUM(COALESCE(pkb_pokok, 0)) as provinsi')
+            ->selectRaw('SUM(COALESCE(pkb_pokok_opsen, 0)) as opsen')
+            ->first();
+
+        $sampleCount = (int) ($agg->c ?? 0);
+        $sampleProv = (float) ($agg->provinsi ?? 0);
+        $sampleOpsen = (float) ($agg->opsen ?? 0);
+
+        if ($sampleCount > 0 && $jumlahTunggakan > 0) {
+            $avgProv = $sampleProv / $sampleCount;
+            $avgOpsen = $sampleOpsen / $sampleCount;
+            $potensiProvinsi = (int) round($avgProv * $jumlahTunggakan);
+            $potensiOpsen = (int) round($avgOpsen * $jumlahTunggakan);
+        } else {
+            $potensiProvinsi = (int) round($sampleProv);
+            $potensiOpsen = (int) round($sampleOpsen);
+        }
+
+        $potensiTotal = $potensiProvinsi + $potensiOpsen;
+
+        return [
+            'potensi_provinsi' => $potensiProvinsi,
+            'potensi_opsen' => $potensiOpsen,
+            'potensi_total' => $potensiTotal,
+            'potensi_provinsi_fmt' => MoneyShortFormatter::format($potensiProvinsi),
+            'potensi_opsen_fmt' => MoneyShortFormatter::format($potensiOpsen),
+            'potensi_total_fmt' => MoneyShortFormatter::format($potensiTotal),
+        ];
     }
 
     /**
@@ -239,9 +292,12 @@ class RekapVisualController extends Controller
         $sebelum = 0;
         $sesudah = 0;
         $tanpa = 0;
-        $sebelumNominal = 0;
-        $sesudahNominal = 0;
-        $tanpaNominal = 0;
+        $sebelumProv = 0;
+        $sebelumOps = 0;
+        $sesudahProv = 0;
+        $sesudahOps = 0;
+        $tanpaProv = 0;
+        $tanpaOps = 0;
 
         foreach ($rows as $row) {
             $jumlahTerbayar++;
@@ -250,7 +306,6 @@ class RekapVisualController extends Controller
 
             $prov = (int) ($row->pkb_provinsi_jalan ?? 0) + (int) ($row->pkb_provinsi_tunggakan ?? 0);
             $ops = (int) ($row->pkb_opsen_jalan ?? 0) + (int) ($row->pkb_opsen_tunggakan ?? 0);
-            $nominal = $prov + $ops;
             $nominalProvinsi += $prov;
             $nominalOpsen += $ops;
 
@@ -259,21 +314,28 @@ class RekapVisualController extends Controller
 
             if ($tglPendataan === null || $tglPendataan === '') {
                 $tanpa++;
-                $tanpaNominal += $nominal;
+                $tanpaProv += $prov;
+                $tanpaOps += $ops;
                 continue;
             }
 
             if ($tglBayar !== null && $tglBayar < $tglPendataan) {
                 $sebelum++;
-                $sebelumNominal += $nominal;
+                $sebelumProv += $prov;
+                $sebelumOps += $ops;
             } else {
                 $sesudah++;
-                $sesudahNominal += $nominal;
+                $sesudahProv += $prov;
+                $sesudahOps += $ops;
             }
         }
 
+        // "Sebelum pendataan" = bayar sebelum tgl pendataan + belum ada pendataan (sama seperti sebelumnya).
         $sebelumTotal = $sebelum + $tanpa;
-        $sebelumTotalNominal = $sebelumNominal + $tanpaNominal;
+        $sebelumProvTotal = $sebelumProv + $tanpaProv;
+        $sebelumOpsTotal = $sebelumOps + $tanpaOps;
+        $sebelumNominalTotal = $sebelumProvTotal + $sebelumOpsTotal;
+        $sesudahNominal = $sesudahProv + $sesudahOps;
 
         return [
             'jumlah_terbayar' => $jumlahTerbayar,
@@ -288,14 +350,23 @@ class RekapVisualController extends Controller
             'sebelum_pendataan_murni' => $sebelum,
             'tanpa_pendataan' => $tanpa,
             'sesudah_pendataan' => $sesudah,
-            'sebelum_pendataan_nominal' => $sebelumTotalNominal,
-            'sebelum_pendataan_murni_nominal' => $sebelumNominal,
-            'tanpa_pendataan_nominal' => $tanpaNominal,
+            'sebelum_pendataan_provinsi' => $sebelumProvTotal,
+            'sebelum_pendataan_opsen' => $sebelumOpsTotal,
+            'sebelum_pendataan_nominal' => $sebelumNominalTotal,
+            'sesudah_pendataan_provinsi' => $sesudahProv,
+            'sesudah_pendataan_opsen' => $sesudahOps,
             'sesudah_pendataan_nominal' => $sesudahNominal,
-            'sebelum_pendataan_nominal_fmt' => MoneyShortFormatter::format($sebelumTotalNominal),
-            'sebelum_pendataan_murni_nominal_fmt' => MoneyShortFormatter::format($sebelumNominal),
-            'tanpa_pendataan_nominal_fmt' => MoneyShortFormatter::format($tanpaNominal),
+            'sebelum_pendataan_provinsi_fmt' => MoneyShortFormatter::format($sebelumProvTotal),
+            'sebelum_pendataan_opsen_fmt' => MoneyShortFormatter::format($sebelumOpsTotal),
+            'sebelum_pendataan_nominal_fmt' => MoneyShortFormatter::format($sebelumNominalTotal),
+            'sesudah_pendataan_provinsi_fmt' => MoneyShortFormatter::format($sesudahProv),
+            'sesudah_pendataan_opsen_fmt' => MoneyShortFormatter::format($sesudahOps),
             'sesudah_pendataan_nominal_fmt' => MoneyShortFormatter::format($sesudahNominal),
+            // Legacy keys (tetap ada agar cache lama tidak error di FE lama)
+            'sebelum_pendataan_murni_nominal' => $sebelumProv + $sebelumOps,
+            'tanpa_pendataan_nominal' => $tanpaProv + $tanpaOps,
+            'sebelum_pendataan_murni_nominal_fmt' => MoneyShortFormatter::format($sebelumProv + $sebelumOps),
+            'tanpa_pendataan_nominal_fmt' => MoneyShortFormatter::format($tanpaProv + $tanpaOps),
         ];
     }
 

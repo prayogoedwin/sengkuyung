@@ -150,6 +150,42 @@
             border: 1px solid var(--line);
             overflow: hidden;
         }
+        .map-head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 4px 8px;
+            flex-shrink: 0;
+            margin-bottom: 4px;
+        }
+        .map-head h2 { margin: 0; }
+        .map-tabs {
+            display: inline-flex;
+            gap: 2px;
+            padding: 2px;
+            border-radius: 999px;
+            background: rgba(15, 28, 46, 0.06);
+            flex-shrink: 0;
+        }
+        .map-tabs button {
+            border: 0;
+            background: transparent;
+            color: var(--muted);
+            font: inherit;
+            font-size: 0.62rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            border-radius: 999px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .map-tabs button.active {
+            background: var(--ink);
+            color: #fff;
+        }
         .legend {
             display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px;
             font-size: 0.65rem; flex-shrink: 0;
@@ -273,14 +309,15 @@
 
     <div class="rv-bottom">
         <div class="rv-card">
-            <h2>Peta Kab/Kota Jawa Tengah</h2>
-            <div id="rvMap"><div id="rvMapLoading" style="padding:12px;color:#64748b;font-size:0.75rem;">Memuat peta…</div></div>
-            <div class="legend">
-                <span><i class="swatch" style="background:#22c55e"></i> ≤25%</span>
-                <span><i class="swatch" style="background:#eab308"></i> 26–50%</span>
-                <span><i class="swatch" style="background:#f97316"></i> 51–75%</span>
-                <span><i class="swatch" style="background:#ef4444"></i> &gt;75%</span>
+            <div class="map-head">
+                <h2>Peta Kab/Kota Jawa Tengah</h2>
+                <div class="map-tabs" role="tablist">
+                    <button type="button" class="active" data-map-tab="kinerja" role="tab" aria-selected="true">Kinerja Pendataan</button>
+                    <button type="button" data-map-tab="sukses" role="tab" aria-selected="false">Sukses Rate Kegiatan</button>
+                </div>
             </div>
+            <div id="rvMap"><div id="rvMapLoading" style="padding:12px;color:#64748b;font-size:0.75rem;">Memuat peta…</div></div>
+            <div class="legend" id="mapLegend"></div>
         </div>
         <div class="rv-card">
             <h2>Ringkasan per Kab/Kota</h2>
@@ -290,14 +327,13 @@
                         <tr>
                             <th>Kab/Kota</th>
                             <th>Obyek Potensi</th>
-                            <th>Sudah Pendataan</th>
                             <th>Sudah Bayar</th>
                             <th>% Bayar</th>
                             <th>% Belum</th>
                         </tr>
                     </thead>
                     <tbody id="kabTableBody">
-                        <tr><td colspan="6" class="muted">Memuat…</td></tr>
+                        <tr><td colspan="5" class="muted">Memuat…</td></tr>
                     </tbody>
                     <tfoot id="kabTableFoot"></tfoot>
                 </table>
@@ -399,7 +435,6 @@
             map.invalidateSize();
             if (bounds && bounds.isValid && bounds.isValid()) {
                 map.fitBounds(bounds, { padding: [4, 4], maxZoom: 10 });
-                // Kalau container lebar membuat zoom terlalu jauh, paksa level seperti gb2.
                 if (map.getZoom() < jatengZoom) {
                     map.setView(bounds.getCenter(), jatengZoom);
                 }
@@ -412,16 +447,72 @@
         setTimeout(apply, 150);
     }
 
+    let mapMode = 'kinerja';
+    let cachedMapData = [];
+    let geoLayer = null;
+    let fallbackMarkers = [];
+    let geojsonCache = null;
+
+    function successRatePct(row) {
+        return ratioPct(row.bayar, row.pendataan);
+    }
+
+    function successColor(pctVal) {
+        if (pctVal >= 10) return '#22c55e';
+        if (pctVal >= 5) return '#eab308';
+        return '#ef4444';
+    }
+
+    function rowColor(row) {
+        if (mapMode === 'sukses') {
+            return successColor(successRatePct(row));
+        }
+        return row.color || '#94a3b8';
+    }
+
+    function renderLegend() {
+        const el = document.getElementById('mapLegend');
+        if (!el) return;
+        if (mapMode === 'sukses') {
+            el.innerHTML =
+                '<span><i class="swatch" style="background:#22c55e"></i> ≥10%</span>' +
+                '<span><i class="swatch" style="background:#eab308"></i> 5–10%</span>' +
+                '<span><i class="swatch" style="background:#ef4444"></i> &lt;5%</span>';
+            return;
+        }
+        el.innerHTML =
+            '<span><i class="swatch" style="background:#22c55e"></i> ≤25% sisa</span>' +
+            '<span><i class="swatch" style="background:#eab308"></i> 26–50%</span>' +
+            '<span><i class="swatch" style="background:#f97316"></i> 51–75%</span>' +
+            '<span><i class="swatch" style="background:#ef4444"></i> &gt;75%</span>';
+    }
+
+    function popupHtml(row, nama) {
+        const bayarVsPotensi = ratioPct(row.bayar, row.tagihan);
+        const sukses = successRatePct(row);
+        let html = '<strong>' + nama + '</strong>' +
+            '<br>Obyek Potensi: ' + fmt(row.tagihan) +
+            '<br>Sudah Pendataan: ' + fmt(row.pendataan) +
+            '<br>Sudah Bayar: ' + fmt(row.bayar) +
+            ' (' + fmtPct(bayarVsPotensi, 1) + ' vs potensi)';
+        if (mapMode === 'sukses') {
+            html += '<br>Sukses Rate: <strong>' + fmtPct(sukses, 1) + '</strong> (bayar / pendataan)';
+        } else {
+            html += '<br>Belum Bayar: ' + fmt(Math.max(0, (Number(row.tagihan) || 0) - (Number(row.bayar) || 0))) +
+                ' (' + fmtPct(row.tagihan > 0 ? Math.max(0, 100 - bayarVsPotensi) : 100, 1) + ')';
+        }
+        return html;
+    }
+
     function renderTable(mapData) {
         const tbody = document.getElementById('kabTableBody');
         const tfoot = document.getElementById('kabTableFoot');
         if (!mapData.length) {
-            tbody.innerHTML = '<tr><td colspan="6">Tidak ada data</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5">Tidak ada data</td></tr>';
             tfoot.innerHTML = '';
             return;
         }
         let totalTagihan = 0;
-        let totalPendataan = 0;
         let totalBayar = 0;
         tbody.innerHTML = mapData.map(function (row) {
             const tagihan = Number(row.tagihan) || 0;
@@ -429,12 +520,10 @@
             const pctBayar = ratioPct(bayar, tagihan);
             const pctBelum = tagihan > 0 ? Math.max(0, 100 - pctBayar) : 100;
             totalTagihan += tagihan;
-            totalPendataan += Number(row.pendataan) || 0;
             totalBayar += bayar;
             return '<tr>' +
-                '<td><span class="dot" style="background:' + row.color + '"></span>' + row.nama + '</td>' +
+                '<td><span class="dot" style="background:' + rowColor(row) + '"></span>' + row.nama + '</td>' +
                 '<td>' + fmt(row.tagihan) + '</td>' +
-                '<td>' + fmt(row.pendataan) + '</td>' +
                 '<td>' + fmt(row.bayar) + '</td>' +
                 '<td>' + fmtPct(pctBayar, 1) + '</td>' +
                 '<td>' + fmtPct(pctBelum, 1) + '</td>' +
@@ -445,50 +534,133 @@
         tfoot.innerHTML = '<tr>' +
             '<td>Total</td>' +
             '<td>' + fmt(totalTagihan) + '</td>' +
-            '<td>' + fmt(totalPendataan) + '</td>' +
             '<td>' + fmt(totalBayar) + '</td>' +
             '<td>' + fmtPct(totalPctBayar, 1) + '</td>' +
             '<td>' + fmtPct(totalPctBelum, 1) + '</td>' +
             '</tr>';
     }
 
+    function applyMapColors() {
+        const byId = {};
+        cachedMapData.forEach(function (row) { byId[String(row.id)] = row; });
+
+        if (geoLayer) {
+            geoLayer.eachLayer(function (lyr) {
+                const id = String((lyr.feature && lyr.feature.properties && lyr.feature.properties.id) || '');
+                const row = byId[id];
+                const nama = row ? row.nama : ((lyr.feature && lyr.feature.properties && lyr.feature.properties.nama) || id);
+                lyr.setStyle({
+                    color: '#0f1c2e',
+                    weight: 1,
+                    fillColor: row ? rowColor(row) : '#94a3b8',
+                    fillOpacity: 0.78,
+                });
+                if (row) {
+                    lyr.bindPopup(popupHtml(row, nama));
+                }
+            });
+        }
+
+        fallbackMarkers.forEach(function (marker) {
+            const row = marker._rvRow;
+            if (!row) return;
+            marker.setStyle({ fillColor: rowColor(row) });
+            marker.bindPopup(popupHtml(row, row.nama));
+        });
+
+        renderLegend();
+        renderTable(cachedMapData);
+    }
+
     function paintMap(mapData) {
+        cachedMapData = mapData || [];
         const loading = document.getElementById('rvMapLoading');
         if (loading) loading.remove();
         const byId = {};
-        mapData.forEach(function (row) { byId[String(row.id)] = row; });
-        fetch(geoUrl).then(function (r) { return r.json(); }).then(function (geo) {
-            const layer = L.geoJSON(geo, {
+        cachedMapData.forEach(function (row) { byId[String(row.id)] = row; });
+
+        function buildGeoLayer(geo) {
+            if (geoLayer) {
+                map.removeLayer(geoLayer);
+                geoLayer = null;
+            }
+            fallbackMarkers.forEach(function (m) { map.removeLayer(m); });
+            fallbackMarkers = [];
+
+            geoLayer = L.geoJSON(geo, {
                 style: function (feature) {
                     const row = byId[String(feature.properties.id || '')];
-                    return { color: '#0f1c2e', weight: 1, fillColor: row ? row.color : '#94a3b8', fillOpacity: 0.78 };
+                    return {
+                        color: '#0f1c2e',
+                        weight: 1,
+                        fillColor: row ? rowColor(row) : '#94a3b8',
+                        fillOpacity: 0.78,
+                    };
                 },
                 onEachFeature: function (feature, lyr) {
                     const row = byId[String(feature.properties.id || '')];
                     const nama = row ? row.nama : (feature.properties.nama || feature.properties.id);
-                    if (!row) { lyr.bindPopup('<strong>' + nama + '</strong>'); return; }
-                    lyr.bindPopup('<strong>' + nama + '</strong><br>Obyek Potensi: ' + fmt(row.tagihan) +
-                        '<br>Sudah Pendataan: ' + fmt(row.pendataan) +
-                        '<br>Sudah Bayar: ' + fmt(row.bayar) +
-                        ' (' + fmtPct(ratioPct(row.bayar, row.tagihan), 1) + ')' +
-                        '<br>Belum Bayar: ' + fmt(Math.max(0, (Number(row.tagihan) || 0) - (Number(row.bayar) || 0))) +
-                        ' (' + fmtPct(row.tagihan > 0 ? Math.max(0, 100 - ratioPct(row.bayar, row.tagihan)) : 100, 1) + ')');
-                }
+                    if (!row) {
+                        lyr.bindPopup('<strong>' + nama + '</strong>');
+                        return;
+                    }
+                    lyr.bindPopup(popupHtml(row, nama));
+                },
             }).addTo(map);
-            focusJateng(layer.getBounds());
+            focusJateng(geoLayer.getBounds());
+            renderLegend();
+        }
+
+        if (geojsonCache) {
+            buildGeoLayer(geojsonCache);
+            return;
+        }
+
+        fetch(geoUrl).then(function (r) { return r.json(); }).then(function (geo) {
+            geojsonCache = geo;
+            buildGeoLayer(geo);
         }).catch(function () {
+            if (geoLayer) {
+                map.removeLayer(geoLayer);
+                geoLayer = null;
+            }
+            fallbackMarkers.forEach(function (m) { map.removeLayer(m); });
+            fallbackMarkers = [];
             const bounds = [];
-            mapData.forEach(function (row) {
+            cachedMapData.forEach(function (row) {
                 if (row.lat == null || row.lng == null) return;
-                L.circleMarker([row.lat, row.lng], {
+                const marker = L.circleMarker([row.lat, row.lng], {
                     radius: Math.max(6, Math.min(22, 6 + Math.sqrt(row.tagihan || 0) / 8)),
-                    color: '#0f1c2e', weight: 1, fillColor: row.color, fillOpacity: 0.85
-                }).addTo(map).bindPopup('<strong>' + row.nama + '</strong>');
+                    color: '#0f1c2e',
+                    weight: 1,
+                    fillColor: rowColor(row),
+                    fillOpacity: 0.85,
+                }).addTo(map).bindPopup(popupHtml(row, row.nama));
+                marker._rvRow = row;
+                fallbackMarkers.push(marker);
                 bounds.push([row.lat, row.lng]);
             });
             focusJateng(bounds.length ? L.latLngBounds(bounds) : null);
+            renderLegend();
         });
     }
+
+    document.querySelectorAll('.map-tabs button').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const next = btn.getAttribute('data-map-tab') || 'kinerja';
+            if (next === mapMode) return;
+            mapMode = next;
+            document.querySelectorAll('.map-tabs button').forEach(function (b) {
+                const on = b === btn;
+                b.classList.toggle('active', on);
+                b.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+            applyMapColors();
+            requestAnimationFrame(function () { map.invalidateSize(); });
+        });
+    });
+
+    renderLegend();
 
     fetch(statsUrl, { headers: { 'Accept': 'application/json' } })
         .then(function (r) {
@@ -498,7 +670,7 @@
         .then(function (payload) {
             renderStats(payload);
             document.getElementById('kabTableBody').innerHTML =
-                '<tr><td colspan="6" class="muted">Memuat ringkasan kab/kota…</td></tr>';
+                '<tr><td colspan="5" class="muted">Memuat ringkasan kab/kota…</td></tr>';
             return fetch(mapUrl, { headers: { 'Accept': 'application/json' } });
         })
         .then(function (r) {
@@ -514,7 +686,7 @@
             document.getElementById('rvMeta').innerHTML =
                 '<span class="err">Gagal memuat data (' + err.message + '). Coba refresh.</span>';
             document.getElementById('kabTableBody').innerHTML =
-                '<tr><td colspan="4" class="err">Gagal memuat ringkasan/peta.</td></tr>';
+                '<tr><td colspan="5" class="err">Gagal memuat ringkasan/peta.</td></tr>';
             const loading = document.getElementById('rvMapLoading');
             if (loading) loading.textContent = 'Gagal memuat peta. Halaman HTML sudah tampil; coba refresh endpoint stats/map.';
         });

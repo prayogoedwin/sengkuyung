@@ -412,8 +412,7 @@
                 <h2>Peta Kab/Kota Jawa Tengah</h2>
                 <div class="map-tabs" role="tablist">
                     <button type="button" class="active" data-map-tab="potensi" role="tab" aria-selected="true">Potensi Pembayaran</button>
-                    <button type="button" data-map-tab="kinerja" role="tab" aria-selected="false">Kinerja Pendataan</button>
-                    <button type="button" data-map-tab="sukses" role="tab" aria-selected="false">Sukses Rate Kegiatan</button>
+                    <button type="button" data-map-tab="kinerja" role="tab" aria-selected="false">Progress Pendataan</button>
                 </div>
             </div>
             <div id="rvMap"><div id="rvMapLoading" style="padding:12px;color:#64748b;font-size:0.75rem;">Memuat peta…</div></div>
@@ -557,11 +556,6 @@
     let fallbackMarkers = [];
     let geojsonCache = null;
 
-    function successRatePct(row) {
-        // Tab "Sukses Rate Kegiatan": bayar / sudah pendataan
-        return ratioPct(row.bayar, row.pendataan);
-    }
-
     function potensiBayarPct(row) {
         // Tab "Potensi Pembayaran": bayar / potensi
         return ratioPct(row.bayar, row.tagihan);
@@ -577,9 +571,7 @@
         if (mapMode === 'potensi') {
             return successColor(potensiBayarPct(row));
         }
-        if (mapMode === 'sukses') {
-            return successColor(successRatePct(row));
-        }
+        // Progress Pendataan: % sisa belum bayar
         return row.color || '#94a3b8';
     }
 
@@ -589,13 +581,6 @@
         if (mapMode === 'potensi') {
             el.innerHTML =
                 '<span><i class="swatch" style="background:#22c55e"></i> ≥10% bayar/potensi</span>' +
-                '<span><i class="swatch" style="background:#eab308"></i> 5–10%</span>' +
-                '<span><i class="swatch" style="background:#ef4444"></i> &lt;5%</span>';
-            return;
-        }
-        if (mapMode === 'sukses') {
-            el.innerHTML =
-                '<span><i class="swatch" style="background:#22c55e"></i> ≥10% bayar/pendataan</span>' +
                 '<span><i class="swatch" style="background:#eab308"></i> 5–10%</span>' +
                 '<span><i class="swatch" style="background:#ef4444"></i> &lt;5%</span>';
             return;

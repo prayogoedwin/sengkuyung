@@ -328,8 +328,10 @@ class RekapVisualController extends Controller
         $tagihanByLokasi = DB::table($tertagihTable)
             ->where('year', $year)
             ->selectRaw('id_lokasi_samsat, COUNT(*) as c')
+            ->selectRaw('SUM(CASE WHEN is_terdata = 1 THEN 1 ELSE 0 END) as pendataan')
             ->groupBy('id_lokasi_samsat')
-            ->pluck('c', 'id_lokasi_samsat');
+            ->get()
+            ->keyBy(fn ($row) => (string) $row->id_lokasi_samsat);
 
         $bayarByLokasi = DB::table(DB::raw("(
             SELECT x.nopol_, MIN(t.id_lokasi_samsat) AS id_lokasi_samsat
@@ -350,14 +352,16 @@ class RekapVisualController extends Controller
             ->pluck('c', 'id_lokasi_samsat');
 
         $tagihanByKab = [];
+        $pendataanByKab = [];
         $bayarByKab = [];
 
-        foreach ($tagihanByLokasi as $lokasi => $count) {
+        foreach ($tagihanByLokasi as $lokasi => $row) {
             $kabId = $lokasiToKabkota[(string) $lokasi] ?? null;
             if ($kabId === null) {
                 continue;
             }
-            $tagihanByKab[$kabId] = ($tagihanByKab[$kabId] ?? 0) + (int) $count;
+            $tagihanByKab[$kabId] = ($tagihanByKab[$kabId] ?? 0) + (int) $row->c;
+            $pendataanByKab[$kabId] = ($pendataanByKab[$kabId] ?? 0) + (int) $row->pendataan;
         }
 
         foreach ($bayarByLokasi as $lokasi => $count) {
@@ -372,6 +376,7 @@ class RekapVisualController extends Controller
         foreach ($kabkotas as $kab) {
             $kabId = (string) $kab->id;
             $tagihan = $tagihanByKab[$kabId] ?? 0;
+            $pendataan = min($tagihan, $pendataanByKab[$kabId] ?? 0);
             $bayar = min($tagihan, $bayarByKab[$kabId] ?? 0);
             $sisa = max(0, $tagihan - $bayar);
             $sisaPct = $tagihan > 0 ? round(($sisa / $tagihan) * 100, 2) : 100.0;
@@ -382,6 +387,7 @@ class RekapVisualController extends Controller
                 'lat' => $kab->lat !== null ? (float) $kab->lat : null,
                 'lng' => $kab->lng !== null ? (float) $kab->lng : null,
                 'tagihan' => $tagihan,
+                'pendataan' => $pendataan,
                 'bayar' => $bayar,
                 'sisa' => $sisa,
                 'sisa_pct' => $sisaPct,

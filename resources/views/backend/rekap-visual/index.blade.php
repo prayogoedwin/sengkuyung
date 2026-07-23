@@ -159,7 +159,16 @@
         .kab-scroll { flex: 1; min-height: 0; overflow: auto; }
         .kab-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; }
         .kab-table th, .kab-table td { padding: 3px 6px; border-bottom: 1px solid var(--line); text-align: left; }
-        .kab-table th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--panel); }
+        .kab-table th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--panel); z-index: 1; }
+        .kab-table tfoot td {
+            font-weight: 700;
+            border-top: 2px solid var(--ink);
+            border-bottom: 0;
+            position: sticky;
+            bottom: 0;
+            background: var(--panel);
+            z-index: 1;
+        }
         .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
         .muted { color: var(--muted); }
         .err { color: #b91c1c; }
@@ -273,11 +282,12 @@
             <div class="kab-scroll">
                 <table class="kab-table">
                     <thead>
-                        <tr><th>Kab/Kota</th><th>Tagihan</th><th>Bayar</th><th>Sisa %</th></tr>
+                        <tr><th>Kab/Kota</th><th>Obyek Potensi</th><th>Sudah Pendataan</th><th>Sudah Bayar</th></tr>
                     </thead>
                     <tbody id="kabTableBody">
                         <tr><td colspan="4" class="muted">Memuat…</td></tr>
                     </tbody>
+                    <tfoot id="kabTableFoot"></tfoot>
                 </table>
             </div>
         </div>
@@ -371,18 +381,32 @@
 
     function renderTable(mapData) {
         const tbody = document.getElementById('kabTableBody');
+        const tfoot = document.getElementById('kabTableFoot');
         if (!mapData.length) {
             tbody.innerHTML = '<tr><td colspan="4">Tidak ada data</td></tr>';
+            tfoot.innerHTML = '';
             return;
         }
+        let totalTagihan = 0;
+        let totalPendataan = 0;
+        let totalBayar = 0;
         tbody.innerHTML = mapData.map(function (row) {
+            totalTagihan += Number(row.tagihan) || 0;
+            totalPendataan += Number(row.pendataan) || 0;
+            totalBayar += Number(row.bayar) || 0;
             return '<tr>' +
                 '<td><span class="dot" style="background:' + row.color + '"></span>' + row.nama + '</td>' +
                 '<td>' + fmt(row.tagihan) + '</td>' +
+                '<td>' + fmt(row.pendataan) + '</td>' +
                 '<td>' + fmt(row.bayar) + '</td>' +
-                '<td>' + Number(row.sisa_pct).toFixed(1).replace('.', ',') + '%</td>' +
                 '</tr>';
         }).join('');
+        tfoot.innerHTML = '<tr>' +
+            '<td>Total</td>' +
+            '<td>' + fmt(totalTagihan) + '</td>' +
+            '<td>' + fmt(totalPendataan) + '</td>' +
+            '<td>' + fmt(totalBayar) + '</td>' +
+            '</tr>';
     }
 
     function paintMap(mapData) {
@@ -400,8 +424,9 @@
                     const row = byId[String(feature.properties.id || '')];
                     const nama = row ? row.nama : (feature.properties.nama || feature.properties.id);
                     if (!row) { lyr.bindPopup('<strong>' + nama + '</strong>'); return; }
-                    lyr.bindPopup('<strong>' + nama + '</strong><br>Tagihan: ' + fmt(row.tagihan) +
-                        '<br>Bayar: ' + fmt(row.bayar) + '<br>Sisa: ' + Number(row.sisa_pct).toFixed(1) + '%');
+                    lyr.bindPopup('<strong>' + nama + '</strong><br>Obyek Potensi: ' + fmt(row.tagihan) +
+                        '<br>Sudah Pendataan: ' + fmt(row.pendataan) +
+                        '<br>Sudah Bayar: ' + fmt(row.bayar));
                 }
             }).addTo(map);
             focusJateng(layer.getBounds());

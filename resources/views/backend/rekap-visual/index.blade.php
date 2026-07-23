@@ -553,7 +553,7 @@
     let geojsonCache = null;
 
     function successRatePct(row) {
-        return ratioPct(row.bayar, row.pendataan);
+        return ratioPct(row.bayar, row.tagihan);
     }
 
     function successColor(pctVal) {
@@ -587,20 +587,12 @@
     }
 
     function popupHtml(row, nama) {
-        const bayarVsPotensi = ratioPct(row.bayar, row.tagihan);
         const sukses = successRatePct(row);
-        let html = '<strong>' + nama + '</strong>' +
+        return '<strong>' + nama + '</strong>' +
             '<br>Obyek Potensi: ' + fmt(row.tagihan) +
             '<br>Sudah Pendataan: ' + fmt(row.pendataan) +
             '<br>Sudah Bayar: ' + fmt(row.bayar) +
-            ' (' + fmtPct(bayarVsPotensi, 1) + ' vs potensi)';
-        if (mapMode === 'sukses') {
-            html += '<br>Sukses Rate: <strong>' + fmtPct(sukses, 1) + '</strong> (bayar / pendataan)';
-        } else {
-            html += '<br>Belum Bayar: ' + fmt(Math.max(0, (Number(row.tagihan) || 0) - (Number(row.bayar) || 0))) +
-                ' (' + fmtPct(row.tagihan > 0 ? Math.max(0, 100 - bayarVsPotensi) : 100, 1) + ')';
-        }
-        return html;
+            '<br>Sukses Rate: <strong>' + fmtPct(sukses, 1) + '</strong> (bayar / potensi)';
     }
 
     function renderTable(mapData) {

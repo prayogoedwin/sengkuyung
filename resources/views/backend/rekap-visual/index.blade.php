@@ -109,7 +109,8 @@
         .metric { display: grid; gap: 4px; }
         .metric-row { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: end; }
         .metric-row .label { font-size: 0.72rem; opacity: 0.9; }
-        .metric-row .value { font-size: 0.95rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .metric-row .value { font-size: 0.88rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .metric-row .value .pct { font-size: 0.72rem; font-weight: 600; opacity: 0.85; margin-left: 4px; }
         .bar { height: 3px; border-radius: 999px; background: rgba(255,255,255,0.2); overflow: hidden; }
         .bar > span { display: block; height: 100%; border-radius: inherit; background: #5eead4; }
 
@@ -224,6 +225,10 @@
                     <div class="metric-row"><div class="label">Sudah Bayar (nopol)</div><div class="value" id="vBayarNopol">…</div></div>
                     <div class="bar"><span id="bBayarNopol" style="width:0%"></span></div>
                 </div>
+                <div>
+                    <div class="metric-row"><div class="label">Belum Bayar (nopol)</div><div class="value" id="vBelumBayar">…</div></div>
+                    <div class="bar"><span id="bBelumBayar" style="width:0%"></span></div>
+                </div>
             </div>
         </div>
         <div class="rv-card teal">
@@ -282,10 +287,17 @@
             <div class="kab-scroll">
                 <table class="kab-table">
                     <thead>
-                        <tr><th>Kab/Kota</th><th>Obyek Potensi</th><th>Sudah Pendataan</th><th>Sudah Bayar</th></tr>
+                        <tr>
+                            <th>Kab/Kota</th>
+                            <th>Obyek Potensi</th>
+                            <th>Sudah Pendataan</th>
+                            <th>Sudah Bayar</th>
+                            <th>% Bayar</th>
+                            <th>% Belum</th>
+                        </tr>
                     </thead>
                     <tbody id="kabTableBody">
-                        <tr><td colspan="4" class="muted">Memuat…</td></tr>
+                        <tr><td colspan="6" class="muted">Memuat…</td></tr>
                     </tbody>
                     <tfoot id="kabTableFoot"></tfoot>
                 </table>
@@ -312,17 +324,38 @@
         if (el) el.style.width = Math.max(0, Math.min(100, Number(width) || 0)) + '%';
     }
 
+    function fmtPct(n, digits) {
+        const d = digits == null ? 2 : digits;
+        return Number(n || 0).toFixed(d).replace('.', ',') + '%';
+    }
+    function ratioPct(part, total) {
+        if (!total) return 0;
+        return (Number(part) || 0) / Number(total) * 100;
+    }
+
     function renderStats(payload) {
         const s = payload.stats || {};
         const b = payload.bayar || {};
         const total = Number(s.jumlah_tunggakan || 0);
+        const sudahBayar = Number(b.jumlah_nopol_bayar || 0);
+        const belumBayar = Math.max(0, total - sudahBayar);
+        const pctBayar = ratioPct(sudahBayar, total);
+        const pctBelumBayar = ratioPct(belumBayar, total);
+
         document.getElementById('vPotensi').textContent = fmt(s.jumlah_tunggakan);
-        document.getElementById('vDikunjungi').textContent = fmt(s.jumlah_sudah_pendataan);
-        document.getElementById('vBelum').textContent = fmt(s.jumlah_belum_pendataan);
-        document.getElementById('vBayarNopol').textContent = fmt(b.jumlah_nopol_bayar);
+        document.getElementById('vDikunjungi').innerHTML =
+            fmt(s.jumlah_sudah_pendataan) + ' <span class="pct">(' + fmtPct(s.pct_dikunjungi) + ')</span>';
+        document.getElementById('vBelum').innerHTML =
+            fmt(s.jumlah_belum_pendataan) +
+            ' <span class="pct">(' + fmtPct(ratioPct(s.jumlah_belum_pendataan, total)) + ')</span>';
+        document.getElementById('vBayarNopol').innerHTML =
+            fmt(sudahBayar) + ' <span class="pct">(' + fmtPct(pctBayar) + ')</span>';
+        document.getElementById('vBelumBayar').innerHTML =
+            fmt(belumBayar) + ' <span class="pct">(' + fmtPct(pctBelumBayar) + ')</span>';
         setBar('bDikunjungi', s.pct_dikunjungi);
         setBar('bBelum', total > 0 ? (s.jumlah_belum_pendataan / total * 100) : 0);
-        setBar('bBayarNopol', total > 0 ? (b.jumlah_nopol_bayar / total * 100) : 0);
+        setBar('bBayarNopol', pctBayar);
+        setBar('bBelumBayar', pctBelumBayar);
         document.getElementById('vMenunggu').textContent = fmt(s.menunggu_verifikasi);
         document.getElementById('vVerifikasi').textContent = fmt(s.verifikasi);
         document.getElementById('vDitolak').textContent = fmt(s.ditolak);
@@ -383,7 +416,7 @@
         const tbody = document.getElementById('kabTableBody');
         const tfoot = document.getElementById('kabTableFoot');
         if (!mapData.length) {
-            tbody.innerHTML = '<tr><td colspan="4">Tidak ada data</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6">Tidak ada data</td></tr>';
             tfoot.innerHTML = '';
             return;
         }
@@ -391,21 +424,31 @@
         let totalPendataan = 0;
         let totalBayar = 0;
         tbody.innerHTML = mapData.map(function (row) {
-            totalTagihan += Number(row.tagihan) || 0;
+            const tagihan = Number(row.tagihan) || 0;
+            const bayar = Number(row.bayar) || 0;
+            const pctBayar = ratioPct(bayar, tagihan);
+            const pctBelum = tagihan > 0 ? Math.max(0, 100 - pctBayar) : 100;
+            totalTagihan += tagihan;
             totalPendataan += Number(row.pendataan) || 0;
-            totalBayar += Number(row.bayar) || 0;
+            totalBayar += bayar;
             return '<tr>' +
                 '<td><span class="dot" style="background:' + row.color + '"></span>' + row.nama + '</td>' +
                 '<td>' + fmt(row.tagihan) + '</td>' +
                 '<td>' + fmt(row.pendataan) + '</td>' +
                 '<td>' + fmt(row.bayar) + '</td>' +
+                '<td>' + fmtPct(pctBayar, 1) + '</td>' +
+                '<td>' + fmtPct(pctBelum, 1) + '</td>' +
                 '</tr>';
         }).join('');
+        const totalPctBayar = ratioPct(totalBayar, totalTagihan);
+        const totalPctBelum = totalTagihan > 0 ? Math.max(0, 100 - totalPctBayar) : 100;
         tfoot.innerHTML = '<tr>' +
             '<td>Total</td>' +
             '<td>' + fmt(totalTagihan) + '</td>' +
             '<td>' + fmt(totalPendataan) + '</td>' +
             '<td>' + fmt(totalBayar) + '</td>' +
+            '<td>' + fmtPct(totalPctBayar, 1) + '</td>' +
+            '<td>' + fmtPct(totalPctBelum, 1) + '</td>' +
             '</tr>';
     }
 
@@ -426,7 +469,10 @@
                     if (!row) { lyr.bindPopup('<strong>' + nama + '</strong>'); return; }
                     lyr.bindPopup('<strong>' + nama + '</strong><br>Obyek Potensi: ' + fmt(row.tagihan) +
                         '<br>Sudah Pendataan: ' + fmt(row.pendataan) +
-                        '<br>Sudah Bayar: ' + fmt(row.bayar));
+                        '<br>Sudah Bayar: ' + fmt(row.bayar) +
+                        ' (' + fmtPct(ratioPct(row.bayar, row.tagihan), 1) + ')' +
+                        '<br>Belum Bayar: ' + fmt(Math.max(0, (Number(row.tagihan) || 0) - (Number(row.bayar) || 0))) +
+                        ' (' + fmtPct(row.tagihan > 0 ? Math.max(0, 100 - ratioPct(row.bayar, row.tagihan)) : 100, 1) + ')');
                 }
             }).addTo(map);
             focusJateng(layer.getBounds());
@@ -452,7 +498,7 @@
         .then(function (payload) {
             renderStats(payload);
             document.getElementById('kabTableBody').innerHTML =
-                '<tr><td colspan="4" class="muted">Memuat ringkasan kab/kota…</td></tr>';
+                '<tr><td colspan="6" class="muted">Memuat ringkasan kab/kota…</td></tr>';
             return fetch(mapUrl, { headers: { 'Accept': 'application/json' } });
         })
         .then(function (r) {

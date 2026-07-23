@@ -561,9 +561,22 @@
         return ratioPct(row.bayar, row.tagihan);
     }
 
+    function progressPendataanPct(row) {
+        // Tab "Progress Pendataan": sudah pendataan / potensi
+        return ratioPct(row.pendataan, row.tagihan);
+    }
+
     function successColor(pctVal) {
         if (pctVal >= 10) return '#22c55e';
         if (pctVal >= 5) return '#eab308';
+        return '#ef4444';
+    }
+
+    function progressPendataanColor(pctVal) {
+        // Semakin tinggi semakin bagus
+        if (pctVal > 85) return '#22c55e';
+        if (pctVal >= 51) return '#eab308';
+        if (pctVal >= 26) return '#f97316';
         return '#ef4444';
     }
 
@@ -571,8 +584,7 @@
         if (mapMode === 'potensi') {
             return successColor(potensiBayarPct(row));
         }
-        // Progress Pendataan: % sisa belum bayar
-        return row.color || '#94a3b8';
+        return progressPendataanColor(progressPendataanPct(row));
     }
 
     function renderLegend() {
@@ -586,19 +598,25 @@
             return;
         }
         el.innerHTML =
-            '<span><i class="swatch" style="background:#22c55e"></i> ≤25% sisa</span>' +
-            '<span><i class="swatch" style="background:#eab308"></i> 26–50%</span>' +
-            '<span><i class="swatch" style="background:#f97316"></i> 51–75%</span>' +
-            '<span><i class="swatch" style="background:#ef4444"></i> &gt;75%</span>';
+            '<span><i class="swatch" style="background:#ef4444"></i> &lt;25%</span>' +
+            '<span><i class="swatch" style="background:#f97316"></i> 26–50%</span>' +
+            '<span><i class="swatch" style="background:#eab308"></i> 51–84%</span>' +
+            '<span><i class="swatch" style="background:#22c55e"></i> &gt;85%</span>';
     }
 
     function popupHtml(row, nama) {
         const vsPotensi = potensiBayarPct(row);
-        return '<strong>' + nama + '</strong>' +
+        const progress = progressPendataanPct(row);
+        let html = '<strong>' + nama + '</strong>' +
             '<br>Obyek Potensi: ' + fmt(row.tagihan) +
             '<br>Sudah Pendataan: ' + fmt(row.pendataan) +
-            '<br>Sudah Bayar: ' + fmt(row.bayar) +
-            '<br>Potensi Pembayaran: <strong>' + fmtPct(vsPotensi, 1) + '</strong> (bayar / potensi)';
+            '<br>Sudah Bayar: ' + fmt(row.bayar);
+        if (mapMode === 'kinerja') {
+            html += '<br>Progress Pendataan: <strong>' + fmtPct(progress, 1) + '</strong> (pendataan / potensi)';
+        } else {
+            html += '<br>Potensi Pembayaran: <strong>' + fmtPct(vsPotensi, 1) + '</strong> (bayar / potensi)';
+        }
+        return html;
     }
 
     function renderTable(mapData) {

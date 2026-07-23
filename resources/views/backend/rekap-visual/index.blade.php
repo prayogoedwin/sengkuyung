@@ -327,13 +327,14 @@
                         <tr>
                             <th>Kab/Kota</th>
                             <th>Obyek Potensi</th>
+                            <th>Sudah Pendataan</th>
                             <th>Sudah Bayar</th>
                             <th>% Bayar</th>
                             <th>% Belum</th>
                         </tr>
                     </thead>
                     <tbody id="kabTableBody">
-                        <tr><td colspan="5" class="muted">Memuat…</td></tr>
+                        <tr><td colspan="6" class="muted">Memuat…</td></tr>
                     </tbody>
                     <tfoot id="kabTableFoot"></tfoot>
                 </table>
@@ -508,22 +509,26 @@
         const tbody = document.getElementById('kabTableBody');
         const tfoot = document.getElementById('kabTableFoot');
         if (!mapData.length) {
-            tbody.innerHTML = '<tr><td colspan="5">Tidak ada data</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6">Tidak ada data</td></tr>';
             tfoot.innerHTML = '';
             return;
         }
         let totalTagihan = 0;
+        let totalPendataan = 0;
         let totalBayar = 0;
         tbody.innerHTML = mapData.map(function (row) {
             const tagihan = Number(row.tagihan) || 0;
+            const pendataan = Number(row.pendataan) || 0;
             const bayar = Number(row.bayar) || 0;
             const pctBayar = ratioPct(bayar, tagihan);
             const pctBelum = tagihan > 0 ? Math.max(0, 100 - pctBayar) : 100;
             totalTagihan += tagihan;
+            totalPendataan += pendataan;
             totalBayar += bayar;
             return '<tr>' +
                 '<td><span class="dot" style="background:' + rowColor(row) + '"></span>' + row.nama + '</td>' +
                 '<td>' + fmt(row.tagihan) + '</td>' +
+                '<td>' + fmt(row.pendataan) + '</td>' +
                 '<td>' + fmt(row.bayar) + '</td>' +
                 '<td>' + fmtPct(pctBayar, 1) + '</td>' +
                 '<td>' + fmtPct(pctBelum, 1) + '</td>' +
@@ -534,6 +539,7 @@
         tfoot.innerHTML = '<tr>' +
             '<td>Total</td>' +
             '<td>' + fmt(totalTagihan) + '</td>' +
+            '<td>' + fmt(totalPendataan) + '</td>' +
             '<td>' + fmt(totalBayar) + '</td>' +
             '<td>' + fmtPct(totalPctBayar, 1) + '</td>' +
             '<td>' + fmtPct(totalPctBelum, 1) + '</td>' +
@@ -670,7 +676,7 @@
         .then(function (payload) {
             renderStats(payload);
             document.getElementById('kabTableBody').innerHTML =
-                '<tr><td colspan="5" class="muted">Memuat ringkasan kab/kota…</td></tr>';
+                '<tr><td colspan="6" class="muted">Memuat ringkasan kab/kota…</td></tr>';
             return fetch(mapUrl, { headers: { 'Accept': 'application/json' } });
         })
         .then(function (r) {
@@ -686,7 +692,7 @@
             document.getElementById('rvMeta').innerHTML =
                 '<span class="err">Gagal memuat data (' + err.message + '). Coba refresh.</span>';
             document.getElementById('kabTableBody').innerHTML =
-                '<tr><td colspan="5" class="err">Gagal memuat ringkasan/peta.</td></tr>';
+                '<tr><td colspan="6" class="err">Gagal memuat ringkasan/peta.</td></tr>';
             const loading = document.getElementById('rvMapLoading');
             if (loading) loading.textContent = 'Gagal memuat peta. Halaman HTML sudah tampil; coba refresh endpoint stats/map.';
         });

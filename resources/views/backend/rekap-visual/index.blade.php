@@ -584,7 +584,7 @@
         if (!el) return;
         if (mapMode === 'sukses') {
             el.innerHTML =
-                '<span><i class="swatch" style="background:#22c55e"></i> ≥10% (bayar/pendataan)</span>' +
+                '<span><i class="swatch" style="background:#22c55e"></i> ≥10% bayar/pendataan</span>' +
                 '<span><i class="swatch" style="background:#eab308"></i> 5–10%</span>' +
                 '<span><i class="swatch" style="background:#ef4444"></i> &lt;5%</span>';
             return;
@@ -598,16 +598,11 @@
 
     function popupHtml(row, nama) {
         const vsPotensi = suksesRateVsPotensi(row);
-        const vsPendataan = successRatePct(row);
-        let html = '<strong>' + nama + '</strong>' +
+        return '<strong>' + nama + '</strong>' +
             '<br>Obyek Potensi: ' + fmt(row.tagihan) +
             '<br>Sudah Pendataan: ' + fmt(row.pendataan) +
             '<br>Sudah Bayar: ' + fmt(row.bayar) +
             '<br>Sukses Rate: <strong>' + fmtPct(vsPotensi, 1) + '</strong> (bayar / potensi)';
-        if (mapMode === 'sukses') {
-            html += '<br>Rate vs Pendataan: ' + fmtPct(vsPendataan, 1) + ' (warna peta)';
-        }
-        return html;
     }
 
     function renderTable(mapData) {

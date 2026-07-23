@@ -257,11 +257,11 @@
             background: transparent;
             color: var(--muted);
             font: inherit;
-            font-size: 0.62rem;
+            font-size: 0.58rem;
             font-weight: 600;
             letter-spacing: 0.02em;
             text-transform: uppercase;
-            padding: 4px 10px;
+            padding: 4px 8px;
             border-radius: 999px;
             cursor: pointer;
             white-space: nowrap;
@@ -411,7 +411,8 @@
             <div class="map-head">
                 <h2>Peta Kab/Kota Jawa Tengah</h2>
                 <div class="map-tabs" role="tablist">
-                    <button type="button" class="active" data-map-tab="kinerja" role="tab" aria-selected="true">Kinerja Pendataan</button>
+                    <button type="button" class="active" data-map-tab="potensi" role="tab" aria-selected="true">Potensi Pembayaran</button>
+                    <button type="button" data-map-tab="kinerja" role="tab" aria-selected="false">Kinerja Pendataan</button>
                     <button type="button" data-map-tab="sukses" role="tab" aria-selected="false">Sukses Rate Kegiatan</button>
                 </div>
             </div>
@@ -550,19 +551,19 @@
         setTimeout(apply, 150);
     }
 
-    let mapMode = 'kinerja';
+    let mapMode = 'potensi';
     let cachedMapData = [];
     let geoLayer = null;
     let fallbackMarkers = [];
     let geojsonCache = null;
 
     function successRatePct(row) {
-        // Warna tab "Sukses Rate Kegiatan": bayar / sudah pendataan (agar sebaran warna bermakna).
+        // Tab "Sukses Rate Kegiatan": bayar / sudah pendataan
         return ratioPct(row.bayar, row.pendataan);
     }
 
-    function suksesRateVsPotensi(row) {
-        // Angka Sukses Rate di detail popup: bayar / potensi (revisi).
+    function potensiBayarPct(row) {
+        // Tab "Potensi Pembayaran": bayar / potensi
         return ratioPct(row.bayar, row.tagihan);
     }
 
@@ -573,6 +574,9 @@
     }
 
     function rowColor(row) {
+        if (mapMode === 'potensi') {
+            return successColor(potensiBayarPct(row));
+        }
         if (mapMode === 'sukses') {
             return successColor(successRatePct(row));
         }
@@ -582,6 +586,13 @@
     function renderLegend() {
         const el = document.getElementById('mapLegend');
         if (!el) return;
+        if (mapMode === 'potensi') {
+            el.innerHTML =
+                '<span><i class="swatch" style="background:#22c55e"></i> ≥10% bayar/potensi</span>' +
+                '<span><i class="swatch" style="background:#eab308"></i> 5–10%</span>' +
+                '<span><i class="swatch" style="background:#ef4444"></i> &lt;5%</span>';
+            return;
+        }
         if (mapMode === 'sukses') {
             el.innerHTML =
                 '<span><i class="swatch" style="background:#22c55e"></i> ≥10% bayar/pendataan</span>' +
@@ -597,12 +608,12 @@
     }
 
     function popupHtml(row, nama) {
-        const vsPotensi = suksesRateVsPotensi(row);
+        const vsPotensi = potensiBayarPct(row);
         return '<strong>' + nama + '</strong>' +
             '<br>Obyek Potensi: ' + fmt(row.tagihan) +
             '<br>Sudah Pendataan: ' + fmt(row.pendataan) +
             '<br>Sudah Bayar: ' + fmt(row.bayar) +
-            '<br>Sukses Rate: <strong>' + fmtPct(vsPotensi, 1) + '</strong> (bayar / potensi)';
+            '<br>Potensi Pembayaran: <strong>' + fmtPct(vsPotensi, 1) + '</strong> (bayar / potensi)';
     }
 
     function renderTable(mapData) {
@@ -758,7 +769,7 @@
             if (!btn || !mapTabs.contains(btn)) return;
             e.preventDefault();
             e.stopPropagation();
-            const next = btn.getAttribute('data-map-tab') || 'kinerja';
+            const next = btn.getAttribute('data-map-tab') || 'potensi';
             if (next === mapMode) return;
             mapMode = next;
             mapTabs.querySelectorAll('button[data-map-tab]').forEach(function (b) {

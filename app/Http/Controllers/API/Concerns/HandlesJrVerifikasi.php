@@ -28,6 +28,8 @@ trait HandlesJrVerifikasi
             'nopol' => 'nullable|string|max:50',
             'tanggal_start' => 'nullable|date',
             'tanggal_end' => 'nullable|date',
+            'tanggal_update_start' => 'nullable|date',
+            'tanggal_update_end' => 'nullable|date',
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1|max:100',
         ]);
@@ -94,6 +96,10 @@ trait HandlesJrVerifikasi
 
         if ($request->filled('tanggal_start') && $request->filled('tanggal_end')) {
             $query->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
+        }
+
+        if ($request->filled('tanggal_update_start') && $request->filled('tanggal_update_end')) {
+            $query->whereBetween('updated_at', [$request->tanggal_update_start, $request->tanggal_update_end]);
         }
     }
 

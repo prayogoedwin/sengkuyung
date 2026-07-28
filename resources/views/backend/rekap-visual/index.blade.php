@@ -447,12 +447,11 @@
                             <th>Obyek Potensi</th>
                             <th>Sudah Pendataan</th>
                             <th>Sudah Bayar</th>
-                            <th>% Bayar</th>
-                            <th>% Belum</th>
+                            <th>Potensi Pembayaran</th>
                         </tr>
                     </thead>
                     <tbody id="kabTableBody">
-                        <tr><td colspan="6" class="muted">Memuat…</td></tr>
+                        <tr><td colspan="5" class="muted">Memuat…</td></tr>
                     </tbody>
                     <tfoot id="kabTableFoot"></tfoot>
                 </table>
@@ -642,25 +641,23 @@
         const thead = document.getElementById('kabTableHead');
         if (!thead) return;
         if (mapMode === 'kinerja') {
-            // Progress Pendataan: Kab/Kota, Obyek Potensi, Sudah Pendataan, % Belum, Sudah Bayar, % Bayar
+            // Sama seperti popup map Progress Pendataan
             thead.innerHTML = '<tr>' +
                 '<th>Kab/Kota</th>' +
                 '<th>Obyek Potensi</th>' +
                 '<th>Sudah Pendataan</th>' +
-                '<th>% Belum</th>' +
                 '<th>Sudah Bayar</th>' +
-                '<th>% Bayar</th>' +
+                '<th>Progress Pendataan</th>' +
                 '</tr>';
             return;
         }
-        // Potensi Pembayaran: Kab/Kota, Obyek Potensi, Sudah Pendataan, Sudah Bayar, % Bayar, % Belum
+        // Sama seperti popup map Potensi Pembayaran
         thead.innerHTML = '<tr>' +
             '<th>Kab/Kota</th>' +
             '<th>Obyek Potensi</th>' +
             '<th>Sudah Pendataan</th>' +
             '<th>Sudah Bayar</th>' +
-            '<th>% Bayar</th>' +
-            '<th>% Belum</th>' +
+            '<th>Potensi Pembayaran</th>' +
             '</tr>';
     }
 
@@ -686,7 +683,7 @@
         const tfoot = document.getElementById('kabTableFoot');
         renderTableHead();
         if (!mapData.length) {
-            tbody.innerHTML = '<tr><td colspan="6">Tidak ada data</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5">Tidak ada data</td></tr>';
             tfoot.innerHTML = '';
             return;
         }
@@ -698,53 +695,28 @@
             const pendataan = Number(row.pendataan) || 0;
             const bayar = Number(row.bayar) || 0;
             const pctBayar = ratioPct(bayar, tagihan);
-            const pctBelumBayar = tagihan > 0 ? Math.max(0, 100 - pctBayar) : 100;
             const pctPendataan = ratioPct(pendataan, tagihan);
-            const pctBelumPendataan = tagihan > 0 ? Math.max(0, 100 - pctPendataan) : 100;
             totalTagihan += tagihan;
             totalPendataan += pendataan;
             totalBayar += bayar;
-            if (mapMode === 'kinerja') {
-                return '<tr>' +
-                    '<td><span class="dot" style="background:' + rowColor(row) + '"></span>' + row.nama + '</td>' +
-                    '<td>' + fmt(row.tagihan) + '</td>' +
-                    '<td>' + fmt(row.pendataan) + '</td>' +
-                    '<td>' + fmtPct(pctBelumPendataan, 1) + '</td>' +
-                    '<td>' + fmt(row.bayar) + '</td>' +
-                    '<td>' + fmtPct(pctBayar, 1) + '</td>' +
-                    '</tr>';
-            }
+            const metricPct = mapMode === 'kinerja' ? pctPendataan : pctBayar;
             return '<tr>' +
                 '<td><span class="dot" style="background:' + rowColor(row) + '"></span>' + row.nama + '</td>' +
                 '<td>' + fmt(row.tagihan) + '</td>' +
                 '<td>' + fmt(row.pendataan) + '</td>' +
                 '<td>' + fmt(row.bayar) + '</td>' +
-                '<td>' + fmtPct(pctBayar, 1) + '</td>' +
-                '<td>' + fmtPct(pctBelumBayar, 1) + '</td>' +
+                '<td>' + fmtPct(metricPct, 1) + '</td>' +
                 '</tr>';
         }).join('');
-        const totalPctBayar = ratioPct(totalBayar, totalTagihan);
-        const totalPctBelumBayar = totalTagihan > 0 ? Math.max(0, 100 - totalPctBayar) : 100;
-        const totalPctPendataan = ratioPct(totalPendataan, totalTagihan);
-        const totalPctBelumPendataan = totalTagihan > 0 ? Math.max(0, 100 - totalPctPendataan) : 100;
-        if (mapMode === 'kinerja') {
-            tfoot.innerHTML = '<tr>' +
-                '<td>Total</td>' +
-                '<td>' + fmt(totalTagihan) + '</td>' +
-                '<td>' + fmt(totalPendataan) + '</td>' +
-                '<td>' + fmtPct(totalPctBelumPendataan, 1) + '</td>' +
-                '<td>' + fmt(totalBayar) + '</td>' +
-                '<td>' + fmtPct(totalPctBayar, 1) + '</td>' +
-                '</tr>';
-            return;
-        }
+        const totalMetricPct = mapMode === 'kinerja'
+            ? ratioPct(totalPendataan, totalTagihan)
+            : ratioPct(totalBayar, totalTagihan);
         tfoot.innerHTML = '<tr>' +
             '<td>Total</td>' +
             '<td>' + fmt(totalTagihan) + '</td>' +
             '<td>' + fmt(totalPendataan) + '</td>' +
             '<td>' + fmt(totalBayar) + '</td>' +
-            '<td>' + fmtPct(totalPctBayar, 1) + '</td>' +
-            '<td>' + fmtPct(totalPctBelumBayar, 1) + '</td>' +
+            '<td>' + fmtPct(totalMetricPct, 1) + '</td>' +
             '</tr>';
     }
 
@@ -875,7 +847,7 @@
         .then(function (payload) {
             renderStats(payload);
             document.getElementById('kabTableBody').innerHTML =
-                '<tr><td colspan="6" class="muted">Memuat ringkasan kab/kota…</td></tr>';
+                '<tr><td colspan="5" class="muted">Memuat ringkasan kab/kota…</td></tr>';
             return fetch(mapUrl, { headers: { 'Accept': 'application/json' } });
         })
         .then(function (r) {
@@ -891,7 +863,7 @@
             document.getElementById('rvMeta').innerHTML =
                 '<span class="err">Gagal memuat data (' + err.message + '). Coba refresh.</span>';
             document.getElementById('kabTableBody').innerHTML =
-                '<tr><td colspan="6" class="err">Gagal memuat ringkasan/peta.</td></tr>';
+                '<tr><td colspan="5" class="err">Gagal memuat ringkasan/peta.</td></tr>';
             const loading = document.getElementById('rvMapLoading');
             if (loading) loading.textContent = 'Gagal memuat peta. Halaman HTML sudah tampil; coba refresh endpoint stats/map.';
         });

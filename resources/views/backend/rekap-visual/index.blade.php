@@ -77,7 +77,7 @@
         }
         .rv-bottom {
             display: grid;
-            grid-template-columns: 1.15fr 0.85fr;
+            grid-template-columns: 1.05fr 0.95fr;
             gap: 6px;
             min-height: 0;
             overflow: hidden;
@@ -292,9 +292,22 @@
         .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 
         .kab-scroll { flex: 1; min-height: 0; overflow: auto; }
-        .kab-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .kab-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; table-layout: fixed; }
         .kab-table th, .kab-table td { padding: 4px 7px; border-bottom: 1px solid var(--line); text-align: left; }
+        .kab-table th:first-child,
+        .kab-table td:first-child {
+            width: 38%;
+            white-space: nowrap;
+        }
+        .kab-table th:not(:first-child),
+        .kab-table td:not(:first-child) {
+            width: 16.5%;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
         .kab-table th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--panel); z-index: 1; }
+        .kab-table th:not(:first-child) { text-align: right; }
         .kab-table tfoot td {
             font-weight: 700;
             border-top: 2px solid var(--ink);

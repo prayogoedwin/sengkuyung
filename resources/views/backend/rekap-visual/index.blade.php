@@ -241,7 +241,8 @@
             margin-bottom: 4px;
         }
         .map-head h2 { margin: 0; }
-        .map-tabs {
+        .map-tabs,
+        .kab-tabs {
             display: inline-flex;
             gap: 2px;
             padding: 2px;
@@ -252,7 +253,8 @@
             z-index: 5;
             pointer-events: auto;
         }
-        .map-tabs button {
+        .map-tabs button,
+        .kab-tabs button {
             border: 0;
             background: transparent;
             color: var(--muted);
@@ -267,10 +269,21 @@
             white-space: nowrap;
             pointer-events: auto;
         }
-        .map-tabs button.active {
+        .map-tabs button.active,
+        .kab-tabs button.active {
             background: var(--ink);
             color: #fff;
         }
+        .kab-head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 4px 8px;
+            flex-shrink: 0;
+            margin-bottom: 4px;
+        }
+        .kab-head h2 { margin: 0; }
         .legend {
             display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px;
             font-size: 0.65rem; flex-shrink: 0;
@@ -419,10 +432,16 @@
             <div class="legend" id="mapLegend"></div>
         </div>
         <div class="rv-card">
-            <h2>Ringkasan per Kab/Kota</h2>
+            <div class="kab-head">
+                <h2>Ringkasan per Kab/Kota</h2>
+                <div class="kab-tabs" role="tablist">
+                    <button type="button" class="active" data-map-tab="potensi" role="tab" aria-selected="true">Potensi Pembayaran</button>
+                    <button type="button" data-map-tab="kinerja" role="tab" aria-selected="false">Progress Pendataan</button>
+                </div>
+            </div>
             <div class="kab-scroll">
                 <table class="kab-table">
-                    <thead>
+                    <thead id="kabTableHead">
                         <tr>
                             <th>Kab/Kota</th>
                             <th>Obyek Potensi</th>
@@ -619,9 +638,53 @@
         return html;
     }
 
+    function renderTableHead() {
+        const thead = document.getElementById('kabTableHead');
+        if (!thead) return;
+        if (mapMode === 'kinerja') {
+            // Progress Pendataan: Kab/Kota, Obyek Potensi, Sudah Pendataan, % Belum, Sudah Bayar, % Bayar
+            thead.innerHTML = '<tr>' +
+                '<th>Kab/Kota</th>' +
+                '<th>Obyek Potensi</th>' +
+                '<th>Sudah Pendataan</th>' +
+                '<th>% Belum</th>' +
+                '<th>Sudah Bayar</th>' +
+                '<th>% Bayar</th>' +
+                '</tr>';
+            return;
+        }
+        // Potensi Pembayaran: Kab/Kota, Obyek Potensi, Sudah Pendataan, Sudah Bayar, % Bayar, % Belum
+        thead.innerHTML = '<tr>' +
+            '<th>Kab/Kota</th>' +
+            '<th>Obyek Potensi</th>' +
+            '<th>Sudah Pendataan</th>' +
+            '<th>Sudah Bayar</th>' +
+            '<th>% Bayar</th>' +
+            '<th>% Belum</th>' +
+            '</tr>';
+    }
+
+    function syncModeTabs() {
+        document.querySelectorAll('.map-tabs button[data-map-tab], .kab-tabs button[data-map-tab]').forEach(function (b) {
+            const on = b.getAttribute('data-map-tab') === mapMode;
+            b.classList.toggle('active', on);
+            b.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+    }
+
+    function setMapMode(next) {
+        const mode = next || 'potensi';
+        if (mode === mapMode) return;
+        mapMode = mode;
+        syncModeTabs();
+        applyMapColors();
+        requestAnimationFrame(function () { map.invalidateSize(); });
+    }
+
     function renderTable(mapData) {
         const tbody = document.getElementById('kabTableBody');
         const tfoot = document.getElementById('kabTableFoot');
+        renderTableHead();
         if (!mapData.length) {
             tbody.innerHTML = '<tr><td colspan="6">Tidak ada data</td></tr>';
             tfoot.innerHTML = '';
@@ -635,28 +698,53 @@
             const pendataan = Number(row.pendataan) || 0;
             const bayar = Number(row.bayar) || 0;
             const pctBayar = ratioPct(bayar, tagihan);
-            const pctBelum = tagihan > 0 ? Math.max(0, 100 - pctBayar) : 100;
+            const pctBelumBayar = tagihan > 0 ? Math.max(0, 100 - pctBayar) : 100;
+            const pctPendataan = ratioPct(pendataan, tagihan);
+            const pctBelumPendataan = tagihan > 0 ? Math.max(0, 100 - pctPendataan) : 100;
             totalTagihan += tagihan;
             totalPendataan += pendataan;
             totalBayar += bayar;
+            if (mapMode === 'kinerja') {
+                return '<tr>' +
+                    '<td><span class="dot" style="background:' + rowColor(row) + '"></span>' + row.nama + '</td>' +
+                    '<td>' + fmt(row.tagihan) + '</td>' +
+                    '<td>' + fmt(row.pendataan) + '</td>' +
+                    '<td>' + fmtPct(pctBelumPendataan, 1) + '</td>' +
+                    '<td>' + fmt(row.bayar) + '</td>' +
+                    '<td>' + fmtPct(pctBayar, 1) + '</td>' +
+                    '</tr>';
+            }
             return '<tr>' +
                 '<td><span class="dot" style="background:' + rowColor(row) + '"></span>' + row.nama + '</td>' +
                 '<td>' + fmt(row.tagihan) + '</td>' +
                 '<td>' + fmt(row.pendataan) + '</td>' +
                 '<td>' + fmt(row.bayar) + '</td>' +
                 '<td>' + fmtPct(pctBayar, 1) + '</td>' +
-                '<td>' + fmtPct(pctBelum, 1) + '</td>' +
+                '<td>' + fmtPct(pctBelumBayar, 1) + '</td>' +
                 '</tr>';
         }).join('');
         const totalPctBayar = ratioPct(totalBayar, totalTagihan);
-        const totalPctBelum = totalTagihan > 0 ? Math.max(0, 100 - totalPctBayar) : 100;
+        const totalPctBelumBayar = totalTagihan > 0 ? Math.max(0, 100 - totalPctBayar) : 100;
+        const totalPctPendataan = ratioPct(totalPendataan, totalTagihan);
+        const totalPctBelumPendataan = totalTagihan > 0 ? Math.max(0, 100 - totalPctPendataan) : 100;
+        if (mapMode === 'kinerja') {
+            tfoot.innerHTML = '<tr>' +
+                '<td>Total</td>' +
+                '<td>' + fmt(totalTagihan) + '</td>' +
+                '<td>' + fmt(totalPendataan) + '</td>' +
+                '<td>' + fmtPct(totalPctBelumPendataan, 1) + '</td>' +
+                '<td>' + fmt(totalBayar) + '</td>' +
+                '<td>' + fmtPct(totalPctBayar, 1) + '</td>' +
+                '</tr>';
+            return;
+        }
         tfoot.innerHTML = '<tr>' +
             '<td>Total</td>' +
             '<td>' + fmt(totalTagihan) + '</td>' +
             '<td>' + fmt(totalPendataan) + '</td>' +
             '<td>' + fmt(totalBayar) + '</td>' +
             '<td>' + fmtPct(totalPctBayar, 1) + '</td>' +
-            '<td>' + fmtPct(totalPctBelum, 1) + '</td>' +
+            '<td>' + fmtPct(totalPctBelumBayar, 1) + '</td>' +
             '</tr>';
     }
 
@@ -765,27 +853,19 @@
         });
     }
 
-    const mapTabs = document.querySelector('.map-tabs');
-    if (mapTabs) {
-        mapTabs.addEventListener('click', function (e) {
+    document.querySelectorAll('.map-tabs, .kab-tabs').forEach(function (tabs) {
+        tabs.addEventListener('click', function (e) {
             const btn = e.target.closest('button[data-map-tab]');
-            if (!btn || !mapTabs.contains(btn)) return;
+            if (!btn || !tabs.contains(btn)) return;
             e.preventDefault();
             e.stopPropagation();
-            const next = btn.getAttribute('data-map-tab') || 'potensi';
-            if (next === mapMode) return;
-            mapMode = next;
-            mapTabs.querySelectorAll('button[data-map-tab]').forEach(function (b) {
-                const on = b === btn;
-                b.classList.toggle('active', on);
-                b.setAttribute('aria-selected', on ? 'true' : 'false');
-            });
-            applyMapColors();
-            requestAnimationFrame(function () { map.invalidateSize(); });
+            setMapMode(btn.getAttribute('data-map-tab') || 'potensi');
         });
-    }
+    });
 
+    syncModeTabs();
     renderLegend();
+    renderTableHead();
 
     fetch(statsUrl, { headers: { 'Accept': 'application/json' } })
         .then(function (r) {

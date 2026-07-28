@@ -36,10 +36,10 @@
             height: 100vh;
             max-width: 1600px;
             margin: 0 auto;
-            padding: 8px 10px 10px;
+            padding: 6px 8px 8px;
             display: grid;
             grid-template-rows: auto auto minmax(0, 1fr);
-            gap: 8px;
+            gap: 6px;
             overflow: hidden;
         }
         .rv-top {
@@ -53,32 +53,32 @@
         .rv-brand { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
         .rv-brand h1 {
             margin: 0;
-            font-size: clamp(0.95rem, 1.5vw, 1.2rem);
+            font-size: clamp(1.05rem, 1.7vw, 1.35rem);
             letter-spacing: 0.01em;
             font-weight: 700;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .rv-brand .meta { color: var(--muted); font-size: 0.72rem; }
+        .rv-brand .meta { color: var(--muted); font-size: 0.82rem; }
         .rv-actions { display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; flex-shrink: 0; }
         .rv-actions a, .rv-actions select {
             border: 1px solid var(--line); background: var(--panel); color: var(--ink);
-            border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 0.78rem; text-decoration: none; cursor: pointer;
+            border-radius: 999px; padding: 5px 11px; font: inherit; font-size: 0.88rem; text-decoration: none; cursor: pointer;
         }
         .rv-actions a.active { background: var(--ink); color: #fff; border-color: var(--ink); }
-        .back-link { color: var(--muted); text-decoration: none; font-size: 0.72rem; }
+        .back-link { color: var(--muted); text-decoration: none; font-size: 0.82rem; }
 
         .rv-mid {
             display: grid;
             grid-template-columns: 1.15fr 0.9fr 1.35fr;
-            gap: 8px;
+            gap: 6px;
             min-height: 0;
         }
         .rv-bottom {
             display: grid;
             grid-template-columns: 1.15fr 0.85fr;
-            gap: 8px;
+            gap: 6px;
             min-height: 0;
             overflow: hidden;
         }
@@ -98,7 +98,7 @@
         .rv-card.teal { background: linear-gradient(145deg, #0f766e, #0e7490); color: #ecfeff; border: none; }
         .rv-card h2 {
             margin: 0 0 6px;
-            font-size: 0.68rem;
+            font-size: 0.8rem;
             font-weight: 600;
             letter-spacing: 0.04em;
             text-transform: uppercase;
@@ -106,18 +106,18 @@
             flex-shrink: 0;
         }
 
-        .metric { display: grid; gap: 4px; }
+        .metric { display: grid; gap: 5px; }
         .metric-row { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: end; }
-        .metric-row .label { font-size: 0.72rem; opacity: 0.9; }
-        .metric-row .value { font-size: 0.88rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-        .metric-row .value .pct { font-size: 0.72rem; font-weight: 600; opacity: 0.85; margin-left: 4px; }
-        .bar { height: 3px; border-radius: 999px; background: rgba(255,255,255,0.2); overflow: hidden; }
+        .metric-row .label { font-size: 0.84rem; opacity: 0.9; }
+        .metric-row .value { font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .metric-row .value .pct { font-size: 0.84rem; font-weight: 600; opacity: 0.85; margin-left: 4px; }
+        .bar { height: 4px; border-radius: 999px; background: rgba(255,255,255,0.2); overflow: hidden; }
         .bar > span { display: block; height: 100%; border-radius: inherit; background: #5eead4; }
 
         .stat-pills { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-        .pill { border-radius: 8px; padding: 6px 8px; background: rgba(255,255,255,0.12); }
-        .pill .k { font-size: 0.65rem; opacity: 0.85; }
-        .pill .v { font-size: 0.95rem; font-weight: 700; margin-top: 2px; }
+        .pill { border-radius: 8px; padding: 7px 9px; background: rgba(255,255,255,0.12); }
+        .pill .k { font-size: 0.78rem; opacity: 0.85; }
+        .pill .v { font-size: 1.15rem; font-weight: 700; margin-top: 2px; }
 
         .pay-grid {
             display: grid;
@@ -136,21 +136,21 @@
             min-height: 0;
         }
         .money-box .title {
-            font-size: 0.58rem;
+            font-size: 0.72rem;
             color: var(--muted);
             text-transform: uppercase;
             letter-spacing: 0.03em;
             font-weight: 600;
         }
         .money-box .big {
-            font-size: 0.95rem;
+            font-size: 1.1rem;
             font-weight: 700;
             margin: 1px 0 0;
             color: var(--accent-2);
             line-height: 1.15;
         }
         .money-box .big .unit {
-            font-size: 0.68rem;
+            font-size: 0.78rem;
             font-weight: 600;
             color: var(--muted);
             margin-left: 2px;
@@ -169,13 +169,13 @@
             align-items: end;
         }
         .nominal-cell .k {
-            font-size: 0.55rem;
+            font-size: 0.68rem;
             color: var(--muted);
             text-transform: uppercase;
             letter-spacing: 0.02em;
         }
         .nominal-cell .v {
-            font-size: 0.82rem;
+            font-size: 0.95rem;
             font-weight: 700;
             color: var(--ink);
             line-height: 1.2;
@@ -184,7 +184,7 @@
             display: grid;
             gap: 1px;
             margin-top: 3px;
-            font-size: 0.68rem;
+            font-size: 0.8rem;
             color: var(--ink-soft);
             line-height: 1.25;
         }
@@ -201,7 +201,7 @@
             background: linear-gradient(90deg, rgba(13,148,136,0.08), #f8fafc);
         }
         .pay-ratio .pct {
-            font-size: 1.35rem;
+            font-size: 1.5rem;
             font-weight: 800;
             color: var(--accent);
             line-height: 1;
@@ -210,14 +210,14 @@
         .pay-ratio .meta {
             display: grid;
             gap: 1px;
-            font-size: 0.68rem;
+            font-size: 0.8rem;
             color: var(--ink-soft);
             line-height: 1.25;
         }
         .pay-ratio .meta strong { color: var(--ink); }
         .pay-note {
             grid-column: 1 / -1;
-            font-size: 0.58rem;
+            font-size: 0.7rem;
             color: var(--muted);
             line-height: 1.3;
             padding: 0 2px;
@@ -259,11 +259,11 @@
             background: transparent;
             color: var(--muted);
             font: inherit;
-            font-size: 0.58rem;
+            font-size: 0.72rem;
             font-weight: 600;
             letter-spacing: 0.02em;
             text-transform: uppercase;
-            padding: 4px 8px;
+            padding: 5px 9px;
             border-radius: 999px;
             cursor: pointer;
             white-space: nowrap;
@@ -286,14 +286,14 @@
         .kab-head h2 { margin: 0; }
         .legend {
             display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px;
-            font-size: 0.65rem; flex-shrink: 0;
+            font-size: 0.78rem; flex-shrink: 0;
         }
         .legend span { display: inline-flex; align-items: center; gap: 4px; }
-        .swatch { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+        .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 
         .kab-scroll { flex: 1; min-height: 0; overflow: auto; }
-        .kab-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; }
-        .kab-table th, .kab-table td { padding: 3px 6px; border-bottom: 1px solid var(--line); text-align: left; }
+        .kab-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .kab-table th, .kab-table td { padding: 4px 7px; border-bottom: 1px solid var(--line); text-align: left; }
         .kab-table th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--panel); z-index: 1; }
         .kab-table tfoot td {
             font-weight: 700;
@@ -304,7 +304,7 @@
             background: var(--panel);
             z-index: 1;
         }
-        .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+        .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 5px; }
         .muted { color: var(--muted); }
         .err { color: #b91c1c; }
 

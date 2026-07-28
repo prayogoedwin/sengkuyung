@@ -95,11 +95,15 @@ trait HandlesJrVerifikasi
         }
 
         if ($request->filled('tanggal_start') && $request->filled('tanggal_end')) {
-            $query->whereBetween('created_at', [$request->tanggal_start, $request->tanggal_end]);
+            $createdStartAt = Carbon::parse((string) $request->tanggal_start)->startOfDay();
+            $createdEndAt = Carbon::parse((string) $request->tanggal_end)->endOfDay();
+            $query->whereBetween('created_at', [$createdStartAt, $createdEndAt]);
         }
 
         if ($request->filled('tanggal_update_start') && $request->filled('tanggal_update_end')) {
-            $query->whereBetween('updated_at', [$request->tanggal_update_start, $request->tanggal_update_end]);
+            $updatedStartAt = Carbon::parse((string) $request->tanggal_update_start)->startOfDay();
+            $updatedEndAt = Carbon::parse((string) $request->tanggal_update_end)->endOfDay();
+            $query->whereBetween('updated_at', [$updatedStartAt, $updatedEndAt]);
         }
     }
 

@@ -11,7 +11,7 @@ use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class SengBayarPajakImporter
 {
-    public const CHUNK_SIZE = 2500;
+    public const CHUNK_SIZE = 5000;
 
     public const BATCH_SIZE = 1000;
 

@@ -25,7 +25,8 @@
                                                 accept=".xlsx,.xls,.csv" required>
                                             <small class="text-muted">
                                                 Kolom: NO_POLISI, NOPOL_LAMA, TGL_BAYAR, PKB_PROVINSI_JALAN,
-                                                PKB_PROVINSI_TUNGGAKAN, PKB_OPSEN_JALAN, PKB_OPSEN_TUNGGAKAN
+                                                PKB_PROVINSI_TUNGGAKAN, PKB_OPSEN_JALAN, PKB_OPSEN_TUNGGAKAN.
+                                                File besar (.xlsx) akan dikonversi bertahap — jangan tutup halaman.
                                             </small>
                                         </div>
                                         <div class="col-md-3 mt-4">
@@ -154,7 +155,7 @@
                     } else if (response.status === 419) {
                         hint = 'Sesi habis. Muat ulang halaman lalu coba lagi.';
                     } else if (response.status >= 500) {
-                        hint = 'Server error. Pastikan PDO SQLite aktif dan timeout cukup besar.';
+                        hint = 'Server timeout/error. Untuk file sangat besar, pastikan versi terbaru (konversi bertahap) sudah di-deploy.';
                     }
                     throw new Error('Respons server bukan JSON (HTTP ' + response.status + '). ' + hint + ' ' + snippet);
                 }
@@ -176,7 +177,7 @@
 
                 $overlay.show();
                 $submitBtn.prop('disabled', true);
-                $progress.text('Mengunggah & mengonversi file Excel...');
+                $progress.text('Mengunggah file...');
 
                 try {
                     const uploadResponse = await fetch(importUploadUrl, {
@@ -212,7 +213,9 @@
                             throw new Error(chunkData.message || 'Gagal memproses chunk import.');
                         }
 
-                        if (chunkData.seeding) {
+                        if (chunkData.converting) {
+                            $progress.text(chunkData.message || 'Mengonversi Excel ke CSV...');
+                        } else if (chunkData.seeding) {
                             $progress.text(chunkData.message || 'Menyiapkan indeks duplikat database...');
                         } else {
                             const stats = chunkData.stats || {};

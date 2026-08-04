@@ -12,7 +12,6 @@ use App\Support\VerifikasiStatusGroups;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class RekapVisualController extends Controller
 {
@@ -68,7 +67,7 @@ class RekapVisualController extends Controller
 
     protected function cachePrefix(): string
     {
-        return 'admin:rekap-visual:v9:';
+        return 'admin:rekap-visual:v10:';
     }
 
     public function index(Request $request)
@@ -261,6 +260,13 @@ class RekapVisualController extends Controller
             ->where('b.year', $year)
             ->whereNotNull('b.nopol_')
             ->where('b.nopol_', '!=', '')
+            ->whereExists(function ($q) use ($tertagihTable, $year) {
+                $q->select(DB::raw(1))
+                    ->from("{$tertagihTable} as t")
+                    ->whereColumn('t.no_polisi', 'b.nopol_')
+                    ->where('t.year', $year)
+                    ->limit(1);
+            })
             ->get([
                 'b.nopol_',
                 'b.tgl_bayar',
@@ -269,12 +275,6 @@ class RekapVisualController extends Controller
                 'b.pkb_opsen_jalan',
                 'b.pkb_opsen_tunggakan',
             ]);
-
-        $paidNopols = [];
-        foreach ($rows as $row) {
-            $paidNopols[(string) $row->nopol_] = true;
-        }
-        $matchedNopols = $this->matchNopolsInTertagih($tertagihTable, $year, array_keys($paidNopols));
 
         $pendataanMap = DB::table($pendataanTable)
             ->whereNull('deleted_at')
@@ -300,12 +300,8 @@ class RekapVisualController extends Controller
         $tanpaOps = 0;
 
         foreach ($rows as $row) {
-            $nopol = (string) $row->nopol_;
-            if (!isset($matchedNopols[$nopol])) {
-                continue;
-            }
-
             $jumlahTerbayar++;
+            $nopol = (string) $row->nopol_;
             $nopolUnik[$nopol] = true;
 
             $prov = (int) ($row->pkb_provinsi_jalan ?? 0) + (int) ($row->pkb_provinsi_tunggakan ?? 0);
@@ -387,7 +383,22 @@ class RekapVisualController extends Controller
             ->where('id_up', 33)
             ->get(['id', 'nama', 'lat', 'lng']);
 
-        $lokasiToKabkota = $this->lokasiToKabkotaMap();
+        $lokasiToKabkota = [];
+        $samsats = SengSaamsat::query()->get(['id', 'id_wilayah_samsat', 'kabkota']);
+        foreach ($samsats as $samsat) {
+            $kabId = (string) $samsat->kabkota;
+            if ($kabId === '') {
+                continue;
+            }
+            foreach ([(string) ($samsat->id ?? ''), (string) ($samsat->id_wilayah_samsat ?? '')] as $seed) {
+                if ($seed === '') {
+                    continue;
+                }
+                foreach (SengSaamsat::codeVariants($seed) as $variant) {
+                    $lokasiToKabkota[$variant] = $kabId;
+                }
+            }
+        }
 
         $tagihanByLokasi = DB::table($tertagihTable)
             ->where('year', $year)
@@ -397,14 +408,53 @@ class RekapVisualController extends Controller
             ->get()
             ->keyBy(fn ($row) => (string) $row->id_lokasi_samsat);
 
-        // Bayar + bayar-sesudah: lookup lokasi per nopol bayar (chunk), tanpa JOIN ke seluruh tabel tertagih.
-        [$bayarByLokasi, $bayarSesudahByLokasi] = $this->buildBayarCountsByLokasi(
-            $year,
-            $tertagihTable,
-            $pendataanTable,
-            $yearStart,
-            $yearEnd
-        );
+        $bayarByLokasi = DB::table(DB::raw("(
+            SELECT x.nopol_, MIN(t.id_lokasi_samsat) AS id_lokasi_samsat
+            FROM (
+                SELECT DISTINCT b.nopol_
+                FROM seng_bayar_pajak b
+                WHERE b.year = " . (int) $year . "
+                  AND b.nopol_ IS NOT NULL
+                  AND b.nopol_ != ''
+            ) x
+            INNER JOIN {$tertagihTable} t
+                ON t.no_polisi = x.nopol_
+               AND t.year = " . (int) $year . "
+            GROUP BY x.nopol_
+        ) as paid"))
+            ->selectRaw('id_lokasi_samsat, COUNT(*) as c')
+            ->groupBy('id_lokasi_samsat')
+            ->pluck('c', 'id_lokasi_samsat');
+
+        // Nopol unik yang bayar pada/setelah tanggal pendataan (untuk Progress Pendataan).
+        $bayarSesudahByLokasi = DB::table(DB::raw("(
+            SELECT x.nopol_, MIN(t.id_lokasi_samsat) AS id_lokasi_samsat
+            FROM (
+                SELECT DISTINCT b.nopol_
+                FROM seng_bayar_pajak b
+                INNER JOIN (
+                    SELECT nopol, MIN(DATE(created_at)) AS tgl_pendataan
+                    FROM {$pendataanTable}
+                    WHERE deleted_at IS NULL
+                      AND created_at BETWEEN '{$yearStart}' AND '{$yearEnd}'
+                      AND nopol IS NOT NULL
+                      AND nopol != ''
+                    GROUP BY nopol
+                ) p ON p.nopol = b.nopol_
+                WHERE b.year = " . (int) $year . "
+                  AND b.nopol_ IS NOT NULL
+                  AND b.nopol_ != ''
+                  AND b.tgl_bayar IS NOT NULL
+                  AND DATE(b.tgl_bayar) >= p.tgl_pendataan
+            ) x
+            INNER JOIN {$tertagihTable} t
+                ON t.no_polisi = x.nopol_
+               AND t.year = " . (int) $year . "
+            GROUP BY x.nopol_
+        ) as paid_sesudah"))
+            ->selectRaw('id_lokasi_samsat, COUNT(*) as c')
+            ->groupBy('id_lokasi_samsat')
+            ->pluck('c', 'id_lokasi_samsat');
 
         $tagihanByKab = [];
         $pendataanByKab = [];
@@ -468,186 +518,6 @@ class RekapVisualController extends Controller
         usort($out, static fn ($a, $b) => $b['sisa_pct'] <=> $a['sisa_pct']);
 
         return $out;
-    }
-
-    /**
-     * @return array<string, string> lokasi_samsat => kabkota_id
-     */
-    protected function lokasiToKabkotaMap(): array
-    {
-        $lokasiToKabkota = [];
-        $samsats = SengSaamsat::query()->get(['id', 'id_wilayah_samsat', 'kabkota']);
-        foreach ($samsats as $samsat) {
-            $kabId = (string) $samsat->kabkota;
-            if ($kabId === '') {
-                continue;
-            }
-            foreach ([(string) ($samsat->id ?? ''), (string) ($samsat->id_wilayah_samsat ?? '')] as $seed) {
-                if ($seed === '') {
-                    continue;
-                }
-                foreach (SengSaamsat::codeVariants($seed) as $variant) {
-                    $lokasiToKabkota[$variant] = $kabId;
-                }
-            }
-        }
-
-        return $lokasiToKabkota;
-    }
-
-    /**
-     * @param  list<string>  $nopols
-     * @return array<string, true>
-     */
-    protected function matchNopolsInTertagih(string $tertagihTable, int $year, array $nopols): array
-    {
-        $matched = [];
-        if ($nopols === []) {
-            return $matched;
-        }
-
-        foreach (array_chunk($nopols, 2000) as $chunk) {
-            $found = DB::table($tertagihTable)
-                ->where('year', $year)
-                ->whereIn('no_polisi', $chunk)
-                ->distinct()
-                ->pluck('no_polisi');
-
-            foreach ($found as $nopol) {
-                $matched[(string) $nopol] = true;
-            }
-        }
-
-        return $matched;
-    }
-
-    /**
-     * @return array{0: array<string, int>, 1: array<string, int>}
-     */
-    protected function buildBayarCountsByLokasi(
-        int $year,
-        string $tertagihTable,
-        string $pendataanTable,
-        string $yearStart,
-        string $yearEnd
-    ): array {
-        $useNopolKey = Schema::hasColumn('seng_bayar_pajak', 'nopol_key')
-            && Schema::hasColumn($tertagihTable, 'nopol_key');
-
-        if ($useNopolKey) {
-            $paidKeys = DB::table('seng_bayar_pajak')
-                ->where('year', $year)
-                ->whereNotNull('nopol_key')
-                ->where('nopol_key', '!=', '')
-                ->distinct()
-                ->pluck('nopol_key')
-                ->all();
-
-            $paidMinTgl = DB::table('seng_bayar_pajak')
-                ->where('year', $year)
-                ->whereNotNull('nopol_key')
-                ->where('nopol_key', '!=', '')
-                ->whereNotNull('tgl_bayar')
-                ->groupBy('nopol_key')
-                ->selectRaw('nopol_key as k, MIN(DATE(tgl_bayar)) as tgl')
-                ->pluck('tgl', 'k');
-
-            $pendataanHasKey = Schema::hasColumn($pendataanTable, 'nopol_key');
-            if ($pendataanHasKey) {
-                $pendataanMap = DB::table($pendataanTable)
-                    ->whereNull('deleted_at')
-                    ->whereBetween('created_at', [$yearStart, $yearEnd])
-                    ->whereNotNull('nopol_key')
-                    ->where('nopol_key', '!=', '')
-                    ->groupBy('nopol_key')
-                    ->selectRaw('nopol_key as k, MIN(DATE(created_at)) as tgl_pendataan')
-                    ->pluck('tgl_pendataan', 'k');
-            } else {
-                $pendataanMap = collect();
-            }
-
-            $bayarByLokasi = [];
-            $bayarSesudahByLokasi = [];
-
-            foreach (array_chunk($paidKeys, 2000) as $chunk) {
-                $lokasiRows = DB::table($tertagihTable)
-                    ->where('year', $year)
-                    ->whereIn('nopol_key', $chunk)
-                    ->groupBy('nopol_key')
-                    ->selectRaw('nopol_key as k, MIN(id_lokasi_samsat) as id_lokasi_samsat')
-                    ->get();
-
-                foreach ($lokasiRows as $row) {
-                    $lokasi = (string) ($row->id_lokasi_samsat ?? '');
-                    if ($lokasi === '') {
-                        continue;
-                    }
-                    $bayarByLokasi[$lokasi] = ($bayarByLokasi[$lokasi] ?? 0) + 1;
-
-                    $tglBayar = (string) ($paidMinTgl[$row->k] ?? '');
-                    $tglPend = (string) ($pendataanMap[$row->k] ?? '');
-                    if ($tglPend !== '' && $tglBayar !== '' && $tglBayar >= $tglPend) {
-                        $bayarSesudahByLokasi[$lokasi] = ($bayarSesudahByLokasi[$lokasi] ?? 0) + 1;
-                    }
-                }
-            }
-
-            return [$bayarByLokasi, $bayarSesudahByLokasi];
-        }
-
-        $paidKeys = DB::table('seng_bayar_pajak')
-            ->where('year', $year)
-            ->whereNotNull('nopol_')
-            ->where('nopol_', '!=', '')
-            ->distinct()
-            ->pluck('nopol_')
-            ->all();
-
-        $paidMinTgl = DB::table('seng_bayar_pajak')
-            ->where('year', $year)
-            ->whereNotNull('nopol_')
-            ->where('nopol_', '!=', '')
-            ->whereNotNull('tgl_bayar')
-            ->groupBy('nopol_')
-            ->selectRaw('nopol_ as k, MIN(DATE(tgl_bayar)) as tgl')
-            ->pluck('tgl', 'k');
-
-        $pendataanMap = DB::table($pendataanTable)
-            ->whereNull('deleted_at')
-            ->whereBetween('created_at', [$yearStart, $yearEnd])
-            ->whereNotNull('nopol')
-            ->where('nopol', '!=', '')
-            ->groupBy('nopol')
-            ->selectRaw('nopol as k, MIN(DATE(created_at)) as tgl_pendataan')
-            ->pluck('tgl_pendataan', 'k');
-
-        $bayarByLokasi = [];
-        $bayarSesudahByLokasi = [];
-
-        foreach (array_chunk($paidKeys, 2000) as $chunk) {
-            $lokasiRows = DB::table($tertagihTable)
-                ->where('year', $year)
-                ->whereIn('no_polisi', $chunk)
-                ->groupBy('no_polisi')
-                ->selectRaw('no_polisi as k, MIN(id_lokasi_samsat) as id_lokasi_samsat')
-                ->get();
-
-            foreach ($lokasiRows as $row) {
-                $lokasi = (string) ($row->id_lokasi_samsat ?? '');
-                if ($lokasi === '') {
-                    continue;
-                }
-                $bayarByLokasi[$lokasi] = ($bayarByLokasi[$lokasi] ?? 0) + 1;
-
-                $tglBayar = (string) ($paidMinTgl[$row->k] ?? '');
-                $tglPend = (string) ($pendataanMap[$row->k] ?? '');
-                if ($tglPend !== '' && $tglBayar !== '' && $tglBayar >= $tglPend) {
-                    $bayarSesudahByLokasi[$lokasi] = ($bayarSesudahByLokasi[$lokasi] ?? 0) + 1;
-                }
-            }
-        }
-
-        return [$bayarByLokasi, $bayarSesudahByLokasi];
     }
 
     protected function sisaColor(float $sisaPct): string

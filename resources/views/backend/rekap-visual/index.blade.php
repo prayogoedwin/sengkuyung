@@ -62,12 +62,25 @@
         }
         .rv-brand .meta { color: var(--muted); font-size: clamp(0.9rem, 1.05vw, 1.05rem); }
         .rv-actions { display: flex; flex-wrap: nowrap; gap: 8px; align-items: center; flex-shrink: 0; }
-        .rv-actions a, .rv-actions select {
+        .rv-actions a, .rv-actions select, .rv-actions button {
             border: 1px solid var(--line); background: var(--panel); color: var(--ink);
             border-radius: 999px; padding: 6px 14px; font: inherit; font-size: clamp(0.92rem, 1.05vw, 1.05rem); text-decoration: none; cursor: pointer;
         }
         .rv-actions a.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+        .rv-actions button:disabled { opacity: 0.55; cursor: wait; }
         .back-link { color: var(--muted); text-decoration: none; font-size: clamp(0.88rem, 1vw, 1rem); }
+        .meta .retry-link,
+        .retry-link {
+            margin-left: 8px;
+            color: var(--accent-2);
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
+            background: none;
+            border: 0;
+            padding: 0;
+            font: inherit;
+        }
 
         .rv-mid {
             display: grid;
@@ -357,7 +370,8 @@
                     @endfor
                 </select>
             </form>
-            <a href="{{ route($routeIndex, ['year' => $year]) }}">Refresh</a>
+            <a href="{{ route($routeIndex, ['year' => $year]) }}" id="btnHardRefresh" title="Refresh penuh halaman">Refresh</a>
+            <button type="button" id="btnReloadData" title="Muat ulang data tanpa reload halaman">Muat Ulang</button>
         </div>
     </div>
 
@@ -909,42 +923,170 @@
     renderLegend();
     renderTableHead();
 
-    document.getElementById('kabTableBody').innerHTML =
-        '<tr><td colspan="5" class="muted">Memuat ringkasan kab/kota…</td></tr>';
+    let loadSeq = 0;
+    let activeControllers = [];
+    let statsReady = false;
+    let mapReady = false;
 
-    const statsPromise = fetch(statsUrl, { headers: { 'Accept': 'application/json' } })
-        .then(function (r) {
-            if (!r.ok) throw new Error('STATS HTTP ' + r.status);
-            return r.json();
-        });
+    function sleep(ms) {
+        return new Promise(function (resolve) { setTimeout(resolve, ms); });
+    }
 
-    const mapPromise = fetch(mapUrl, { headers: { 'Accept': 'application/json' } })
-        .then(function (r) {
-            if (!r.ok) throw new Error('MAP HTTP ' + r.status);
-            return r.json();
-        });
+    function setMeta(html) {
+        const el = document.getElementById('rvMeta');
+        if (el) el.innerHTML = html;
+    }
 
-    statsPromise
-        .then(function (payload) {
-            renderStats(payload);
-        })
-        .catch(function (err) {
-            document.getElementById('rvMeta').innerHTML =
-                '<span class="err">Gagal memuat statistik (' + err.message + '). Coba refresh.</span>';
-        });
+    function setReloadBusy(busy) {
+        const btn = document.getElementById('btnReloadData');
+        if (btn) {
+            btn.disabled = !!busy;
+            btn.textContent = busy ? 'Memuat…' : 'Muat Ulang';
+        }
+    }
 
-    mapPromise
-        .then(function (payload) {
-            const mapData = payload.mapKabkota || [];
-            renderTable(mapData);
-            paintMap(mapData);
-        })
-        .catch(function (err) {
-            document.getElementById('kabTableBody').innerHTML =
-                '<tr><td colspan="5" class="err">Gagal memuat ringkasan/peta (' + err.message + ').</td></tr>';
-            const loading = document.getElementById('rvMapLoading');
-            if (loading) loading.textContent = 'Gagal memuat peta. Coba refresh.';
+    function abortActiveLoads() {
+        activeControllers.forEach(function (c) {
+            try { c.abort(); } catch (e) {}
         });
+        activeControllers = [];
+    }
+
+    function ensureMapLoadingOverlay(text) {
+        const mapEl = document.getElementById('rvMap');
+        if (!mapEl) return;
+        let loading = document.getElementById('rvMapLoading');
+        if (!loading) {
+            loading = document.createElement('div');
+            loading.id = 'rvMapLoading';
+            loading.style.cssText = 'padding:12px;color:#64748b;font-size:1rem;';
+            mapEl.insertBefore(loading, mapEl.firstChild);
+        }
+        loading.textContent = text || 'Memuat peta…';
+    }
+
+    function isRetryableHttp(status) {
+        return status === 408 || status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+    }
+
+    function fetchJsonWithRetry(url, label, signal, attempts) {
+        const maxAttempts = attempts == null ? 3 : attempts;
+
+        function attempt(n) {
+            if (signal && signal.aborted) {
+                return Promise.reject(Object.assign(new Error('Dibatalkan'), { name: 'AbortError' }));
+            }
+
+            if (n > 1) {
+                setMeta(
+                    'Channel ' + channelLabel +
+                    ' · Mengulang ' + label + ' (' + n + '/' + maxAttempts + ')…'
+                );
+            }
+
+            return fetch(url, {
+                headers: { 'Accept': 'application/json' },
+                signal: signal,
+                cache: 'no-store',
+            }).then(function (r) {
+                if (!r.ok) {
+                    const err = new Error(label.toUpperCase() + ' HTTP ' + r.status);
+                    err.status = r.status;
+                    err.retryable = isRetryableHttp(r.status);
+                    throw err;
+                }
+                return r.json();
+            }).catch(function (err) {
+                if (err && err.name === 'AbortError') {
+                    throw err;
+                }
+                const retryable = !err.status || err.retryable === true || isRetryableHttp(err.status);
+                if (n < maxAttempts && retryable) {
+                    return sleep(700 * n).then(function () { return attempt(n + 1); });
+                }
+                throw err;
+            });
+        }
+
+        return attempt(1);
+    }
+
+    function showRetryHint(message) {
+        setMeta(
+            '<span class="err">' + message + '</span> ' +
+            '<button type="button" class="retry-link" id="btnRetryNow">Coba lagi</button>'
+        );
+        const btn = document.getElementById('btnRetryNow');
+        if (btn) btn.addEventListener('click', function () { loadDashboardData(); });
+    }
+
+    function loadDashboardData() {
+        abortActiveLoads();
+        const seq = ++loadSeq;
+        statsReady = false;
+        mapReady = false;
+        setReloadBusy(true);
+
+        const statsCtrl = new AbortController();
+        const mapCtrl = new AbortController();
+        activeControllers = [statsCtrl, mapCtrl];
+
+        setMeta('Channel ' + channelLabel + ' · Memuat statistik & peta (bisa agak lama di D2D)…');
+        document.getElementById('kabTableBody').innerHTML =
+            '<tr><td colspan="5" class="muted">Memuat ringkasan kab/kota…</td></tr>';
+        document.getElementById('kabTableFoot').innerHTML = '';
+        ensureMapLoadingOverlay('Memuat peta…');
+
+        const statsPromise = fetchJsonWithRetry(statsUrl, 'stats', statsCtrl.signal, 3)
+            .then(function (payload) {
+                if (seq !== loadSeq) return;
+                renderStats(payload);
+                statsReady = true;
+            })
+            .catch(function (err) {
+                if (seq !== loadSeq || (err && err.name === 'AbortError')) return;
+                showRetryHint('Gagal memuat statistik (' + (err && err.message ? err.message : 'error') + ').');
+            });
+
+        const mapPromise = fetchJsonWithRetry(mapUrl, 'map', mapCtrl.signal, 3)
+            .then(function (payload) {
+                if (seq !== loadSeq) return;
+                const mapData = payload.mapKabkota || [];
+                renderTable(mapData);
+                paintMap(mapData);
+                requestAnimationFrame(function () { map.invalidateSize(); });
+                setTimeout(function () { map.invalidateSize(); }, 200);
+                mapReady = true;
+            })
+            .catch(function (err) {
+                if (seq !== loadSeq || (err && err.name === 'AbortError')) return;
+                document.getElementById('kabTableBody').innerHTML =
+                    '<tr><td colspan="5" class="err">Gagal memuat ringkasan/peta (' +
+                    (err && err.message ? err.message : 'error') +
+                    '). <button type="button" class="retry-link" id="btnRetryMap">Coba lagi</button></td></tr>';
+                const mapBtn = document.getElementById('btnRetryMap');
+                if (mapBtn) mapBtn.addEventListener('click', function () { loadDashboardData(); });
+                ensureMapLoadingOverlay('Gagal memuat peta. Klik Muat Ulang / Coba lagi.');
+                if (!statsReady) {
+                    showRetryHint('Gagal memuat ringkasan/peta (' + (err && err.message ? err.message : 'error') + ').');
+                }
+            });
+
+        Promise.allSettled([statsPromise, mapPromise]).then(function () {
+            if (seq !== loadSeq) return;
+            setReloadBusy(false);
+            activeControllers = [];
+        });
+    }
+
+    const reloadBtn = document.getElementById('btnReloadData');
+    if (reloadBtn) {
+        reloadBtn.addEventListener('click', function () {
+            loadDashboardData();
+        });
+    }
+
+    loadDashboardData();
 </script>
 </body>
 </html>

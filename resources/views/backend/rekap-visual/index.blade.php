@@ -909,33 +909,41 @@
     renderLegend();
     renderTableHead();
 
-    fetch(statsUrl, { headers: { 'Accept': 'application/json' } })
+    document.getElementById('kabTableBody').innerHTML =
+        '<tr><td colspan="5" class="muted">Memuat ringkasan kab/kota…</td></tr>';
+
+    const statsPromise = fetch(statsUrl, { headers: { 'Accept': 'application/json' } })
         .then(function (r) {
-            if (!r.ok) throw new Error('HTTP ' + r.status);
+            if (!r.ok) throw new Error('STATS HTTP ' + r.status);
             return r.json();
-        })
-        .then(function (payload) {
-            renderStats(payload);
-            document.getElementById('kabTableBody').innerHTML =
-                '<tr><td colspan="5" class="muted">Memuat ringkasan kab/kota…</td></tr>';
-            return fetch(mapUrl, { headers: { 'Accept': 'application/json' } });
-        })
+        });
+
+    const mapPromise = fetch(mapUrl, { headers: { 'Accept': 'application/json' } })
         .then(function (r) {
             if (!r.ok) throw new Error('MAP HTTP ' + r.status);
             return r.json();
+        });
+
+    statsPromise
+        .then(function (payload) {
+            renderStats(payload);
         })
+        .catch(function (err) {
+            document.getElementById('rvMeta').innerHTML =
+                '<span class="err">Gagal memuat statistik (' + err.message + '). Coba refresh.</span>';
+        });
+
+    mapPromise
         .then(function (payload) {
             const mapData = payload.mapKabkota || [];
             renderTable(mapData);
             paintMap(mapData);
         })
         .catch(function (err) {
-            document.getElementById('rvMeta').innerHTML =
-                '<span class="err">Gagal memuat data (' + err.message + '). Coba refresh.</span>';
             document.getElementById('kabTableBody').innerHTML =
-                '<tr><td colspan="5" class="err">Gagal memuat ringkasan/peta.</td></tr>';
+                '<tr><td colspan="5" class="err">Gagal memuat ringkasan/peta (' + err.message + ').</td></tr>';
             const loading = document.getElementById('rvMapLoading');
-            if (loading) loading.textContent = 'Gagal memuat peta. Halaman HTML sudah tampil; coba refresh endpoint stats/map.';
+            if (loading) loading.textContent = 'Gagal memuat peta. Coba refresh.';
         });
 </script>
 </body>

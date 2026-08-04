@@ -67,7 +67,7 @@ class RekapVisualController extends Controller
 
     protected function cachePrefix(): string
     {
-        return 'admin:rekap-visual:v7:';
+        return 'admin:rekap-visual:v8:';
     }
 
     public function index(Request $request)
@@ -375,6 +375,10 @@ class RekapVisualController extends Controller
      */
     protected function buildMapKabkota(int $year, string $tertagihTable): array
     {
+        $pendataanTable = (new ($this->pendataanModelClass()))->getTable();
+        $yearStart = sprintf('%04d-01-01 00:00:00', $year);
+        $yearEnd = sprintf('%04d-12-31 23:59:59', $year);
+
         $kabkotas = SengWilayah::query()
             ->where('id_up', 33)
             ->get(['id', 'nama', 'lat', 'lng']);
@@ -422,9 +426,40 @@ class RekapVisualController extends Controller
             ->groupBy('id_lokasi_samsat')
             ->pluck('c', 'id_lokasi_samsat');
 
+        // Nopol unik yang bayar pada/setelah tanggal pendataan (untuk Progress Pendataan).
+        $bayarSesudahByLokasi = DB::table(DB::raw("(
+            SELECT x.nopol_, MIN(t.id_lokasi_samsat) AS id_lokasi_samsat
+            FROM (
+                SELECT DISTINCT b.nopol_
+                FROM seng_bayar_pajak b
+                INNER JOIN (
+                    SELECT nopol, MIN(DATE(created_at)) AS tgl_pendataan
+                    FROM {$pendataanTable}
+                    WHERE deleted_at IS NULL
+                      AND created_at BETWEEN '{$yearStart}' AND '{$yearEnd}'
+                      AND nopol IS NOT NULL
+                      AND nopol != ''
+                    GROUP BY nopol
+                ) p ON p.nopol = b.nopol_
+                WHERE b.year = " . (int) $year . "
+                  AND b.nopol_ IS NOT NULL
+                  AND b.nopol_ != ''
+                  AND b.tgl_bayar IS NOT NULL
+                  AND DATE(b.tgl_bayar) >= p.tgl_pendataan
+            ) x
+            INNER JOIN {$tertagihTable} t
+                ON t.no_polisi = x.nopol_
+               AND t.year = " . (int) $year . "
+            GROUP BY x.nopol_
+        ) as paid_sesudah"))
+            ->selectRaw('id_lokasi_samsat, COUNT(*) as c')
+            ->groupBy('id_lokasi_samsat')
+            ->pluck('c', 'id_lokasi_samsat');
+
         $tagihanByKab = [];
         $pendataanByKab = [];
         $bayarByKab = [];
+        $bayarSesudahByKab = [];
 
         foreach ($tagihanByLokasi as $lokasi => $row) {
             $kabId = $lokasiToKabkota[(string) $lokasi] ?? null;
@@ -443,14 +478,26 @@ class RekapVisualController extends Controller
             $bayarByKab[$kabId] = ($bayarByKab[$kabId] ?? 0) + (int) $count;
         }
 
+        foreach ($bayarSesudahByLokasi as $lokasi => $count) {
+            $kabId = $lokasiToKabkota[(string) $lokasi] ?? null;
+            if ($kabId === null) {
+                continue;
+            }
+            $bayarSesudahByKab[$kabId] = ($bayarSesudahByKab[$kabId] ?? 0) + (int) $count;
+        }
+
         $out = [];
         foreach ($kabkotas as $kab) {
             $kabId = (string) $kab->id;
             $tagihan = $tagihanByKab[$kabId] ?? 0;
             $pendataan = min($tagihan, $pendataanByKab[$kabId] ?? 0);
             $bayar = min($tagihan, $bayarByKab[$kabId] ?? 0);
+            $bayarSesudah = min($pendataan, $bayarSesudahByKab[$kabId] ?? 0);
             $sisa = max(0, $tagihan - $bayar);
             $sisaPct = $tagihan > 0 ? round(($sisa / $tagihan) * 100, 2) : 100.0;
+            $successRate = $pendataan > 0
+                ? round(($bayarSesudah / $pendataan) * 100, 2)
+                : 0.0;
 
             $out[] = [
                 'id' => $kabId,
@@ -460,6 +507,8 @@ class RekapVisualController extends Controller
                 'tagihan' => $tagihan,
                 'pendataan' => $pendataan,
                 'bayar' => $bayar,
+                'bayar_sesudah' => $bayarSesudah,
+                'success_rate' => $successRate,
                 'sisa' => $sisa,
                 'sisa_pct' => $sisaPct,
                 'color' => $this->sisaColor($sisaPct),

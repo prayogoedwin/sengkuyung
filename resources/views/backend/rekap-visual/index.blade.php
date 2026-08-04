@@ -292,6 +292,15 @@
         .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 
         .kab-scroll { flex: 1; min-height: 0; overflow: auto; }
+        .progress-note {
+            margin: 6px 0 0;
+            flex-shrink: 0;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
         .kab-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; table-layout: fixed; }
         .kab-table th, .kab-table td { padding: 4px 7px; border-bottom: 1px solid var(--line); text-align: left; }
         .kab-table th:first-child,
@@ -435,7 +444,7 @@
     <div class="rv-bottom">
         <div class="rv-card">
             <div class="map-head">
-                <h2>Peta Kab/Kota Jawa Tengah</h2>
+                <h2 id="mapTitle">Peta Kab/Kota Jawa Tengah</h2>
                 <div class="map-tabs" role="tablist">
                     <button type="button" class="active" data-map-tab="potensi" role="tab" aria-selected="true">Potensi Pembayaran</button>
                     <button type="button" data-map-tab="kinerja" role="tab" aria-selected="false">Progress Pendataan</button>
@@ -446,7 +455,7 @@
         </div>
         <div class="rv-card">
             <div class="kab-head">
-                <h2>Ringkasan per Kab/Kota</h2>
+                <h2 id="kabTitle">Ringkasan per Kab/Kota</h2>
                 <div class="kab-tabs" role="tablist">
                     <button type="button" class="active" data-map-tab="potensi" role="tab" aria-selected="true">Potensi Pembayaran</button>
                     <button type="button" data-map-tab="kinerja" role="tab" aria-selected="false">Progress Pendataan</button>
@@ -469,6 +478,7 @@
                     <tfoot id="kabTableFoot"></tfoot>
                 </table>
             </div>
+            <p class="progress-note" id="progressNote" style="display:none;">Catatan : Obyek yang bayar setelah pendataan</p>
         </div>
     </div>
 </div>
@@ -592,9 +602,17 @@
         return ratioPct(row.bayar, row.tagihan);
     }
 
+    function progressSudahBayar(row) {
+        // Obyek yang bayar setelah pendataan
+        if (row.bayar_sesudah != null) {
+            return Number(row.bayar_sesudah) || 0;
+        }
+        return Number(row.bayar) || 0;
+    }
+
     function progressPendataanPct(row) {
-        // Tab "Progress Pendataan": sudah pendataan / potensi
-        return ratioPct(row.pendataan, row.tagihan);
+        // Success rate: sudah bayar / sudah pendataan * 100%
+        return ratioPct(progressSudahBayar(row), row.pendataan);
     }
 
     function successColor(pctVal) {
@@ -637,34 +655,48 @@
 
     function popupHtml(row, nama) {
         const vsPotensi = potensiBayarPct(row);
-        const progress = progressPendataanPct(row);
-        let html = '<strong>' + nama + '</strong>' +
+        const success = progressPendataanPct(row);
+        const sudahBayar = progressSudahBayar(row);
+        if (mapMode === 'kinerja') {
+            return '<strong>' + nama + '</strong>' +
+                '<br>Sudah Pendataan: ' + fmt(row.pendataan) +
+                '<br>Sudah Bayar: ' + fmt(sudahBayar) +
+                '<br>Success Rate: <strong>' + fmtPct(success, 1) + '</strong>';
+        }
+        return '<strong>' + nama + '</strong>' +
             '<br>Obyek Potensi: ' + fmt(row.tagihan) +
             '<br>Sudah Pendataan: ' + fmt(row.pendataan) +
-            '<br>Sudah Bayar: ' + fmt(row.bayar);
+            '<br>Sudah Bayar: ' + fmt(row.bayar) +
+            '<br>Potensi Pembayaran: <strong>' + fmtPct(vsPotensi, 1) + '</strong> (bayar / potensi)';
+    }
+
+    function syncPanelTitles() {
+        const mapTitle = document.getElementById('mapTitle');
+        const kabTitle = document.getElementById('kabTitle');
+        const note = document.getElementById('progressNote');
         if (mapMode === 'kinerja') {
-            html += '<br>Progress Pendataan: <strong>' + fmtPct(progress, 1) + '</strong> (pendataan / potensi)';
-        } else {
-            html += '<br>Potensi Pembayaran: <strong>' + fmtPct(vsPotensi, 1) + '</strong> (bayar / potensi)';
+            if (mapTitle) mapTitle.textContent = 'Peta Progress Pendataan';
+            if (kabTitle) kabTitle.textContent = 'Progress Pendataan';
+            if (note) note.style.display = '';
+            return;
         }
-        return html;
+        if (mapTitle) mapTitle.textContent = 'Peta Kab/Kota Jawa Tengah';
+        if (kabTitle) kabTitle.textContent = 'Ringkasan per Kab/Kota';
+        if (note) note.style.display = 'none';
     }
 
     function renderTableHead() {
         const thead = document.getElementById('kabTableHead');
         if (!thead) return;
         if (mapMode === 'kinerja') {
-            // Sama seperti popup map Progress Pendataan
             thead.innerHTML = '<tr>' +
-                '<th>Kab/Kota</th>' +
-                '<th>Obyek Potensi</th>' +
+                '<th>Kab / Kota</th>' +
                 '<th>Sudah Pendataan</th>' +
                 '<th>Sudah Bayar</th>' +
-                '<th>Progress Pendataan</th>' +
+                '<th>Success Rate</th>' +
                 '</tr>';
             return;
         }
-        // Sama seperti popup map Potensi Pembayaran
         thead.innerHTML = '<tr>' +
             '<th>Kab/Kota</th>' +
             '<th>Obyek Potensi</th>' +
@@ -680,6 +712,7 @@
             b.classList.toggle('active', on);
             b.setAttribute('aria-selected', on ? 'true' : 'false');
         });
+        syncPanelTitles();
     }
 
     function setMapMode(next) {
@@ -696,10 +729,39 @@
         const tfoot = document.getElementById('kabTableFoot');
         renderTableHead();
         if (!mapData.length) {
-            tbody.innerHTML = '<tr><td colspan="5">Tidak ada data</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="' + (mapMode === 'kinerja' ? 4 : 5) + '">Tidak ada data</td></tr>';
             tfoot.innerHTML = '';
             return;
         }
+
+        if (mapMode === 'kinerja') {
+            let totalPendataan = 0;
+            let totalBayar = 0;
+            const rows = mapData.slice().sort(function (a, b) {
+                return progressPendataanPct(b) - progressPendataanPct(a);
+            });
+            tbody.innerHTML = rows.map(function (row) {
+                const pendataan = Number(row.pendataan) || 0;
+                const bayar = progressSudahBayar(row);
+                const success = progressPendataanPct(row);
+                totalPendataan += pendataan;
+                totalBayar += bayar;
+                return '<tr>' +
+                    '<td><span class="dot" style="background:' + rowColor(row) + '"></span>' + row.nama + '</td>' +
+                    '<td>' + fmt(pendataan) + '</td>' +
+                    '<td>' + fmt(bayar) + '</td>' +
+                    '<td>' + fmtPct(success, 1) + '</td>' +
+                    '</tr>';
+            }).join('');
+            tfoot.innerHTML = '<tr>' +
+                '<td>Total</td>' +
+                '<td>' + fmt(totalPendataan) + '</td>' +
+                '<td>' + fmt(totalBayar) + '</td>' +
+                '<td>' + fmtPct(ratioPct(totalBayar, totalPendataan), 1) + '</td>' +
+                '</tr>';
+            return;
+        }
+
         let totalTagihan = 0;
         let totalPendataan = 0;
         let totalBayar = 0;
@@ -708,28 +770,23 @@
             const pendataan = Number(row.pendataan) || 0;
             const bayar = Number(row.bayar) || 0;
             const pctBayar = ratioPct(bayar, tagihan);
-            const pctPendataan = ratioPct(pendataan, tagihan);
             totalTagihan += tagihan;
             totalPendataan += pendataan;
             totalBayar += bayar;
-            const metricPct = mapMode === 'kinerja' ? pctPendataan : pctBayar;
             return '<tr>' +
                 '<td><span class="dot" style="background:' + rowColor(row) + '"></span>' + row.nama + '</td>' +
                 '<td>' + fmt(row.tagihan) + '</td>' +
                 '<td>' + fmt(row.pendataan) + '</td>' +
                 '<td>' + fmt(row.bayar) + '</td>' +
-                '<td>' + fmtPct(metricPct, 1) + '</td>' +
+                '<td>' + fmtPct(pctBayar, 1) + '</td>' +
                 '</tr>';
         }).join('');
-        const totalMetricPct = mapMode === 'kinerja'
-            ? ratioPct(totalPendataan, totalTagihan)
-            : ratioPct(totalBayar, totalTagihan);
         tfoot.innerHTML = '<tr>' +
             '<td>Total</td>' +
             '<td>' + fmt(totalTagihan) + '</td>' +
             '<td>' + fmt(totalPendataan) + '</td>' +
             '<td>' + fmt(totalBayar) + '</td>' +
-            '<td>' + fmtPct(totalMetricPct, 1) + '</td>' +
+            '<td>' + fmtPct(ratioPct(totalBayar, totalTagihan), 1) + '</td>' +
             '</tr>';
     }
 

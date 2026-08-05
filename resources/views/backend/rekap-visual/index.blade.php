@@ -415,7 +415,7 @@
             <h2>Pembayaran</h2>
             <div class="pay-grid">
                 <div class="money-box">
-                    <div class="title">Transaksi Terbayar</div>
+                    <div class="title">Nopol Terbayar (Unik)</div>
                     <div class="big" id="vTrx">…<span class="unit">Obyek</span></div>
                 </div>
                 <div class="money-box nominal">

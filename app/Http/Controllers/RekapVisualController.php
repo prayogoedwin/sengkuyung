@@ -67,7 +67,7 @@ class RekapVisualController extends Controller
 
     protected function cachePrefix(): string
     {
-        return 'admin:rekap-visual:v11:';
+        return 'admin:rekap-visual:v12:';
     }
 
     public function index(Request $request)
@@ -285,13 +285,12 @@ class RekapVisualController extends Controller
             ->selectRaw('nopol, MIN(DATE(created_at)) as tgl_pendataan')
             ->pluck('tgl_pendataan', 'nopol');
 
-        $jumlahTerbayar = 0;
         $nopolUnik = [];
+        $nopolBayarSebelum = [];
+        $nopolBayarSesudah = [];
+        $nopolTanpaPendataan = [];
         $nominalProvinsi = 0;
         $nominalOpsen = 0;
-        $sebelum = 0;
-        $sesudah = 0;
-        $tanpa = 0;
         $sebelumProv = 0;
         $sebelumOps = 0;
         $sesudahProv = 0;
@@ -300,7 +299,6 @@ class RekapVisualController extends Controller
         $tanpaOps = 0;
 
         foreach ($rows as $row) {
-            $jumlahTerbayar++;
             $nopol = (string) $row->nopol_;
             $nopolUnik[$nopol] = true;
 
@@ -313,25 +311,31 @@ class RekapVisualController extends Controller
             $tglBayar = $row->tgl_bayar ? substr((string) $row->tgl_bayar, 0, 10) : null;
 
             if ($tglPendataan === null || $tglPendataan === '') {
-                $tanpa++;
+                $nopolTanpaPendataan[$nopol] = true;
                 $tanpaProv += $prov;
                 $tanpaOps += $ops;
                 continue;
             }
 
             if ($tglBayar !== null && $tglBayar < $tglPendataan) {
-                $sebelum++;
+                $nopolBayarSebelum[$nopol] = true;
                 $sebelumProv += $prov;
                 $sebelumOps += $ops;
             } else {
-                $sesudah++;
+                $nopolBayarSesudah[$nopol] = true;
                 $sesudahProv += $prov;
                 $sesudahOps += $ops;
             }
         }
 
-        // "Sebelum pendataan" = bayar sebelum tgl pendataan + belum ada pendataan (sama seperti sebelumnya).
-        $sebelumTotal = $sebelum + $tanpa;
+        // Hitungan obyek selalu distinct per nopol. Jika satu nopol punya transaksi
+        // sebelum dan sesudah pendataan, obyek masuk kategori "sesudah" satu kali.
+        // Nominal tetap menjumlahkan seluruh transaksi sesuai kategorinya.
+        $jumlahTerbayar = count($nopolUnik);
+        $sesudah = count($nopolBayarSesudah);
+        $sebelumMurni = count(array_diff_key($nopolBayarSebelum, $nopolBayarSesudah));
+        $tanpa = count(array_diff_key($nopolTanpaPendataan, $nopolBayarSesudah));
+        $sebelumTotal = $sebelumMurni + $tanpa;
         $sebelumProvTotal = $sebelumProv + $tanpaProv;
         $sebelumOpsTotal = $sebelumOps + $tanpaOps;
         $sebelumNominalTotal = $sebelumProvTotal + $sebelumOpsTotal;
@@ -339,7 +343,7 @@ class RekapVisualController extends Controller
 
         return [
             'jumlah_terbayar' => $jumlahTerbayar,
-            'jumlah_nopol_bayar' => count($nopolUnik),
+            'jumlah_nopol_bayar' => $jumlahTerbayar,
             'nominal_provinsi' => $nominalProvinsi,
             'nominal_opsen' => $nominalOpsen,
             'nominal_total' => $nominalProvinsi + $nominalOpsen,
@@ -347,7 +351,7 @@ class RekapVisualController extends Controller
             'nominal_opsen_fmt' => MoneyShortFormatter::format($nominalOpsen),
             'nominal_total_fmt' => MoneyShortFormatter::format($nominalProvinsi + $nominalOpsen),
             'sebelum_pendataan' => $sebelumTotal,
-            'sebelum_pendataan_murni' => $sebelum,
+            'sebelum_pendataan_murni' => $sebelumMurni,
             'tanpa_pendataan' => $tanpa,
             'sesudah_pendataan' => $sesudah,
             'sebelum_pendataan_provinsi' => $sebelumProvTotal,

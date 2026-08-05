@@ -171,15 +171,15 @@
         .money-box.warn .big { color: var(--warn); }
         .money-box.good .big { color: var(--good); }
         .money-box.nominal {
-            display: grid;
-            grid-template-rows: auto 1fr;
-            gap: 2px;
+            display: flex;
+            align-items: center;
         }
         .nominal-row {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
             gap: 4px;
             align-items: end;
+            width: 100%;
         }
         .nominal-cell .k {
             font-size: clamp(0.78rem, 0.9vw, 0.9rem);
@@ -188,10 +188,11 @@
             letter-spacing: 0.02em;
         }
         .nominal-cell .v {
-            font-size: clamp(1.05rem, 1.35vw, 1.25rem);
-            font-weight: 700;
+            font-size: clamp(1.7rem, 2.3vw, 2.15rem);
+            font-weight: 800;
             color: var(--ink);
-            line-height: 1.2;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
         }
         .pay-lines {
             display: grid;
@@ -392,11 +393,11 @@
                     <div class="bar"><span id="bBelum" style="width:0%"></span></div>
                 </div>
                 <div>
-                    <div class="metric-row"><div class="label">Sudah Bayar (nopol)</div><div class="value" id="vBayarNopol">…</div></div>
+                    <div class="metric-row"><div class="label">Sudah Bayar</div><div class="value" id="vBayarNopol">…</div></div>
                     <div class="bar"><span id="bBayarNopol" style="width:0%"></span></div>
                 </div>
                 <div>
-                    <div class="metric-row"><div class="label">Belum Bayar (nopol)</div><div class="value" id="vBelumBayar">…</div></div>
+                    <div class="metric-row"><div class="label">Belum Bayar</div><div class="value" id="vBelumBayar">…</div></div>
                     <div class="bar"><span id="bBelumBayar" style="width:0%"></span></div>
                 </div>
             </div>
@@ -418,7 +419,6 @@
                     <div class="big" id="vTrx">…<span class="unit">Obyek</span></div>
                 </div>
                 <div class="money-box nominal">
-                    <div class="title">Nominal</div>
                     <div class="nominal-row">
                         <div class="nominal-cell"><div class="k">Provinsi</div><div class="v" id="vNomProv">…</div></div>
                         <div class="nominal-cell"><div class="k">Opsen</div><div class="v" id="vNomOps">…</div></div>

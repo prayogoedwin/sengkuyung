@@ -84,7 +84,7 @@
 
         .rv-mid {
             display: grid;
-            grid-template-columns: 1.15fr 0.9fr 1.35fr;
+            grid-template-columns: 1.15fr 0.7fr 1.55fr;
             gap: 8px;
             min-height: 0;
         }

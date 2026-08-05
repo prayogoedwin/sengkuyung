@@ -779,11 +779,14 @@
         let totalTagihan = 0;
         let totalPendataan = 0;
         let totalBayar = 0;
-        tbody.innerHTML = mapData.map(function (row) {
+        const rows = mapData.slice().sort(function (a, b) {
+            return potensiBayarPct(b) - potensiBayarPct(a);
+        });
+        tbody.innerHTML = rows.map(function (row) {
             const tagihan = Number(row.tagihan) || 0;
             const pendataan = Number(row.pendataan) || 0;
             const bayar = Number(row.bayar) || 0;
-            const pctBayar = ratioPct(bayar, tagihan);
+            const pctBayar = potensiBayarPct(row);
             totalTagihan += tagihan;
             totalPendataan += pendataan;
             totalBayar += bayar;

@@ -67,7 +67,7 @@ class RekapVisualController extends Controller
 
     protected function cachePrefix(): string
     {
-        return 'admin:rekap-visual:v10:';
+        return 'admin:rekap-visual:v11:';
     }
 
     public function index(Request $request)
@@ -493,6 +493,7 @@ class RekapVisualController extends Controller
             $pendataan = min($tagihan, $pendataanByKab[$kabId] ?? 0);
             $bayar = min($tagihan, $bayarByKab[$kabId] ?? 0);
             $bayarSesudah = min($pendataan, $bayarSesudahByKab[$kabId] ?? 0);
+            $bayarPct = $tagihan > 0 ? round(($bayar / $tagihan) * 100, 2) : 0.0;
             $sisa = max(0, $tagihan - $bayar);
             $sisaPct = $tagihan > 0 ? round(($sisa / $tagihan) * 100, 2) : 100.0;
             $successRate = $pendataan > 0
@@ -509,13 +510,14 @@ class RekapVisualController extends Controller
                 'bayar' => $bayar,
                 'bayar_sesudah' => $bayarSesudah,
                 'success_rate' => $successRate,
+                'bayar_pct' => $bayarPct,
                 'sisa' => $sisa,
                 'sisa_pct' => $sisaPct,
                 'color' => $this->sisaColor($sisaPct),
             ];
         }
 
-        usort($out, static fn ($a, $b) => $b['sisa_pct'] <=> $a['sisa_pct']);
+        usort($out, static fn ($a, $b) => $b['bayar_pct'] <=> $a['bayar_pct']);
 
         return $out;
     }

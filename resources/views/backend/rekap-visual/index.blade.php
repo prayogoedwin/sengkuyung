@@ -134,7 +134,7 @@
 
         .pay-grid {
             display: grid;
-            grid-template-columns: 0.85fr 1.35fr;
+            grid-template-columns: 0.7fr 1.5fr;
             grid-template-rows: auto auto auto;
             gap: 6px;
             flex: 1;

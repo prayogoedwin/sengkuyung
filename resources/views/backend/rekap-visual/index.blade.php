@@ -134,7 +134,7 @@
 
         .pay-grid {
             display: grid;
-            grid-template-columns: 0.7fr 1.5fr;
+            grid-template-columns: 0.85fr 1.35fr;
             grid-template-rows: auto auto auto;
             gap: 6px;
             flex: 1;
@@ -156,11 +156,11 @@
             font-weight: 600;
         }
         .money-box .big {
-            font-size: clamp(1.2rem, 1.55vw, 1.45rem);
-            font-weight: 700;
+            font-size: clamp(1.7rem, 2.3vw, 2.15rem);
+            font-weight: 800;
             margin: 1px 0 0;
             color: var(--accent-2);
-            line-height: 1.15;
+            line-height: 1;
         }
         .money-box .big .unit {
             font-size: clamp(0.88rem, 1.05vw, 1.02rem);
@@ -188,7 +188,7 @@
             letter-spacing: 0.02em;
         }
         .nominal-cell .v {
-            font-size: clamp(1.7rem, 2.3vw, 2.15rem);
+            font-size: clamp(1.55rem, 2.05vw, 1.9rem);
             font-weight: 800;
             color: var(--ink);
             line-height: 1;

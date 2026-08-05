@@ -188,11 +188,12 @@
             letter-spacing: 0.02em;
         }
         .nominal-cell .v {
-            font-size: clamp(1.55rem, 2.05vw, 1.9rem);
+            font-size: clamp(1.3rem, 1.7vw, 1.6rem);
             font-weight: 800;
             color: var(--ink);
             line-height: 1;
             font-variant-numeric: tabular-nums;
+            white-space: nowrap;
         }
         .pay-lines {
             display: grid;

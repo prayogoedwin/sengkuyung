@@ -83,7 +83,7 @@ class RekapVisualFilterController extends Controller
 
     protected function cacheNamespace(): string
     {
-        return 'rvf:standalone:v2:reguler:';
+        return 'rvf:standalone:v3:reguler:';
     }
 
     public function index(Request $request)
@@ -126,7 +126,7 @@ class RekapVisualFilterController extends Controller
                 return response()->json(['success' => false, 'message' => 'kabkota_id wajib.'], 422);
             }
 
-            $lokasiIds = SengSaamsat::lokasiFilterVariantsByKabkota($kabkotaId);
+            $lokasiIds = $this->lokasiIdsForKabkota($kabkotaId);
             if ($lokasiIds === []) {
                 return response()->json(['success' => true, 'items' => []]);
             }
@@ -422,7 +422,7 @@ class RekapVisualFilterController extends Controller
         };
 
         if ($filters['kabkota_id'] !== '') {
-            $lokasiIds = SengSaamsat::lokasiFilterVariantsByKabkota($filters['kabkota_id']);
+            $lokasiIds = $this->lokasiIdsForKabkota($filters['kabkota_id']);
             if ($lokasiIds === []) {
                 $query->whereRaw('1 = 0');
 
@@ -438,6 +438,83 @@ class RekapVisualFilterController extends Controller
         if ($filters['kelurahan_id'] !== '') {
             $query->whereIn($col('id_kelurahan'), $this->codeVariants($filters['kelurahan_id']));
         }
+    }
+
+    /**
+     * Lokasi samsat untuk satu kabkota — sama dengan mapping yang dipakai ringkasan/map,
+     * supaya filter Kab tidak "kosong" padahal baris Kab itu ada di tampilan seluruh Provinsi.
+     *
+     * @return list<string>
+     */
+    protected function lokasiIdsForKabkota(string $kabkotaId): array
+    {
+        $kabkotaId = trim($kabkotaId);
+        if ($kabkotaId === '') {
+            return [];
+        }
+
+        $kabVariants = $this->codeVariants($kabkotaId);
+        $ids = [];
+
+        foreach ($kabVariants as $kabVariant) {
+            foreach (SengSaamsat::lokasiFilterVariantsByKabkota($kabVariant) as $lokasiId) {
+                $ids[] = (string) $lokasiId;
+            }
+        }
+
+        // Invert mapping yang sama dengan breakdownByKabkota / map.
+        foreach ($this->buildLokasiToKabkotaMap() as $lokasi => $kabId) {
+            $kabId = trim((string) $kabId);
+            if ($kabId === $kabkotaId || in_array($kabId, $kabVariants, true)) {
+                foreach ($this->codeVariants((string) $lokasi) as $variant) {
+                    $ids[] = $variant;
+                }
+            }
+        }
+
+        // Cadangan: kecamatan master yang punya kode_dagri_kota = kab terpilih.
+        $kecLokasi = DB::table('wilayah_samsat_kec')
+            ->where(function ($q) use ($kabkotaId, $kabVariants) {
+                $q->whereIn('kode_dagri_kota', $kabVariants)
+                    ->orWhere('kode_dagri_kota', $kabkotaId);
+            })
+            ->pluck('id_lokasi_samsat');
+        foreach ($kecLokasi as $lokasi) {
+            foreach ($this->codeVariants((string) $lokasi) as $variant) {
+                $ids[] = $variant;
+            }
+        }
+
+        return array_values(array_unique(array_filter($ids, static fn ($v) => trim((string) $v) !== '')));
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function buildLokasiToKabkotaMap(): array
+    {
+        static $map = null;
+        if (is_array($map)) {
+            return $map;
+        }
+
+        $map = [];
+        foreach (SengSaamsat::query()->get(['id', 'id_wilayah_samsat', 'kabkota']) as $samsat) {
+            $kabId = trim((string) $samsat->kabkota);
+            if ($kabId === '') {
+                continue;
+            }
+            foreach ([(string) ($samsat->id ?? ''), (string) ($samsat->id_wilayah_samsat ?? '')] as $seed) {
+                if ($seed === '') {
+                    continue;
+                }
+                foreach ($this->codeVariants($seed) as $variant) {
+                    $map[$variant] = $kabId;
+                }
+            }
+        }
+
+        return $map;
     }
 
     /**
@@ -638,21 +715,7 @@ class RekapVisualFilterController extends Controller
         $year = $filters['year'];
         $kabkotas = SengWilayah::query()->where('id_up', 33)->get(['id', 'nama']);
 
-        $lokasiToKabkota = [];
-        foreach (SengSaamsat::query()->get(['id', 'id_wilayah_samsat', 'kabkota']) as $samsat) {
-            $kabId = (string) $samsat->kabkota;
-            if ($kabId === '') {
-                continue;
-            }
-            foreach ([(string) ($samsat->id ?? ''), (string) ($samsat->id_wilayah_samsat ?? '')] as $seed) {
-                if ($seed === '') {
-                    continue;
-                }
-                foreach ($this->codeVariants($seed) as $variant) {
-                    $lokasiToKabkota[$variant] = $kabId;
-                }
-            }
-        }
+        $lokasiToKabkota = $this->buildLokasiToKabkotaMap();
 
         $tagihanByLokasi = DB::table($tertagihTable)
             ->where('year', $year)
@@ -1069,7 +1132,7 @@ class RekapVisualFilterController extends Controller
         $parts = [];
 
         if ($filters['kabkota_id'] !== '') {
-            $lokasiIds = SengSaamsat::lokasiFilterVariantsByKabkota($filters['kabkota_id']);
+            $lokasiIds = $this->lokasiIdsForKabkota($filters['kabkota_id']);
             if ($lokasiIds === []) {
                 return ' AND 1 = 0';
             }

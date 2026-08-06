@@ -64,6 +64,6 @@ class RekapVisualFilterD2dController extends RekapVisualFilterController
 
     protected function cacheNamespace(): string
     {
-        return 'rvf:standalone:v2:d2d:';
+        return 'rvf:standalone:v3:d2d:';
     }
 }

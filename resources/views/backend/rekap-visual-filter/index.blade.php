@@ -33,9 +33,10 @@
                 linear-gradient(165deg, #e8eef5 0%, #d7e5ea 45%, #c9d8e0 100%);
         }
         .wrap { max-width: 1400px; margin: 0 auto; padding: 14px 16px 28px; display: grid; gap: 12px; }
-        .top { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: flex-start; }
-        .brand h1 { margin: 4px 0 0; font-size: clamp(1.2rem, 2vw, 1.7rem); }
-        .meta { color: var(--muted); font-size: 0.95rem; }
+        .top { display: flex; flex-wrap: wrap; gap: 10px 16px; justify-content: space-between; align-items: flex-start; }
+        .brand { min-width: 0; flex: 1 1 320px; }
+        .brand h1 { margin: 4px 0 6px; font-size: clamp(1.2rem, 2vw, 1.7rem); line-height: 1.2; }
+        .meta { color: var(--muted); font-size: 0.95rem; margin-top: 4px; }
         .meta .retry-link,
         .retry-link {
             margin-left: 8px;
@@ -49,7 +50,10 @@
             font: inherit;
         }
         .back-link { color: var(--muted); text-decoration: none; font-size: 0.9rem; }
-        .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; max-width: 100%; }
+        .actions {
+            display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+            justify-content: flex-end; flex: 0 1 auto;
+        }
         .actions a, .actions select, .actions button {
             border: 1px solid var(--line); background: var(--panel); color: var(--ink);
             border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 0.92rem; text-decoration: none; cursor: pointer;
@@ -57,23 +61,30 @@
         .actions a.active { background: var(--ink); color: #fff; border-color: var(--ink); }
         .actions button:disabled,
         .actions select:disabled { opacity: 0.55; cursor: wait; }
-        .actions select.filter-select {
-            max-width: 180px;
-            min-width: 132px;
-            padding-right: 28px;
-            white-space: nowrap;
-            text-overflow: ellipsis;
+
+        .title-filters {
+            display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+            margin-top: 2px;
         }
-        .actions select.filter-select.wide { max-width: 200px; min-width: 150px; }
-        .actions button.primary {
+        .title-filters .badge { margin-left: 0; }
+        .title-filters select,
+        .title-filters button {
+            border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+            border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 0.86rem; cursor: pointer;
+        }
+        .title-filters select {
+            max-width: 168px; min-width: 118px;
+            white-space: nowrap; text-overflow: ellipsis;
+        }
+        .title-filters select.wide { max-width: 190px; min-width: 140px; }
+        .title-filters select:disabled { opacity: 0.55; cursor: wait; }
+        .title-filters button:disabled { opacity: 0.55; cursor: wait; }
+        .title-filters button.primary {
             background: var(--ink); color: #fff; border-color: var(--ink);
         }
-        .actions button.primary.is-loading {
+        .title-filters button.primary.is-loading {
             background: #334155;
-            min-width: 118px;
-        }
-        .actions .sep {
-            width: 1px; height: 22px; background: var(--line); margin: 0 2px;
+            min-width: 108px;
         }
 
         .mid { display: grid; grid-template-columns: 1.1fr 0.75fr 1.35fr; gap: 10px; }
@@ -160,20 +171,19 @@
         .muted { color: var(--muted); }
         .err { color: #b91c1c; }
         .badge {
-            display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px;
+            display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px;
             background: rgba(13,148,136,0.12); color: var(--accent); font-size: 0.75rem; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 0.03em; vertical-align: middle;
+            text-transform: uppercase; letter-spacing: 0.03em; vertical-align: middle; white-space: nowrap;
         }
 
         @media (max-width: 1100px) {
             .mid, .panels { grid-template-columns: 1fr; }
             #rvMap { min-height: 260px; }
-            .actions select.filter-select { max-width: 160px; min-width: 120px; }
         }
         @media (max-width: 700px) {
             .pay-grid { grid-template-columns: 1fr; }
-            .actions { justify-content: flex-start; }
-            .actions select.filter-select { max-width: none; min-width: 0; width: calc(50% - 8px); flex: 1 1 140px; }
+            .actions { justify-content: flex-start; width: 100%; }
+            .title-filters select { max-width: none; min-width: 0; flex: 1 1 140px; }
         }
     </style>
 </head>
@@ -182,7 +192,24 @@
     <div class="top">
         <div class="brand">
             <a class="back-link" href="{{ route('dashboard') }}">← Dashboard</a>
-            <h1>{{ $pageTitle }} · {{ $year }} <span class="badge">uji filter</span></h1>
+            <h1>{{ $pageTitle }} · {{ $year }}</h1>
+            <div class="title-filters">
+                <span class="badge">uji filter</span>
+                <select id="fKabkota" class="wide" title="Kab/Kota">
+                    <option value="">Seluruh Provinsi</option>
+                    @foreach ($kabkotas as $kab)
+                        <option value="{{ $kab->id }}">{{ $kab->nama }}</option>
+                    @endforeach
+                </select>
+                <select id="fKecamatan" title="Kecamatan" disabled>
+                    <option value="">Semua Kecamatan</option>
+                </select>
+                <select id="fKelurahan" title="Kelurahan" disabled>
+                    <option value="">Semua Kelurahan</option>
+                </select>
+                <button type="button" class="primary" id="btnApply">Terapkan</button>
+                <button type="button" id="btnReset">Reset</button>
+            </div>
             <div class="meta" id="rvMeta">Channel {{ $channelLabel }} · Siap memuat…</div>
         </div>
         <div class="actions">
@@ -196,21 +223,6 @@
                     @endfor
                 </select>
             </form>
-            <span class="sep" aria-hidden="true"></span>
-            <select id="fKabkota" class="filter-select wide" title="Kab/Kota">
-                <option value="">Seluruh Provinsi</option>
-                @foreach ($kabkotas as $kab)
-                    <option value="{{ $kab->id }}">{{ $kab->nama }}</option>
-                @endforeach
-            </select>
-            <select id="fKecamatan" class="filter-select" title="Kecamatan" disabled>
-                <option value="">Semua Kecamatan</option>
-            </select>
-            <select id="fKelurahan" class="filter-select" title="Kelurahan" disabled>
-                <option value="">Semua Kelurahan</option>
-            </select>
-            <button type="button" class="primary" id="btnApply">Terapkan</button>
-            <button type="button" id="btnReset">Reset</button>
             <button type="button" id="btnReload">Muat Ulang</button>
         </div>
     </div>

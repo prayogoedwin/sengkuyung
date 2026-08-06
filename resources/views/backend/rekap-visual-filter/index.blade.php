@@ -49,39 +49,31 @@
             font: inherit;
         }
         .back-link { color: var(--muted); text-decoration: none; font-size: 0.9rem; }
-        .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; max-width: 100%; }
         .actions a, .actions select, .actions button {
             border: 1px solid var(--line); background: var(--panel); color: var(--ink);
-            border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 0.95rem; text-decoration: none; cursor: pointer;
+            border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 0.92rem; text-decoration: none; cursor: pointer;
         }
         .actions a.active { background: var(--ink); color: #fff; border-color: var(--ink); }
-        .actions button:disabled { opacity: 0.55; cursor: wait; }
-
-        .filters {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(140px, 1fr)) auto;
-            gap: 8px;
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            padding: 10px 12px;
-            align-items: end;
+        .actions button:disabled,
+        .actions select:disabled { opacity: 0.55; cursor: wait; }
+        .actions select.filter-select {
+            max-width: 180px;
+            min-width: 132px;
+            padding-right: 28px;
+            white-space: nowrap;
+            text-overflow: ellipsis;
         }
-        .filters label { display: grid; gap: 4px; font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
-        .filters select {
-            width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
-            font: inherit; background: #fff; color: var(--ink);
+        .actions select.filter-select.wide { max-width: 200px; min-width: 150px; }
+        .actions button.primary {
+            background: var(--ink); color: #fff; border-color: var(--ink);
         }
-        .filters .filter-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-        .filters .filter-actions button {
-            border: 1px solid var(--line); background: var(--ink); color: #fff;
-            border-radius: 999px; padding: 8px 14px; font: inherit; cursor: pointer;
-        }
-        .filters .filter-actions button.ghost { background: #fff; color: var(--ink); }
-        .filters .filter-actions button.is-loading {
+        .actions button.primary.is-loading {
             background: #334155;
-            cursor: wait;
-            min-width: 140px;
+            min-width: 118px;
+        }
+        .actions .sep {
+            width: 1px; height: 22px; background: var(--line); margin: 0 2px;
         }
 
         .mid { display: grid; grid-template-columns: 1.1fr 0.75fr 1.35fr; gap: 10px; }
@@ -175,12 +167,13 @@
 
         @media (max-width: 1100px) {
             .mid, .panels { grid-template-columns: 1fr; }
-            .filters { grid-template-columns: 1fr 1fr; }
             #rvMap { min-height: 260px; }
+            .actions select.filter-select { max-width: 160px; min-width: 120px; }
         }
         @media (max-width: 700px) {
-            .filters { grid-template-columns: 1fr; }
             .pay-grid { grid-template-columns: 1fr; }
+            .actions { justify-content: flex-start; }
+            .actions select.filter-select { max-width: none; min-width: 0; width: calc(50% - 8px); flex: 1 1 140px; }
         }
     </style>
 </head>
@@ -203,33 +196,22 @@
                     @endfor
                 </select>
             </form>
-            <button type="button" id="btnReload">Muat Ulang</button>
-        </div>
-    </div>
-
-    <div class="filters">
-        <label>Kab/Kota
-            <select id="fKabkota">
+            <span class="sep" aria-hidden="true"></span>
+            <select id="fKabkota" class="filter-select wide" title="Kab/Kota">
                 <option value="">Seluruh Provinsi</option>
                 @foreach ($kabkotas as $kab)
                     <option value="{{ $kab->id }}">{{ $kab->nama }}</option>
                 @endforeach
             </select>
-        </label>
-        <label>Kecamatan
-            <select id="fKecamatan" disabled>
-                <option value="">Pilih Kab/Kota dulu</option>
+            <select id="fKecamatan" class="filter-select" title="Kecamatan" disabled>
+                <option value="">Semua Kecamatan</option>
             </select>
-        </label>
-        <label>Kelurahan
-            <select id="fKelurahan" disabled>
-                <option value="">Pilih Kecamatan dulu</option>
+            <select id="fKelurahan" class="filter-select" title="Kelurahan" disabled>
+                <option value="">Semua Kelurahan</option>
             </select>
-        </label>
-        <label style="visibility:hidden">spacer<select disabled></select></label>
-        <div class="filter-actions">
-            <button type="button" id="btnApply">Terapkan</button>
-            <button type="button" class="ghost" id="btnReset">Reset</button>
+            <button type="button" class="primary" id="btnApply">Terapkan</button>
+            <button type="button" id="btnReset">Reset</button>
+            <button type="button" id="btnReload">Muat Ulang</button>
         </div>
     </div>
 
@@ -536,7 +518,7 @@
 
     async function loadKecamatan() {
         resetSelect(elKec, 'Semua Kecamatan', !!elKab.value);
-        resetSelect(elKel, 'Pilih Kecamatan dulu', false);
+        resetSelect(elKel, 'Semua Kelurahan', false);
         if (!elKab.value) return;
         const p = new URLSearchParams({ level: 'kecamatan', kabkota_id: elKab.value });
         const data = await fetchJson(optionsUrl + '?' + p.toString());
@@ -943,8 +925,8 @@
     document.getElementById('btnReload').addEventListener('click', function () { loadAll(true); });
     document.getElementById('btnReset').addEventListener('click', function () {
         elKab.value = '';
-        resetSelect(elKec, 'Pilih Kab/Kota dulu', false);
-        resetSelect(elKel, 'Pilih Kecamatan dulu', false);
+        resetSelect(elKec, 'Semua Kecamatan', false);
+        resetSelect(elKel, 'Semua Kelurahan', false);
         loadAll(false);
     });
 

@@ -35,8 +35,15 @@
         .wrap { max-width: 1400px; margin: 0 auto; padding: 14px 16px 28px; display: grid; gap: 12px; }
         .top { display: flex; flex-wrap: wrap; gap: 10px 16px; justify-content: space-between; align-items: flex-start; }
         .brand { min-width: 0; flex: 1 1 320px; }
-        .brand h1 { margin: 4px 0 0; font-size: clamp(1.15rem, 1.9vw, 1.65rem); line-height: 1.2; white-space: nowrap; }
-        .meta { color: var(--muted); font-size: 0.95rem; margin-top: 6px; }
+        .brand h1 {
+            margin: 0;
+            font-size: clamp(0.95rem, 1.15vw, 1.15rem);
+            line-height: 1.2;
+            white-space: nowrap;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+        }
+        .meta { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
         .meta .retry-link,
         .retry-link {
             margin-left: 8px;
@@ -63,20 +70,21 @@
         .actions select:disabled { opacity: 0.55; cursor: wait; }
 
         .title-row {
-            display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center;
-            margin-top: 4px;
+            display: flex; flex-wrap: nowrap; gap: 6px 8px; align-items: center;
+            margin-top: 4px; min-width: 0; overflow-x: auto;
         }
-        .title-row h1 { margin: 0; }
+        .title-row h1 { margin: 0; flex: 0 0 auto; }
         .title-row select,
         .title-row button {
             border: 1px solid var(--line); background: var(--panel); color: var(--ink);
-            border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 0.86rem; cursor: pointer;
+            border-radius: 999px; padding: 5px 11px; font: inherit; font-size: 0.84rem; cursor: pointer;
+            flex: 0 0 auto;
         }
         .title-row select {
-            max-width: 168px; min-width: 118px;
+            max-width: 150px; min-width: 110px;
             white-space: nowrap; text-overflow: ellipsis;
         }
-        .title-row select.wide { max-width: 190px; min-width: 140px; }
+        .title-row select.wide { max-width: 170px; min-width: 128px; }
         .title-row select:disabled,
         .title-row button:disabled { opacity: 0.55; cursor: wait; }
         .title-row button.primary {
@@ -174,6 +182,7 @@
         @media (max-width: 1100px) {
             .mid, .panels { grid-template-columns: 1fr; }
             #rvMap { min-height: 260px; }
+            .title-row { flex-wrap: wrap; }
             .brand h1 { white-space: normal; }
         }
         @media (max-width: 700px) {

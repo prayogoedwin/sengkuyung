@@ -36,6 +36,18 @@
         .top { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: flex-start; }
         .brand h1 { margin: 4px 0 0; font-size: clamp(1.2rem, 2vw, 1.7rem); }
         .meta { color: var(--muted); font-size: 0.95rem; }
+        .meta .retry-link,
+        .retry-link {
+            margin-left: 8px;
+            color: var(--accent-2);
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
+            background: none;
+            border: 0;
+            padding: 0;
+            font: inherit;
+        }
         .back-link { color: var(--muted); text-decoration: none; font-size: 0.9rem; }
         .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
         .actions a, .actions select, .actions button {
@@ -341,6 +353,8 @@
     let mapKabkotaRows = [];
     let lastStats = null;
     let loading = false;
+    let loadSeq = 0;
+    let activeControllers = [];
     let geoLayer = null;
     let geojsonCache = null;
     let fallbackMarkers = [];
@@ -391,10 +405,86 @@
         if (level === 'kelurahan') return 'Ringkasan per Kelurahan';
         return 'Ringkasan per Kab/Kota';
     }
-    function setMeta(text, isErr) {
+    function setMeta(html, isErr) {
         const el = document.getElementById('rvMeta');
-        el.textContent = text;
+        if (!el) return;
+        el.innerHTML = html;
         el.className = 'meta' + (isErr ? ' err' : '');
+    }
+    function abortActiveLoads() {
+        activeControllers.forEach(function (c) {
+            try { c.abort(); } catch (e) {}
+        });
+        activeControllers = [];
+    }
+    function sleep(ms) {
+        return new Promise(function (resolve) { setTimeout(resolve, ms); });
+    }
+    function isRetryableHttp(status) {
+        return status === 408 || status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+    }
+    function fetchJsonWithRetry(url, label, signal, attempts) {
+        const maxAttempts = attempts == null ? 3 : attempts;
+
+        function attempt(n) {
+            if (signal && signal.aborted) {
+                return Promise.reject(Object.assign(new Error('Dibatalkan'), { name: 'AbortError' }));
+            }
+            if (n > 1) {
+                setMeta(
+                    'Channel ' + channelLabel +
+                    ' · Mengulang ' + label + ' (' + n + '/' + maxAttempts + ')…'
+                );
+                if (btnApply) {
+                    btnApply.classList.add('is-loading');
+                    btnApply.textContent = 'Mengulang…';
+                }
+            }
+            return fetch(url, {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+                signal: signal,
+                cache: 'no-store',
+            }).then(function (r) {
+                if (!r.ok) {
+                    const err = new Error(label.toUpperCase() + ' HTTP ' + r.status);
+                    err.status = r.status;
+                    err.retryable = isRetryableHttp(r.status);
+                    throw err;
+                }
+                return r.json();
+            }).catch(function (err) {
+                if (err && err.name === 'AbortError') throw err;
+                const retryable = !err.status || err.retryable === true || isRetryableHttp(err.status);
+                if (n < maxAttempts && retryable) {
+                    return sleep(700 * n).then(function () { return attempt(n + 1); });
+                }
+                throw err;
+            });
+        }
+
+        return attempt(1);
+    }
+    function showRetryHint(message) {
+        setMeta(
+            '<span class="err">' + message + '</span> ' +
+            '<button type="button" class="retry-link" id="btnRetryNow">Coba lagi</button>',
+            true
+        );
+        const btn = document.getElementById('btnRetryNow');
+        if (btn) btn.addEventListener('click', function () { loadAll(true); });
+    }
+    function ensureMapLoadingOverlay(text) {
+        const mapEl = document.getElementById('rvMap');
+        if (!mapEl) return;
+        let loadingEl = document.getElementById('rvMapLoading');
+        if (!loadingEl) {
+            loadingEl = document.createElement('div');
+            loadingEl.id = 'rvMapLoading';
+            loadingEl.style.cssText = 'padding:12px;color:#64748b;font-size:1rem;';
+            mapEl.insertBefore(loadingEl, mapEl.firstChild);
+        }
+        loadingEl.textContent = text || 'Memuat peta…';
     }
     function setLoading(on) {
         loading = on;
@@ -415,19 +505,23 @@
             document.getElementById('tableTitle').textContent = levelTitle(expectedLevel());
             document.getElementById('tableBody').innerHTML = '<tr><td class="muted">Sedang memuat data filter…</td></tr>';
             document.getElementById('tableFoot').innerHTML = '';
+            ensureMapLoadingOverlay('Memuat peta…');
         } else {
             btnApply.classList.remove('is-loading');
             btnApply.textContent = btnApplyDefault;
         }
     }
 
-    async function fetchJson(url) {
-        const res = await fetch(url, {
+    function fetchJson(url, signal) {
+        return fetch(url, {
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             credentials: 'same-origin',
+            signal: signal,
+            cache: 'no-store',
+        }).then(function (res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
         });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
     }
 
     function resetSelect(sel, placeholder, enabled) {
@@ -755,58 +849,103 @@
             '</td><td>' + fmt(totalBayar) + '</td><td>' + fmtPct(ratioPct(totalBayar, totalTagihan), 2) + '</td></tr>';
     }
 
-    async function loadAll() {
-        if (loading) return;
+    async function loadAll(force) {
+        abortActiveLoads();
+        const seq = ++loadSeq;
         setLoading(true);
-        setMeta('Channel ' + channelLabel + ' · Memuat data filter…');
-        try {
-            const qs = filterParams().toString();
-            const requests = [
-                fetchJson(statsUrl + '?' + qs),
-                fetchJson(breakdownUrl + '?' + qs),
-            ];
-            if (!mapKabkotaRows.length) {
-                requests.push(fetchJson(mapUrl + '?year=' + year));
-            }
-            const results = await Promise.all(requests);
-            const stats = results[0];
-            const breakdown = results[1];
-            if (results[2]) {
-                mapKabkotaRows = results[2].mapKabkota || [];
-            }
-            renderStats(stats);
-            breakdownRows = breakdown.rows || [];
-            breakdownLevel = breakdown.level || expectedLevel();
-            renderTable();
+        setMeta('Channel ' + channelLabel + ' · Memuat statistik, ringkasan & peta…');
+
+        const qs = filterParams().toString();
+        const statsCtrl = new AbortController();
+        const breakdownCtrl = new AbortController();
+        const mapCtrl = new AbortController();
+        const needMap = force === true || !mapKabkotaRows.length;
+        activeControllers = needMap
+            ? [statsCtrl, breakdownCtrl, mapCtrl]
+            : [statsCtrl, breakdownCtrl];
+
+        let statsOk = false;
+        let breakdownOk = false;
+        let mapOk = !needMap;
+
+        const statsPromise = fetchJsonWithRetry(statsUrl + '?' + qs, 'stats', statsCtrl.signal, 3)
+            .then(function (payload) {
+                if (seq !== loadSeq) return;
+                renderStats(payload);
+                statsOk = true;
+            })
+            .catch(function (err) {
+                if (seq !== loadSeq || (err && err.name === 'AbortError')) return;
+                showRetryHint('Gagal memuat statistik (' + (err && err.message ? err.message : 'error') + ').');
+            });
+
+        const breakdownPromise = fetchJsonWithRetry(breakdownUrl + '?' + qs, 'ringkasan', breakdownCtrl.signal, 3)
+            .then(function (payload) {
+                if (seq !== loadSeq) return;
+                breakdownRows = payload.rows || [];
+                breakdownLevel = payload.level || expectedLevel();
+                renderTable();
+                breakdownOk = true;
+            })
+            .catch(function (err) {
+                if (seq !== loadSeq || (err && err.name === 'AbortError')) return;
+                document.getElementById('tableBody').innerHTML =
+                    '<tr><td class="err">Gagal memuat ringkasan (' +
+                    (err && err.message ? err.message : 'error') +
+                    '). <button type="button" class="retry-link" id="btnRetryBreakdown">Coba lagi</button></td></tr>';
+                const b = document.getElementById('btnRetryBreakdown');
+                if (b) b.addEventListener('click', function () { loadAll(true); });
+            });
+
+        const mapPromise = needMap
+            ? fetchJsonWithRetry(mapUrl + '?year=' + year, 'map', mapCtrl.signal, 3)
+                .then(function (payload) {
+                    if (seq !== loadSeq) return;
+                    mapKabkotaRows = payload.mapKabkota || [];
+                    mapOk = true;
+                })
+                .catch(function (err) {
+                    if (seq !== loadSeq || (err && err.name === 'AbortError')) return;
+                    ensureMapLoadingOverlay('Gagal memuat peta. Klik Muat Ulang / Coba lagi.');
+                    mapOk = false;
+                })
+            : Promise.resolve();
+
+        await Promise.allSettled([statsPromise, breakdownPromise, mapPromise]);
+        if (seq !== loadSeq) return;
+
+        if (statsOk || breakdownOk || mapOk) {
             paintMap();
-            setMeta('Channel ' + channelLabel + ' · Diperbarui ' + (stats.refreshedAt || ''));
-        } catch (err) {
-            setMeta('Gagal memuat data: ' + (err && err.message ? err.message : 'error'), true);
-            document.getElementById('tableBody').innerHTML = '<tr><td class="err">Gagal memuat</td></tr>';
-        } finally {
-            setLoading(false);
         }
+        if (statsOk && breakdownOk) {
+            const refreshed = (lastStats && lastStats.refreshedAt) ? lastStats.refreshedAt : '';
+            setMeta('Channel ' + channelLabel + ' · Diperbarui ' + refreshed);
+        } else if (!document.getElementById('btnRetryNow')) {
+            showRetryHint('Sebagian data gagal dimuat. Coba lagi.');
+        }
+        setLoading(false);
+        activeControllers = [];
     }
 
     elKab.addEventListener('change', function () {
         loadKecamatan()
             .catch(function () { resetSelect(elKec, 'Gagal memuat kecamatan', false); })
-            .finally(function () { loadAll(); });
+            .finally(function () { loadAll(false); });
     });
     elKec.addEventListener('change', function () {
         loadKelurahan()
             .catch(function () { resetSelect(elKel, 'Gagal memuat kelurahan', false); })
-            .finally(function () { loadAll(); });
+            .finally(function () { loadAll(false); });
     });
-    elKel.addEventListener('change', function () { loadAll(); });
+    elKel.addEventListener('change', function () { loadAll(false); });
 
-    btnApply.addEventListener('click', loadAll);
-    document.getElementById('btnReload').addEventListener('click', loadAll);
+    btnApply.addEventListener('click', function () { loadAll(false); });
+    document.getElementById('btnReload').addEventListener('click', function () { loadAll(true); });
     document.getElementById('btnReset').addEventListener('click', function () {
         elKab.value = '';
         resetSelect(elKec, 'Pilih Kab/Kota dulu', false);
         resetSelect(elKel, 'Pilih Kecamatan dulu', false);
-        loadAll();
+        loadAll(false);
     });
 
     document.querySelectorAll('.tabs button').forEach(function (btn) {
@@ -820,7 +959,7 @@
         });
     });
 
-    loadAll();
+    loadAll(true);
 })();
 </script>
 </body>

@@ -128,10 +128,12 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::get('/rekap-visual-filter', [RekapVisualFilterController::class, 'index'])->name('rekap-visual-filter.index');
         Route::get('/rekap-visual-filter/stats', [RekapVisualFilterController::class, 'stats'])->name('rekap-visual-filter.stats');
         Route::get('/rekap-visual-filter/breakdown', [RekapVisualFilterController::class, 'breakdown'])->name('rekap-visual-filter.breakdown');
+        Route::get('/rekap-visual-filter/map', [RekapVisualFilterController::class, 'map'])->name('rekap-visual-filter.map');
         Route::get('/rekap-visual-filter/options', [RekapVisualFilterController::class, 'options'])->name('rekap-visual-filter.options');
         Route::get('/rekap-visual-filter-d2d', [RekapVisualFilterD2dController::class, 'index'])->name('rekap-visual-filter-d2d.index');
         Route::get('/rekap-visual-filter-d2d/stats', [RekapVisualFilterD2dController::class, 'stats'])->name('rekap-visual-filter-d2d.stats');
         Route::get('/rekap-visual-filter-d2d/breakdown', [RekapVisualFilterD2dController::class, 'breakdown'])->name('rekap-visual-filter-d2d.breakdown');
+        Route::get('/rekap-visual-filter-d2d/map', [RekapVisualFilterD2dController::class, 'map'])->name('rekap-visual-filter-d2d.map');
         Route::get('/rekap-visual-filter-d2d/options', [RekapVisualFilterD2dController::class, 'options'])->name('rekap-visual-filter-d2d.options');
 
         Route::get('/cache-management', [CacheManagementController::class, 'index'])->name('cache-management.index');

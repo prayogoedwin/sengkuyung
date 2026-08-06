@@ -32,6 +32,11 @@ class RekapVisualFilterD2dController extends RekapVisualFilterController
         return 'rekap-visual-filter-d2d.breakdown';
     }
 
+    protected function routeMap(): string
+    {
+        return 'rekap-visual-filter-d2d.map';
+    }
+
     protected function routeOptions(): string
     {
         return 'rekap-visual-filter-d2d.options';
@@ -59,6 +64,6 @@ class RekapVisualFilterD2dController extends RekapVisualFilterController
 
     protected function cacheNamespace(): string
     {
-        return 'rvf:standalone:v1:d2d:';
+        return 'rvf:standalone:v2:d2d:';
     }
 }

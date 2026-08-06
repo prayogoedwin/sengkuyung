@@ -51,6 +51,11 @@ class RekapVisualFilterController extends Controller
         return 'rekap-visual-filter.breakdown';
     }
 
+    protected function routeMap(): string
+    {
+        return 'rekap-visual-filter.map';
+    }
+
     protected function routeOptions(): string
     {
         return 'rekap-visual-filter.options';
@@ -78,7 +83,7 @@ class RekapVisualFilterController extends Controller
 
     protected function cacheNamespace(): string
     {
-        return 'rvf:standalone:v1:reguler:';
+        return 'rvf:standalone:v2:reguler:';
     }
 
     public function index(Request $request)
@@ -100,7 +105,9 @@ class RekapVisualFilterController extends Controller
             'routeSibling' => $this->routeSibling(),
             'statsUrl' => route($this->routeStats()),
             'breakdownUrl' => route($this->routeBreakdown()),
+            'mapUrl' => route($this->routeMap()),
             'optionsUrl' => route($this->routeOptions()),
+            'geoUrl' => asset('geo/jateng-kabkota.geojson'),
             'kabkotas' => $kabkotas,
             'refreshedAt' => now()->format('d/m/Y H:i:s'),
         ]);
@@ -206,6 +213,51 @@ class RekapVisualFilterController extends Controller
             ],
             'level' => $payload['level'],
             'rows' => $payload['rows'],
+            'refreshedAt' => now()->format('d/m/Y H:i:s'),
+        ]);
+    }
+
+    public function map(Request $request)
+    {
+        $this->authorizeAccess();
+        @set_time_limit(300);
+
+        $year = $this->resolveYear($request);
+        $cacheKey = $this->cacheNamespace() . 'map:y:' . $year;
+
+        $rows = Cache::remember($cacheKey, 1800, function () use ($year) {
+            $filters = [
+                'year' => $year,
+                'kabkota_id' => '',
+                'kecamatan_id' => '',
+                'kelurahan_id' => '',
+            ];
+            $rows = $this->breakdownByKabkota(
+                $filters,
+                $this->tertagihTable(),
+                $this->pendataanTable(),
+                sprintf('%04d-01-01 00:00:00', $year),
+                sprintf('%04d-12-31 23:59:59', $year)
+            );
+
+            $coords = SengWilayah::query()
+                ->where('id_up', 33)
+                ->get(['id', 'lat', 'lng'])
+                ->keyBy(fn ($r) => (string) $r->id);
+
+            foreach ($rows as &$row) {
+                $c = $coords[$row['id']] ?? null;
+                $row['lat'] = $c && $c->lat !== null ? (float) $c->lat : null;
+                $row['lng'] = $c && $c->lng !== null ? (float) $c->lng : null;
+            }
+            unset($row);
+
+            return $rows;
+        });
+
+        return response()->json([
+            'year' => $year,
+            'mapKabkota' => $rows,
             'refreshedAt' => now()->format('d/m/Y H:i:s'),
         ]);
     }

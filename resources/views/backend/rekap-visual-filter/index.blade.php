@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root {
             --ink: #0f1c2e;
@@ -65,6 +66,11 @@
             border-radius: 999px; padding: 8px 14px; font: inherit; cursor: pointer;
         }
         .filters .filter-actions button.ghost { background: #fff; color: var(--ink); }
+        .filters .filter-actions button.is-loading {
+            background: #334155;
+            cursor: wait;
+            min-width: 140px;
+        }
 
         .mid { display: grid; grid-template-columns: 1.1fr 0.75fr 1.35fr; gap: 10px; }
         .card {
@@ -110,16 +116,38 @@
         .money-box.warn { border-color: rgba(234,88,12,0.25); }
         .money-box.good { border-color: rgba(22,163,74,0.25); }
 
-        .bottom { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
-        .bottom-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center; margin-bottom: 8px; }
-        .bottom-head h2 { margin: 0; font-size: 0.95rem; letter-spacing: 0.04em; text-transform: uppercase; }
+        .panels {
+            display: grid;
+            grid-template-columns: 1.05fr 0.95fr;
+            gap: 10px;
+            min-height: 420px;
+        }
+        .map-card, .table-card {
+            background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px;
+            display: flex; flex-direction: column; min-height: 0;
+        }
+        .panel-head {
+            display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px;
+            align-items: center; margin-bottom: 8px;
+        }
+        .panel-head h2 { margin: 0; font-size: 0.95rem; letter-spacing: 0.04em; text-transform: uppercase; }
+        #rvMap {
+            flex: 1; min-height: 340px; border-radius: 8px; border: 1px solid var(--line); overflow: hidden;
+            background: #eef2f7;
+        }
+        .legend {
+            display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px;
+            font-size: 0.88rem; color: var(--muted);
+        }
+        .legend span { display: inline-flex; align-items: center; gap: 5px; }
+        .swatch { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
         .tabs { display: inline-flex; gap: 2px; padding: 2px; border-radius: 999px; background: rgba(15,28,46,0.06); }
         .tabs button {
             border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 0.85rem;
             font-weight: 600; text-transform: uppercase; padding: 6px 12px; border-radius: 999px; cursor: pointer;
         }
         .tabs button.active { background: var(--ink); color: #fff; }
-        .table-wrap { max-height: 420px; overflow: auto; }
+        .table-wrap { flex: 1; max-height: 380px; overflow: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 0.98rem; }
         th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; }
         th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--panel); }
@@ -134,8 +162,9 @@
         }
 
         @media (max-width: 1100px) {
-            .mid { grid-template-columns: 1fr; }
+            .mid, .panels { grid-template-columns: 1fr; }
             .filters { grid-template-columns: 1fr 1fr; }
+            #rvMap { min-height: 260px; }
         }
         @media (max-width: 700px) {
             .filters { grid-template-columns: 1fr; }
@@ -268,40 +297,67 @@
         </div>
     </div>
 
-    <div class="bottom">
-        <div class="bottom-head">
-            <h2 id="tableTitle">Ringkasan per Kab/Kota</h2>
-            <div class="tabs" role="tablist">
-                <button type="button" class="active" data-mode="potensi">Potensi Pembayaran</button>
-                <button type="button" data-mode="kinerja">Progress Pendataan</button>
+    <div class="panels">
+        <div class="map-card">
+            <div class="panel-head">
+                <h2 id="mapTitle">Peta Kab/Kota Jawa Tengah</h2>
             </div>
+            <div id="rvMap"><div id="rvMapLoading" style="padding:12px;color:#64748b;">Memuat peta…</div></div>
+            <div class="legend" id="mapLegend"></div>
         </div>
-        <div class="table-wrap">
-            <table>
-                <thead id="tableHead"></thead>
-                <tbody id="tableBody"><tr><td class="muted">Memuat…</td></tr></tbody>
-                <tfoot id="tableFoot"></tfoot>
-            </table>
+        <div class="table-card">
+            <div class="panel-head">
+                <h2 id="tableTitle">Ringkasan per Kab/Kota</h2>
+                <div class="tabs" role="tablist">
+                    <button type="button" class="active" data-mode="potensi">Potensi Pembayaran</button>
+                    <button type="button" data-mode="kinerja">Progress Pendataan</button>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead id="tableHead"></thead>
+                    <tbody id="tableBody"><tr><td class="muted">Memuat…</td></tr></tbody>
+                    <tfoot id="tableFoot"></tfoot>
+                </table>
+            </div>
         </div>
     </div>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function () {
     const statsUrl = @json($statsUrl);
     const breakdownUrl = @json($breakdownUrl);
+    const mapUrl = @json($mapUrl);
     const optionsUrl = @json($optionsUrl);
+    const geoUrl = @json($geoUrl);
     const channelLabel = @json($channelLabel);
     const year = @json((int) $year);
 
     let tableMode = 'potensi';
     let breakdownRows = [];
     let breakdownLevel = 'kabkota';
+    let mapKabkotaRows = [];
+    let lastStats = null;
     let loading = false;
+    let geoLayer = null;
+    let geojsonCache = null;
+    let fallbackMarkers = [];
 
     const elKab = document.getElementById('fKabkota');
     const elKec = document.getElementById('fKecamatan');
     const elKel = document.getElementById('fKelurahan');
+    const btnApply = document.getElementById('btnApply');
+    const btnApplyDefault = btnApply.textContent;
+
+    const jatengCenter = [-7.15, 110.15];
+    const jatengZoom = 8;
+    const map = L.map('rvMap', { zoomControl: true, scrollWheelZoom: true }).setView(jatengCenter, jatengZoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap',
+        maxZoom: 18,
+    }).addTo(map);
 
     function fmt(n) { return Number(n || 0).toLocaleString('id-ID'); }
     function fmtPct(n, d) {
@@ -325,6 +381,16 @@
         if (elKel.value) p.set('kelurahan_id', elKel.value);
         return p;
     }
+    function expectedLevel() {
+        if (elKel.value || elKec.value) return 'kelurahan';
+        if (elKab.value) return 'kecamatan';
+        return 'kabkota';
+    }
+    function levelTitle(level) {
+        if (level === 'kecamatan') return 'Ringkasan per Kecamatan';
+        if (level === 'kelurahan') return 'Ringkasan per Kelurahan';
+        return 'Ringkasan per Kab/Kota';
+    }
     function setMeta(text, isErr) {
         const el = document.getElementById('rvMeta');
         el.textContent = text;
@@ -332,9 +398,27 @@
     }
     function setLoading(on) {
         loading = on;
-        document.getElementById('btnApply').disabled = on;
+        btnApply.disabled = on;
         document.getElementById('btnReload').disabled = on;
         document.getElementById('btnReset').disabled = on;
+        elKab.disabled = on;
+        if (!elKab.value) {
+            elKec.disabled = true;
+            elKel.disabled = true;
+        } else {
+            elKec.disabled = on;
+            elKel.disabled = on || !elKec.value;
+        }
+        if (on) {
+            btnApply.classList.add('is-loading');
+            btnApply.textContent = 'Memuat…';
+            document.getElementById('tableTitle').textContent = levelTitle(expectedLevel());
+            document.getElementById('tableBody').innerHTML = '<tr><td class="muted">Sedang memuat data filter…</td></tr>';
+            document.getElementById('tableFoot').innerHTML = '';
+        } else {
+            btnApply.classList.remove('is-loading');
+            btnApply.textContent = btnApplyDefault;
+        }
     }
 
     async function fetchJson(url) {
@@ -383,7 +467,195 @@
         });
     }
 
+    function successColor(pctVal) {
+        if (pctVal >= 10) return '#22c55e';
+        if (pctVal >= 5) return '#eab308';
+        return '#ef4444';
+    }
+    function progressColor(pctVal) {
+        if (pctVal > 85) return '#22c55e';
+        if (pctVal >= 51) return '#eab308';
+        if (pctVal >= 26) return '#f97316';
+        return '#ef4444';
+    }
+    function rowColor(row) {
+        if (tableMode === 'kinerja') {
+            return progressColor(Number(row.success_rate || 0));
+        }
+        return successColor(Number(row.bayar_pct || 0));
+    }
+    function renderLegend() {
+        const el = document.getElementById('mapLegend');
+        if (!el) return;
+        if (tableMode === 'kinerja') {
+            el.innerHTML =
+                '<span><i class="swatch" style="background:#ef4444"></i> &lt;25%</span>' +
+                '<span><i class="swatch" style="background:#f97316"></i> 26–50%</span>' +
+                '<span><i class="swatch" style="background:#eab308"></i> 51–84%</span>' +
+                '<span><i class="swatch" style="background:#22c55e"></i> &gt;85%</span>';
+            return;
+        }
+        el.innerHTML =
+            '<span><i class="swatch" style="background:#22c55e"></i> ≥10% bayar/potensi</span>' +
+            '<span><i class="swatch" style="background:#eab308"></i> 5–10%</span>' +
+            '<span><i class="swatch" style="background:#ef4444"></i> &lt;5%</span>';
+    }
+    function popupHtml(row, nama) {
+        if (tableMode === 'kinerja') {
+            return '<strong>' + nama + '</strong>' +
+                '<br>Sudah Pendataan: ' + fmt(row.pendataan) +
+                '<br>Sudah Bayar: ' + fmt(row.bayar_sesudah) +
+                '<br>Success Rate: <strong>' + fmtPct(row.success_rate, 2) + '</strong>';
+        }
+        return '<strong>' + nama + '</strong>' +
+            '<br>Obyek Potensi: ' + fmt(row.tagihan) +
+            '<br>Sudah Pendataan: ' + fmt(row.pendataan) +
+            '<br>Sudah Bayar: ' + fmt(row.bayar) +
+            '<br>Potensi Pembayaran: <strong>' + fmtPct(row.bayar_pct, 2) + '</strong>';
+    }
+
+    function selectedKabRowForMap() {
+        if (!elKab.value || !lastStats) return null;
+        const s = lastStats.stats || {};
+        const b = lastStats.bayar || {};
+        const tagihan = Number(s.jumlah_tunggakan || 0);
+        const pendataan = Number(s.jumlah_sudah_pendataan || 0);
+        const bayar = Number(b.jumlah_terbayar || 0);
+        const bayarSesudah = Number(b.sesudah_pendataan || 0);
+        const nama = elKab.options[elKab.selectedIndex]
+            ? elKab.options[elKab.selectedIndex].textContent
+            : elKab.value;
+        return {
+            id: elKab.value,
+            nama: nama,
+            tagihan: tagihan,
+            pendataan: pendataan,
+            bayar: bayar,
+            bayar_sesudah: bayarSesudah,
+            bayar_pct: ratioPct(bayar, tagihan),
+            success_rate: ratioPct(bayarSesudah, pendataan),
+        };
+    }
+
+    function paintMap() {
+        const loadingEl = document.getElementById('rvMapLoading');
+        if (loadingEl) loadingEl.remove();
+
+        const selectedKab = elKab.value;
+        const byId = {};
+        mapKabkotaRows.forEach(function (row) { byId[String(row.id)] = row; });
+        if (selectedKab) {
+            const focused = selectedKabRowForMap();
+            if (focused) byId[String(selectedKab)] = focused;
+        }
+
+        function styleFor(id) {
+            const row = byId[String(id || '')];
+            if (selectedKab) {
+                if (String(id) === String(selectedKab) && row) {
+                    return {
+                        color: '#0f1c2e',
+                        weight: 2,
+                        fillColor: rowColor(row),
+                        fillOpacity: 0.85,
+                    };
+                }
+                return {
+                    color: '#94a3b8',
+                    weight: 1,
+                    fillColor: '#cbd5e1',
+                    fillOpacity: 0.25,
+                };
+            }
+            return {
+                color: '#0f1c2e',
+                weight: 1,
+                fillColor: row ? rowColor(row) : '#94a3b8',
+                fillOpacity: 0.78,
+            };
+        }
+
+        function buildGeoLayer(geo) {
+            if (geoLayer) {
+                map.removeLayer(geoLayer);
+                geoLayer = null;
+            }
+            fallbackMarkers.forEach(function (m) { map.removeLayer(m); });
+            fallbackMarkers = [];
+
+            geoLayer = L.geoJSON(geo, {
+                style: function (feature) {
+                    return styleFor(feature.properties && feature.properties.id);
+                },
+                onEachFeature: function (feature, lyr) {
+                    const id = String((feature.properties && feature.properties.id) || '');
+                    const row = byId[id];
+                    const nama = row ? row.nama : ((feature.properties && feature.properties.nama) || id);
+                    if (selectedKab && id !== String(selectedKab)) {
+                        lyr.bindPopup('<strong>' + nama + '</strong><br><span style="color:#64748b">Di luar filter</span>');
+                        return;
+                    }
+                    if (row) lyr.bindPopup(popupHtml(row, nama));
+                    else lyr.bindPopup('<strong>' + nama + '</strong>');
+                },
+            }).addTo(map);
+
+            if (selectedKab && geoLayer) {
+                let focusLayer = null;
+                geoLayer.eachLayer(function (lyr) {
+                    const id = String((lyr.feature && lyr.feature.properties && lyr.feature.properties.id) || '');
+                    if (id === String(selectedKab)) focusLayer = lyr;
+                });
+                if (focusLayer && focusLayer.getBounds) {
+                    map.fitBounds(focusLayer.getBounds(), { padding: [24, 24], maxZoom: 10 });
+                } else {
+                    map.setView(jatengCenter, jatengZoom);
+                }
+            } else if (geoLayer) {
+                map.fitBounds(geoLayer.getBounds(), { padding: [12, 12] });
+            }
+            document.getElementById('mapTitle').textContent = selectedKab
+                ? 'Peta Kab/Kota Terpilih'
+                : 'Peta Kab/Kota Jawa Tengah';
+            renderLegend();
+            requestAnimationFrame(function () { map.invalidateSize(); });
+        }
+
+        if (geojsonCache) {
+            buildGeoLayer(geojsonCache);
+            return;
+        }
+
+        fetch(geoUrl).then(function (r) { return r.json(); }).then(function (geo) {
+            geojsonCache = geo;
+            buildGeoLayer(geo);
+        }).catch(function () {
+            if (geoLayer) { map.removeLayer(geoLayer); geoLayer = null; }
+            fallbackMarkers.forEach(function (m) { map.removeLayer(m); });
+            fallbackMarkers = [];
+            const bounds = [];
+            Object.keys(byId).forEach(function (id) {
+                const row = byId[id];
+                if (!row || row.lat == null || row.lng == null) return;
+                if (selectedKab && String(id) !== String(selectedKab)) return;
+                const marker = L.circleMarker([row.lat, row.lng], {
+                    radius: 10,
+                    color: '#0f1c2e',
+                    weight: 1,
+                    fillColor: rowColor(row),
+                    fillOpacity: 0.85,
+                }).addTo(map).bindPopup(popupHtml(row, row.nama));
+                fallbackMarkers.push(marker);
+                bounds.push([row.lat, row.lng]);
+            });
+            if (bounds.length) map.fitBounds(bounds, { padding: [30, 30], maxZoom: 10 });
+            else map.setView(jatengCenter, jatengZoom);
+            renderLegend();
+        });
+    }
+
     function renderStats(payload) {
+        lastStats = payload;
         const s = payload.stats || {};
         const b = payload.bayar || {};
         const total = Number(s.jumlah_tunggakan || 0);
@@ -426,12 +698,6 @@
         document.getElementById('vBayarPct').textContent = fmtPct(b.pct_bayar_vs_potensi, 2);
         document.getElementById('vBayarTotal').textContent = b.nominal_total_fmt || '0';
         document.getElementById('vPotensiTotal').textContent = b.potensi_total_fmt || '0';
-    }
-
-    function levelTitle(level) {
-        if (level === 'kecamatan') return 'Ringkasan per Kecamatan';
-        if (level === 'kelurahan') return 'Ringkasan per Kelurahan';
-        return 'Ringkasan per Kab/Kota';
     }
 
     function renderTable() {
@@ -495,14 +761,24 @@
         setMeta('Channel ' + channelLabel + ' · Memuat data filter…');
         try {
             const qs = filterParams().toString();
-            const [stats, breakdown] = await Promise.all([
+            const requests = [
                 fetchJson(statsUrl + '?' + qs),
                 fetchJson(breakdownUrl + '?' + qs),
-            ]);
+            ];
+            if (!mapKabkotaRows.length) {
+                requests.push(fetchJson(mapUrl + '?year=' + year));
+            }
+            const results = await Promise.all(requests);
+            const stats = results[0];
+            const breakdown = results[1];
+            if (results[2]) {
+                mapKabkotaRows = results[2].mapKabkota || [];
+            }
             renderStats(stats);
             breakdownRows = breakdown.rows || [];
-            breakdownLevel = breakdown.level || 'kabkota';
+            breakdownLevel = breakdown.level || expectedLevel();
             renderTable();
+            paintMap();
             setMeta('Channel ' + channelLabel + ' · Diperbarui ' + (stats.refreshedAt || ''));
         } catch (err) {
             setMeta('Gagal memuat data: ' + (err && err.message ? err.message : 'error'), true);
@@ -513,17 +789,18 @@
     }
 
     elKab.addEventListener('change', function () {
-        loadKecamatan().catch(function () {
-            resetSelect(elKec, 'Gagal memuat kecamatan', false);
-        });
+        loadKecamatan()
+            .catch(function () { resetSelect(elKec, 'Gagal memuat kecamatan', false); })
+            .finally(function () { loadAll(); });
     });
     elKec.addEventListener('change', function () {
-        loadKelurahan().catch(function () {
-            resetSelect(elKel, 'Gagal memuat kelurahan', false);
-        });
+        loadKelurahan()
+            .catch(function () { resetSelect(elKel, 'Gagal memuat kelurahan', false); })
+            .finally(function () { loadAll(); });
     });
+    elKel.addEventListener('change', function () { loadAll(); });
 
-    document.getElementById('btnApply').addEventListener('click', loadAll);
+    btnApply.addEventListener('click', loadAll);
     document.getElementById('btnReload').addEventListener('click', loadAll);
     document.getElementById('btnReset').addEventListener('click', function () {
         elKab.value = '';
@@ -539,6 +816,7 @@
                 b.classList.toggle('active', b === btn);
             });
             renderTable();
+            paintMap();
         });
     });
 

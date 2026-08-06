@@ -20,6 +20,8 @@ use App\Http\Controllers\DataTertagihD2dController;
 use App\Http\Controllers\SengBayarPajakController;
 use App\Http\Controllers\RekapVisualController;
 use App\Http\Controllers\RekapVisualD2dController;
+use App\Http\Controllers\RekapVisualFilterController;
+use App\Http\Controllers\RekapVisualFilterD2dController;
 use App\Http\Controllers\CacheManagementController;
 use App\Http\Controllers\KebijakanPrivasiController;
 use App\Http\Controllers\VersionController;
@@ -122,6 +124,15 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::get('/rekap-visual-d2d', [RekapVisualD2dController::class, 'index'])->name('rekap-visual-d2d.index');
         Route::get('/rekap-visual-d2d/stats', [RekapVisualD2dController::class, 'stats'])->name('rekap-visual-d2d.stats');
         Route::get('/rekap-visual-d2d/map', [RekapVisualD2dController::class, 'map'])->name('rekap-visual-d2d.map');
+
+        Route::get('/rekap-visual-filter', [RekapVisualFilterController::class, 'index'])->name('rekap-visual-filter.index');
+        Route::get('/rekap-visual-filter/stats', [RekapVisualFilterController::class, 'stats'])->name('rekap-visual-filter.stats');
+        Route::get('/rekap-visual-filter/breakdown', [RekapVisualFilterController::class, 'breakdown'])->name('rekap-visual-filter.breakdown');
+        Route::get('/rekap-visual-filter/options', [RekapVisualFilterController::class, 'options'])->name('rekap-visual-filter.options');
+        Route::get('/rekap-visual-filter-d2d', [RekapVisualFilterD2dController::class, 'index'])->name('rekap-visual-filter-d2d.index');
+        Route::get('/rekap-visual-filter-d2d/stats', [RekapVisualFilterD2dController::class, 'stats'])->name('rekap-visual-filter-d2d.stats');
+        Route::get('/rekap-visual-filter-d2d/breakdown', [RekapVisualFilterD2dController::class, 'breakdown'])->name('rekap-visual-filter-d2d.breakdown');
+        Route::get('/rekap-visual-filter-d2d/options', [RekapVisualFilterD2dController::class, 'options'])->name('rekap-visual-filter-d2d.options');
 
         Route::get('/cache-management', [CacheManagementController::class, 'index'])->name('cache-management.index');
         Route::get('/cache-management/{scope}', [CacheManagementController::class, 'scope'])

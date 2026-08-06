@@ -35,8 +35,8 @@
         .wrap { max-width: 1400px; margin: 0 auto; padding: 14px 16px 28px; display: grid; gap: 12px; }
         .top { display: flex; flex-wrap: wrap; gap: 10px 16px; justify-content: space-between; align-items: flex-start; }
         .brand { min-width: 0; flex: 1 1 320px; }
-        .brand h1 { margin: 4px 0 6px; font-size: clamp(1.2rem, 2vw, 1.7rem); line-height: 1.2; }
-        .meta { color: var(--muted); font-size: 0.95rem; margin-top: 4px; }
+        .brand h1 { margin: 4px 0 0; font-size: clamp(1.15rem, 1.9vw, 1.65rem); line-height: 1.2; white-space: nowrap; }
+        .meta { color: var(--muted); font-size: 0.95rem; margin-top: 6px; }
         .meta .retry-link,
         .retry-link {
             margin-left: 8px;
@@ -62,27 +62,27 @@
         .actions button:disabled,
         .actions select:disabled { opacity: 0.55; cursor: wait; }
 
-        .title-filters {
-            display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
-            margin-top: 2px;
+        .title-row {
+            display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center;
+            margin-top: 4px;
         }
-        .title-filters .badge { margin-left: 0; }
-        .title-filters select,
-        .title-filters button {
+        .title-row h1 { margin: 0; }
+        .title-row select,
+        .title-row button {
             border: 1px solid var(--line); background: var(--panel); color: var(--ink);
             border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 0.86rem; cursor: pointer;
         }
-        .title-filters select {
+        .title-row select {
             max-width: 168px; min-width: 118px;
             white-space: nowrap; text-overflow: ellipsis;
         }
-        .title-filters select.wide { max-width: 190px; min-width: 140px; }
-        .title-filters select:disabled { opacity: 0.55; cursor: wait; }
-        .title-filters button:disabled { opacity: 0.55; cursor: wait; }
-        .title-filters button.primary {
+        .title-row select.wide { max-width: 190px; min-width: 140px; }
+        .title-row select:disabled,
+        .title-row button:disabled { opacity: 0.55; cursor: wait; }
+        .title-row button.primary {
             background: var(--ink); color: #fff; border-color: var(--ink);
         }
-        .title-filters button.primary.is-loading {
+        .title-row button.primary.is-loading {
             background: #334155;
             min-width: 108px;
         }
@@ -170,20 +170,16 @@
         tfoot td { font-weight: 700; border-top: 2px solid var(--ink); }
         .muted { color: var(--muted); }
         .err { color: #b91c1c; }
-        .badge {
-            display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px;
-            background: rgba(13,148,136,0.12); color: var(--accent); font-size: 0.75rem; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 0.03em; vertical-align: middle; white-space: nowrap;
-        }
 
         @media (max-width: 1100px) {
             .mid, .panels { grid-template-columns: 1fr; }
             #rvMap { min-height: 260px; }
+            .brand h1 { white-space: normal; }
         }
         @media (max-width: 700px) {
             .pay-grid { grid-template-columns: 1fr; }
             .actions { justify-content: flex-start; width: 100%; }
-            .title-filters select { max-width: none; min-width: 0; flex: 1 1 140px; }
+            .title-row select { max-width: none; min-width: 0; flex: 1 1 140px; }
         }
     </style>
 </head>
@@ -192,9 +188,8 @@
     <div class="top">
         <div class="brand">
             <a class="back-link" href="{{ route('dashboard') }}">← Dashboard</a>
-            <h1>{{ $pageTitle }} · {{ $year }}</h1>
-            <div class="title-filters">
-                <span class="badge">uji filter</span>
+            <div class="title-row">
+                <h1>{{ $pageTitle }} · {{ $year }}</h1>
                 <select id="fKabkota" class="wide" title="Kab/Kota">
                     <option value="">Seluruh Provinsi</option>
                     @foreach ($kabkotas as $kab)
@@ -215,7 +210,6 @@
         <div class="actions">
             <a href="{{ route('rekap-visual-filter.index', ['year' => $year]) }}" class="{{ !$isD2d ? 'active' : '' }}">Reguler</a>
             <a href="{{ route('rekap-visual-filter-d2d.index', ['year' => $year]) }}" class="{{ $isD2d ? 'active' : '' }}">D2D</a>
-            <a href="{{ route($isD2d ? 'rekap-visual-d2d.index' : 'rekap-visual.index', ['year' => $year]) }}">Rekap Lama</a>
             <form method="GET" action="{{ route($routeIndex) }}" style="display:flex;gap:6px;align-items:center;">
                 <select name="year" id="yearSelect" onchange="this.form.submit()">
                     @for ($y = (int) date('Y'); $y >= (int) date('Y') - 3; $y--)

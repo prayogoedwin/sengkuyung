@@ -35,11 +35,11 @@
         .wrap { max-width: 1400px; margin: 0 auto; padding: 14px 16px 28px; display: grid; gap: 12px; }
         .top { display: flex; flex-wrap: wrap; gap: 10px 16px; justify-content: space-between; align-items: flex-start; }
         .brand { min-width: 0; flex: 1 1 320px; }
+        .back-link { color: var(--muted); text-decoration: none; font-size: 0.9rem; }
         .brand h1 {
-            margin: 0;
-            font-size: clamp(0.95rem, 1.15vw, 1.15rem);
-            line-height: 1.2;
-            white-space: nowrap;
+            margin: 4px 0 0;
+            font-size: clamp(1.1rem, 1.5vw, 1.45rem);
+            line-height: 1.25;
             font-weight: 700;
             letter-spacing: 0.01em;
         }
@@ -56,41 +56,40 @@
             padding: 0;
             font: inherit;
         }
-        .back-link { color: var(--muted); text-decoration: none; font-size: 0.9rem; }
-        .actions {
-            display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-            justify-content: flex-end; flex: 0 1 auto;
+        .side-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+            flex: 0 1 auto;
+            min-width: 0;
         }
-        .actions a, .actions select, .actions button {
+        .actions,
+        .filter-row {
+            display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+            justify-content: flex-end;
+        }
+        .actions a, .actions select, .actions button,
+        .filter-row select, .filter-row button {
             border: 1px solid var(--line); background: var(--panel); color: var(--ink);
-            border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 0.92rem; text-decoration: none; cursor: pointer;
+            border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 0.9rem; text-decoration: none; cursor: pointer;
         }
         .actions a.active { background: var(--ink); color: #fff; border-color: var(--ink); }
         .actions button:disabled,
-        .actions select:disabled { opacity: 0.55; cursor: wait; }
-
-        .title-row {
-            display: flex; flex-wrap: nowrap; gap: 6px 8px; align-items: center;
-            margin-top: 4px; min-width: 0; overflow-x: auto;
-        }
-        .title-row h1 { margin: 0; flex: 0 0 auto; }
-        .title-row select,
-        .title-row button {
-            border: 1px solid var(--line); background: var(--panel); color: var(--ink);
-            border-radius: 999px; padding: 5px 11px; font: inherit; font-size: 0.84rem; cursor: pointer;
-            flex: 0 0 auto;
-        }
-        .title-row select {
-            max-width: 150px; min-width: 110px;
+        .actions select:disabled,
+        .filter-row select:disabled,
+        .filter-row button:disabled { opacity: 0.55; cursor: wait; }
+        .filter-row select {
+            max-width: 160px; min-width: 118px;
             white-space: nowrap; text-overflow: ellipsis;
+            padding: 6px 12px; font-size: 0.86rem;
         }
-        .title-row select.wide { max-width: 170px; min-width: 128px; }
-        .title-row select:disabled,
-        .title-row button:disabled { opacity: 0.55; cursor: wait; }
-        .title-row button.primary {
+        .filter-row select.wide { max-width: 180px; min-width: 136px; }
+        .filter-row button { padding: 6px 12px; font-size: 0.86rem; }
+        .filter-row button.primary {
             background: var(--ink); color: #fff; border-color: var(--ink);
         }
-        .title-row button.primary.is-loading {
+        .filter-row button.primary.is-loading {
             background: #334155;
             min-width: 108px;
         }
@@ -182,13 +181,12 @@
         @media (max-width: 1100px) {
             .mid, .panels { grid-template-columns: 1fr; }
             #rvMap { min-height: 260px; }
-            .title-row { flex-wrap: wrap; }
-            .brand h1 { white-space: normal; }
         }
         @media (max-width: 700px) {
             .pay-grid { grid-template-columns: 1fr; }
-            .actions { justify-content: flex-start; width: 100%; }
-            .title-row select { max-width: none; min-width: 0; flex: 1 1 140px; }
+            .side-controls { width: 100%; align-items: stretch; }
+            .actions, .filter-row { justify-content: flex-start; }
+            .filter-row select { max-width: none; min-width: 0; flex: 1 1 140px; }
         }
     </style>
 </head>
@@ -197,8 +195,23 @@
     <div class="top">
         <div class="brand">
             <a class="back-link" href="{{ route('dashboard') }}">← Dashboard</a>
-            <div class="title-row">
-                <h1>{{ $pageTitle }} · {{ $year }}</h1>
+            <h1>{{ $pageTitle }} · {{ $year }}</h1>
+            <div class="meta" id="rvMeta">Channel {{ $channelLabel }} · Siap memuat…</div>
+        </div>
+        <div class="side-controls">
+            <div class="actions">
+                <a href="{{ route('rekap-visual-filter.index', ['year' => $year]) }}" class="{{ !$isD2d ? 'active' : '' }}">Reguler</a>
+                <a href="{{ route('rekap-visual-filter-d2d.index', ['year' => $year]) }}" class="{{ $isD2d ? 'active' : '' }}">D2D</a>
+                <form method="GET" action="{{ route($routeIndex) }}" style="display:flex;gap:6px;align-items:center;">
+                    <select name="year" id="yearSelect" onchange="this.form.submit()">
+                        @for ($y = (int) date('Y'); $y >= (int) date('Y') - 3; $y--)
+                            <option value="{{ $y }}" @selected($y === (int) $year)>{{ $y }}</option>
+                        @endfor
+                    </select>
+                </form>
+                <button type="button" id="btnReload">Muat Ulang</button>
+            </div>
+            <div class="filter-row">
                 <select id="fKabkota" class="wide" title="Kab/Kota">
                     <option value="">Seluruh Provinsi</option>
                     @foreach ($kabkotas as $kab)
@@ -214,19 +227,6 @@
                 <button type="button" class="primary" id="btnApply">Terapkan</button>
                 <button type="button" id="btnReset">Reset</button>
             </div>
-            <div class="meta" id="rvMeta">Channel {{ $channelLabel }} · Siap memuat…</div>
-        </div>
-        <div class="actions">
-            <a href="{{ route('rekap-visual-filter.index', ['year' => $year]) }}" class="{{ !$isD2d ? 'active' : '' }}">Reguler</a>
-            <a href="{{ route('rekap-visual-filter-d2d.index', ['year' => $year]) }}" class="{{ $isD2d ? 'active' : '' }}">D2D</a>
-            <form method="GET" action="{{ route($routeIndex) }}" style="display:flex;gap:6px;align-items:center;">
-                <select name="year" id="yearSelect" onchange="this.form.submit()">
-                    @for ($y = (int) date('Y'); $y >= (int) date('Y') - 3; $y--)
-                        <option value="{{ $y }}" @selected($y === (int) $year)>{{ $y }}</option>
-                    @endfor
-                </select>
-            </form>
-            <button type="button" id="btnReload">Muat Ulang</button>
         </div>
     </div>
 

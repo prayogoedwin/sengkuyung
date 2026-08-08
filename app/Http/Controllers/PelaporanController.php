@@ -289,16 +289,6 @@ class PelaporanController extends Controller
         $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;
         if ($kecamatanFilter) {
             $query->whereIn("{$tableAlias}.id_kecamatan", $this->codeVariants((string) $kecamatanFilter));
-        } elseif ($request->kabkota_id) {
-            // Cegah baris lokasi Tegal yang id_kecamatan-nya salah (luar kab) ikut rekap.
-            $allowedKec = $this->allowedKecamatanCodesForKabkota((string) $request->kabkota_id);
-            if ($allowedKec !== []) {
-                $query->where(function ($q) use ($tableAlias, $allowedKec) {
-                    $q->whereIn("{$tableAlias}.id_kecamatan", $allowedKec)
-                        ->orWhereNull("{$tableAlias}.id_kecamatan")
-                        ->orWhere("{$tableAlias}.id_kecamatan", '');
-                });
-            }
         }
 
         if ($request->kelurahan_samsat) {
@@ -320,24 +310,6 @@ class PelaporanController extends Controller
         }
 
         $this->applyPelaporanWilayahFilters($query, $request);
-
-        $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;
-        if (! $kecamatanFilter && $request->kabkota_id) {
-            $allowedKec = $this->allowedKecamatanCodesForKabkota((string) $request->kabkota_id);
-            if ($allowedKec !== []) {
-                $query->where(function ($q) use ($allowedKec) {
-                    $q->whereIn('kec', $allowedKec)
-                        ->orWhereIn('kec_dagri', $allowedKec)
-                        ->orWhere(function ($empty) {
-                            $empty->where(function ($kecEmpty) {
-                                $kecEmpty->whereNull('kec')->orWhere('kec', '');
-                            })->where(function ($dagriEmpty) {
-                                $dagriEmpty->whereNull('kec_dagri')->orWhere('kec_dagri', '');
-                            });
-                        });
-                });
-            }
-        }
 
         if ($request->kelurahan_samsat) {
             $query->whereIn('desa', $this->codeVariants((string) $request->kelurahan_samsat));
@@ -400,10 +372,10 @@ class PelaporanController extends Controller
 
         $rows = $query
             ->selectRaw("{$groupExpr} as group_code")
-            ->selectRaw('COUNT(DISTINCT dt.id) as potensi')
-            ->selectRaw('COUNT(DISTINCT CASE WHEN dt.is_terdata = 0 THEN dt.id END) as belum')
-            ->selectRaw('COUNT(DISTINCT CASE WHEN dt.is_terdata = 1 THEN dt.id END) as sudah')
-            ->groupBy(DB::raw($groupExpr))
+            ->selectRaw('COUNT(*) as potensi')
+            ->selectRaw('SUM(CASE WHEN dt.is_terdata = 0 THEN 1 ELSE 0 END) as belum')
+            ->selectRaw('SUM(CASE WHEN dt.is_terdata = 1 THEN 1 ELSE 0 END) as sudah')
+            ->groupBy('group_code')
             ->get();
 
         $out = [];

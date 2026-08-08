@@ -223,6 +223,45 @@ class PelaporanController extends Controller
     }
 
     /**
+     * Kode kecamatan yang sah untuk satu kabkota (master wilayah_samsat_kec).
+     *
+     * @return list<string>
+     */
+    private function allowedKecamatanCodesForKabkota(string $kabkotaId): array
+    {
+        $kabkotaId = trim($kabkotaId);
+        if ($kabkotaId === '') {
+            return [];
+        }
+
+        $kabVariants = $this->codeVariants($kabkotaId);
+        $lokasiIds = SengSaamsat::lokasiFilterVariantsByKabkota($kabkotaId);
+        $codes = [];
+
+        SengWilayahKec::query()
+            ->where(function ($q) use ($lokasiIds, $kabVariants, $kabkotaId) {
+                if ($lokasiIds !== []) {
+                    $q->whereIn('id_lokasi_samsat', $lokasiIds);
+                }
+                $q->orWhereIn('kode_dagri_kota', $kabVariants)
+                    ->orWhere('kode_dagri_kota', $kabkotaId);
+            })
+            ->get(['id_kecamatan', 'kode_dagri'])
+            ->each(function ($row) use (&$codes) {
+                foreach ([(string) ($row->id_kecamatan ?? ''), (string) ($row->kode_dagri ?? '')] as $seed) {
+                    if ($seed === '') {
+                        continue;
+                    }
+                    foreach ($this->codeVariants($seed) as $variant) {
+                        $codes[] = $variant;
+                    }
+                }
+            });
+
+        return array_values(array_unique($codes));
+    }
+
+    /**
      * @param \Illuminate\Database\Query\Builder $query
      */
     private function applyDataTertagihRekapFiltersOnQuery($query, Request $request, string $tableAlias = 'dt'): void
@@ -250,6 +289,16 @@ class PelaporanController extends Controller
         $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;
         if ($kecamatanFilter) {
             $query->whereIn("{$tableAlias}.id_kecamatan", $this->codeVariants((string) $kecamatanFilter));
+        } elseif ($request->kabkota_id) {
+            // Cegah baris lokasi Tegal yang id_kecamatan-nya salah (luar kab) ikut rekap.
+            $allowedKec = $this->allowedKecamatanCodesForKabkota((string) $request->kabkota_id);
+            if ($allowedKec !== []) {
+                $query->where(function ($q) use ($tableAlias, $allowedKec) {
+                    $q->whereIn("{$tableAlias}.id_kecamatan", $allowedKec)
+                        ->orWhereNull("{$tableAlias}.id_kecamatan")
+                        ->orWhere("{$tableAlias}.id_kecamatan", '');
+                });
+            }
         }
 
         if ($request->kelurahan_samsat) {
@@ -267,10 +316,28 @@ class PelaporanController extends Controller
         }
 
         if ($request->kabkota_id) {
-            $query->where('kota_dagri', $request->kabkota_id);
+            $query->whereIn('kota_dagri', $this->codeVariants((string) $request->kabkota_id));
         }
 
         $this->applyPelaporanWilayahFilters($query, $request);
+
+        $kecamatanFilter = $request->kecamatan_samsat ?: $request->district_id;
+        if (! $kecamatanFilter && $request->kabkota_id) {
+            $allowedKec = $this->allowedKecamatanCodesForKabkota((string) $request->kabkota_id);
+            if ($allowedKec !== []) {
+                $query->where(function ($q) use ($allowedKec) {
+                    $q->whereIn('kec', $allowedKec)
+                        ->orWhereIn('kec_dagri', $allowedKec)
+                        ->orWhere(function ($empty) {
+                            $empty->where(function ($kecEmpty) {
+                                $kecEmpty->whereNull('kec')->orWhere('kec', '');
+                            })->where(function ($dagriEmpty) {
+                                $dagriEmpty->whereNull('kec_dagri')->orWhere('kec_dagri', '');
+                            });
+                        });
+                });
+            }
+        }
 
         if ($request->kelurahan_samsat) {
             $query->whereIn('desa', $this->codeVariants((string) $request->kelurahan_samsat));
@@ -318,20 +385,25 @@ class PelaporanController extends Controller
         $table = (new $modelClass())->getTable();
         $groupExpr = $this->tertagihGroupExpression($layout);
 
-        $query = DB::table("{$table} as dt")
-            ->leftJoin('seng_samsat as ss', function ($join) {
+        $query = DB::table("{$table} as dt");
+
+        // Join samsat hanya untuk rekap provinsi (group by ss.kabkota).
+        // orOn bisa menggandakan baris bila satu id_lokasi cocok ke >1 samsat.
+        if ($layout['variant'] === 'provinsi') {
+            $query->leftJoin('seng_samsat as ss', function ($join) {
                 $join->on('ss.id', '=', 'dt.id_lokasi_samsat')
                     ->orOn('ss.id_wilayah_samsat', '=', 'dt.id_lokasi_samsat');
             });
+        }
 
         $this->applyDataTertagihRekapFiltersOnQuery($query, $request, 'dt');
 
         $rows = $query
             ->selectRaw("{$groupExpr} as group_code")
-            ->selectRaw('COUNT(*) as potensi')
-            ->selectRaw('SUM(CASE WHEN dt.is_terdata = 0 THEN 1 ELSE 0 END) as belum')
-            ->selectRaw('SUM(CASE WHEN dt.is_terdata = 1 THEN 1 ELSE 0 END) as sudah')
-            ->groupBy('group_code')
+            ->selectRaw('COUNT(DISTINCT dt.id) as potensi')
+            ->selectRaw('COUNT(DISTINCT CASE WHEN dt.is_terdata = 0 THEN dt.id END) as belum')
+            ->selectRaw('COUNT(DISTINCT CASE WHEN dt.is_terdata = 1 THEN dt.id END) as sudah')
+            ->groupBy(DB::raw($groupExpr))
             ->get();
 
         $out = [];
@@ -418,6 +490,20 @@ class PelaporanController extends Controller
             ->unique()
             ->sort()
             ->values();
+
+        // Saat filter kabkota + rekap per kecamatan, buang kode luar kab
+        // (mis. SRAGEN / JATILAWANG yang lolos lewat data kotor).
+        $allowedKec = [];
+        if ($request->kabkota_id && ($layout['mapLevel'] ?? '') === 'kecamatan') {
+            $allowedKec = $this->allowedKecamatanCodesForKabkota((string) $request->kabkota_id);
+            if ($allowedKec !== []) {
+                $allowedLookup = array_fill_keys($allowedKec, true);
+                $allCodes = $allCodes->filter(function ($code) use ($allowedLookup) {
+                    $code = (string) $code;
+                    return $code === '-' || $code === '' || isset($allowedLookup[$code]);
+                })->values();
+            }
+        }
 
         $rows = [];
         $totals = [
@@ -939,6 +1025,9 @@ class PelaporanController extends Controller
             if (!empty($kecFromPendataan)) {
                 return (string) $kecFromPendataan;
             }
+
+            // Jangan fallback ke seng_wilayah (kabkota) — kode bentrok bisa jadi "SRAGEN".
+            return $code;
         }
 
         if ($level === 'kelurahan') {
@@ -962,6 +1051,8 @@ class PelaporanController extends Controller
             if (!empty($kelFromPendataan)) {
                 return (string) $kelFromPendataan;
             }
+
+            return $code;
         }
 
         $wilayah = SengWilayah::query()

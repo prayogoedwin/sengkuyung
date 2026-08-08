@@ -47,27 +47,25 @@ class SengSaamsat extends Model
             return [];
         }
 
-        return self::query()
-            ->where('kabkota', $kabkotaId)
+        // Hanya kumpulkan id / id_wilayah dari samsat di kabkota ini.
+        // Jangan panggil lokasiFilterVariants() — lookup global first() bisa
+        // menarik baris kabkota lain saat id bentrok dengan id_wilayah_samsat.
+        $out = [];
+        self::query()
+            ->whereIn('kabkota', self::codeVariants($kabkotaId))
             ->get(['id', 'id_wilayah_samsat'])
-            ->flatMap(function ($s) {
-                $seeds = [];
-
-                if ($s->id_wilayah_samsat !== null && (string) $s->id_wilayah_samsat !== '') {
-                    $seeds[] = (string) $s->id_wilayah_samsat;
+            ->each(function ($s) use (&$out) {
+                foreach ([(string) ($s->id ?? ''), (string) ($s->id_wilayah_samsat ?? '')] as $seed) {
+                    if ($seed === '') {
+                        continue;
+                    }
+                    foreach (self::codeVariants($seed) as $variant) {
+                        $out[] = $variant;
+                    }
                 }
+            });
 
-                if ($s->id !== null && (string) $s->id !== '') {
-                    $seeds[] = (string) $s->id;
-                }
-
-                return collect($seeds)->flatMap(
-                    fn (string $seed) => self::lokasiFilterVariants($seed)
-                );
-            })
-            ->unique()
-            ->values()
-            ->all();
+        return array_values(array_unique($out));
     }
 
     public static function lokasiFilterVariants(?string $selected): array

@@ -223,20 +223,21 @@ class PelaporanController extends Controller
     }
 
     /**
-     * Kode kecamatan yang sah untuk satu kabkota (master wilayah_samsat_kec).
+     * Master kecamatan per kabkota + alias (id, kode_dagri, nama) → canonical id_kecamatan.
      *
-     * @return list<string>
+     * @return array{rows: list<array{canonical: string, name: string}>, aliasToCanonical: array<string, string>}
      */
-    private function allowedKecamatanCodesForKabkota(string $kabkotaId): array
+    private function kecamatanMasterForKabkota(string $kabkotaId): array
     {
         $kabkotaId = trim($kabkotaId);
         if ($kabkotaId === '') {
-            return [];
+            return ['rows' => [], 'aliasToCanonical' => []];
         }
 
         $kabVariants = $this->codeVariants($kabkotaId);
         $lokasiIds = SengSaamsat::lokasiFilterVariantsByKabkota($kabkotaId);
-        $codes = [];
+        $rows = [];
+        $aliasToCanonical = [];
 
         SengWilayahKec::query()
             ->where(function ($q) use ($lokasiIds, $kabVariants, $kabkotaId) {
@@ -246,19 +247,96 @@ class PelaporanController extends Controller
                 $q->orWhereIn('kode_dagri_kota', $kabVariants)
                     ->orWhere('kode_dagri_kota', $kabkotaId);
             })
-            ->get(['id_kecamatan', 'kode_dagri'])
-            ->each(function ($row) use (&$codes) {
-                foreach ([(string) ($row->id_kecamatan ?? ''), (string) ($row->kode_dagri ?? '')] as $seed) {
+            ->orderBy('kecamatan')
+            ->get(['id_kecamatan', 'kode_dagri', 'kecamatan'])
+            ->each(function ($row) use (&$rows, &$aliasToCanonical) {
+                $canonical = trim((string) ($row->id_kecamatan ?? ''));
+                if ($canonical === '') {
+                    $canonical = trim((string) ($row->kode_dagri ?? ''));
+                }
+                if ($canonical === '') {
+                    return;
+                }
+
+                $name = trim((string) ($row->kecamatan ?? ''));
+                $rows[] = [
+                    'canonical' => $canonical,
+                    'name' => $name !== '' ? $name : $canonical,
+                ];
+
+                foreach ([$canonical, (string) ($row->id_kecamatan ?? ''), (string) ($row->kode_dagri ?? '')] as $seed) {
                     if ($seed === '') {
                         continue;
                     }
                     foreach ($this->codeVariants($seed) as $variant) {
-                        $codes[] = $variant;
+                        $aliasToCanonical[$variant] = $canonical;
                     }
+                }
+
+                if ($name !== '') {
+                    $aliasToCanonical[$name] = $canonical;
+                    $aliasToCanonical[mb_strtoupper($name, 'UTF-8')] = $canonical;
                 }
             });
 
-        return array_values(array_unique($codes));
+        return [
+            'rows' => $rows,
+            'aliasToCanonical' => $aliasToCanonical,
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function allowedKecamatanCodesForKabkota(string $kabkotaId): array
+    {
+        return array_keys($this->kecamatanMasterForKabkota($kabkotaId)['aliasToCanonical']);
+    }
+
+    /**
+     * Samakan kode grup tertagih/pendataan ke canonical kecamatan kabkota.
+     */
+    private function resolveKecamatanCanonical(string $groupCode, array $aliasToCanonical): ?string
+    {
+        $code = trim($groupCode);
+        if ($code === '' || $code === '-') {
+            return '-';
+        }
+
+        if (isset($aliasToCanonical[$code])) {
+            return $aliasToCanonical[$code];
+        }
+
+        $upper = mb_strtoupper($code, 'UTF-8');
+        if (isset($aliasToCanonical[$upper])) {
+            return $aliasToCanonical[$upper];
+        }
+
+        foreach ($this->codeVariants($code) as $variant) {
+            if (isset($aliasToCanonical[$variant])) {
+                return $aliasToCanonical[$variant];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, array{obyek: int, pkb: float}> $into
+     * @param array<string, array{obyek: int, pkb: float}> $from
+     * @param list<array{id: int, label: string}> $statusDefs
+     */
+    private function mergeRekapStatusStats(array &$into, array $from, array $statusDefs): void
+    {
+        foreach ($statusDefs as $def) {
+            $id = (string) $def['id'];
+            $src = $from[$id] ?? ['obyek' => 0, 'pkb' => 0.0];
+            if (!isset($into[$id])) {
+                $into[$id] = ['obyek' => 0, 'pkb' => 0.0];
+            }
+            $into[$id]['obyek'] += (int) ($src['obyek'] ?? 0);
+            $into[$id]['pkb'] += (float) ($src['pkb'] ?? 0);
+        }
     }
 
     /**
@@ -306,7 +384,11 @@ class PelaporanController extends Controller
         }
 
         if ($request->kabkota_id) {
-            $query->whereIn('kota_dagri', $this->codeVariants((string) $request->kabkota_id));
+            $kabVariants = $this->codeVariants((string) $request->kabkota_id);
+            $query->where(function ($q) use ($kabVariants) {
+                $q->whereIn('kota_dagri', $kabVariants)
+                    ->orWhereIn('kota', $kabVariants);
+            });
         }
 
         $this->applyPelaporanWilayahFilters($query, $request);
@@ -457,26 +539,6 @@ class PelaporanController extends Controller
         $tertagihStats = $this->aggregateTertagihRekapStats($request, $layout);
         $pendataanStats = $this->aggregatePendataanRekapStats($request, $layout);
 
-        $allCodes = collect(array_keys($tertagihStats))
-            ->merge(array_keys($pendataanStats))
-            ->unique()
-            ->sort()
-            ->values();
-
-        // Saat filter kabkota + rekap per kecamatan, buang kode luar kab
-        // (mis. SRAGEN / JATILAWANG yang lolos lewat data kotor).
-        $allowedKec = [];
-        if ($request->kabkota_id && ($layout['mapLevel'] ?? '') === 'kecamatan') {
-            $allowedKec = $this->allowedKecamatanCodesForKabkota((string) $request->kabkota_id);
-            if ($allowedKec !== []) {
-                $allowedLookup = array_fill_keys($allowedKec, true);
-                $allCodes = $allCodes->filter(function ($code) use ($allowedLookup) {
-                    $code = (string) $code;
-                    return $code === '-' || $code === '' || isset($allowedLookup[$code]);
-                })->values();
-            }
-        }
-
         $rows = [];
         $totals = [
             'potensi' => 0,
@@ -487,6 +549,96 @@ class PelaporanController extends Controller
         foreach ($statusDefs as $def) {
             $totals['statuses'][(string) $def['id']] = ['obyek' => 0, 'pkb' => 0.0];
         }
+
+        // Filter kabkota + level kecamatan: satukan kode tertagih & pendataan
+        // (id / dagri / nama) ke canonical master supaya kolom status tidak kosong.
+        if ($request->kabkota_id && ($layout['mapLevel'] ?? '') === 'kecamatan') {
+            $master = $this->kecamatanMasterForKabkota((string) $request->kabkota_id);
+            $aliasToCanonical = $master['aliasToCanonical'];
+
+            if ($aliasToCanonical !== []) {
+                $merged = [];
+
+                foreach ($tertagihStats as $code => $t) {
+                    $canonical = $this->resolveKecamatanCanonical((string) $code, $aliasToCanonical);
+                    if ($canonical === null) {
+                        continue;
+                    }
+                    if (!isset($merged[$canonical])) {
+                        $merged[$canonical] = [
+                            'wilayah' => $canonical === '-'
+                                ? '-'
+                                : ($this->mapRekapWilayahName($layout, $canonical)),
+                            'potensi' => 0,
+                            'belum' => 0,
+                            'sudah' => 0,
+                            'statuses' => [],
+                        ];
+                        foreach ($statusDefs as $def) {
+                            $merged[$canonical]['statuses'][(string) $def['id']] = ['obyek' => 0, 'pkb' => 0.0];
+                        }
+                    }
+                    $merged[$canonical]['potensi'] += (int) ($t['potensi'] ?? 0);
+                    $merged[$canonical]['belum'] += (int) ($t['belum'] ?? 0);
+                    $merged[$canonical]['sudah'] += (int) ($t['sudah'] ?? 0);
+                }
+
+                foreach ($pendataanStats as $code => $p) {
+                    $canonical = $this->resolveKecamatanCanonical((string) $code, $aliasToCanonical);
+                    if ($canonical === null) {
+                        continue;
+                    }
+                    if (!isset($merged[$canonical])) {
+                        $merged[$canonical] = [
+                            'wilayah' => $canonical === '-'
+                                ? '-'
+                                : ($this->mapRekapWilayahName($layout, $canonical)),
+                            'potensi' => 0,
+                            'belum' => 0,
+                            'sudah' => 0,
+                            'statuses' => [],
+                        ];
+                        foreach ($statusDefs as $def) {
+                            $merged[$canonical]['statuses'][(string) $def['id']] = ['obyek' => 0, 'pkb' => 0.0];
+                        }
+                    }
+                    $this->mergeRekapStatusStats($merged[$canonical]['statuses'], $p, $statusDefs);
+                }
+
+                // Prefer nama dari master bila ada.
+                $nameByCanonical = [];
+                foreach ($master['rows'] as $masterRow) {
+                    $nameByCanonical[$masterRow['canonical']] = $masterRow['name'];
+                }
+
+                uasort($merged, static function (array $a, array $b): int {
+                    return strcmp((string) $a['wilayah'], (string) $b['wilayah']);
+                });
+
+                foreach ($merged as $canonical => $row) {
+                    if (isset($nameByCanonical[$canonical]) && $nameByCanonical[$canonical] !== '') {
+                        $row['wilayah'] = $nameByCanonical[$canonical];
+                    }
+                    $rows[] = $row;
+                    $totals['potensi'] += $row['potensi'];
+                    $totals['belum'] += $row['belum'];
+                    $totals['sudah'] += $row['sudah'];
+                    foreach ($statusDefs as $def) {
+                        $id = (string) $def['id'];
+                        $totals['statuses'][$id]['obyek'] += $row['statuses'][$id]['obyek'] ?? 0;
+                        $totals['statuses'][$id]['pkb'] += $row['statuses'][$id]['pkb'] ?? 0;
+                    }
+                }
+
+                return compact('layout', 'title', 'rows', 'totals');
+            }
+        }
+
+        $allCodes = collect(array_keys($tertagihStats))
+            ->merge(array_keys($pendataanStats))
+            ->unique()
+            ->sort()
+            ->values();
 
         foreach ($allCodes as $code) {
             $code = (string) $code;

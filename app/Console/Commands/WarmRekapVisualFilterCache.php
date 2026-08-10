@@ -9,6 +9,7 @@ use App\Support\MoneyShortFormatter;
 use App\Support\RekapVisualFilterCache;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class WarmRekapVisualFilterCache extends Command
@@ -27,6 +28,12 @@ class WarmRekapVisualFilterCache extends Command
     {
         @set_time_limit(0);
         $this->startedAt = microtime(true);
+
+        try {
+            DB::statement('SET SESSION default_tmp_storage_engine = InnoDB');
+        } catch (Throwable $e) {
+            // ignore
+        }
 
         $lock = Cache::lock(RekapVisualFilterCache::LOCK_KEY, 7200);
         if (! $this->option('force') && ! $lock->get()) {

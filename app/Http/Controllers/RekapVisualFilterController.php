@@ -826,40 +826,53 @@ class RekapVisualFilterController extends Controller
     ): array {
         $year = $filters['year'];
 
-        // whereExists (bukan joinSub DISTINCT) — joinSub sering picu MySQL 1034
-        // "Index for table '(temporary)' is corrupt" di data besar.
-        $bayarQuery = DB::table('seng_bayar_pajak as b')
-            ->where('b.year', $year)
-            ->whereNotNull('b.nopol_')
-            ->where('b.nopol_', '!=', '')
-            ->whereExists(function ($q) use ($tertagihTable, $year, $filters) {
-                $q->select(DB::raw(1))
-                    ->from("{$tertagihTable} as t")
-                    ->whereColumn('t.no_polisi', 'b.nopol_')
-                    ->where('t.year', $year);
-                $this->applyTertagihWilayahFilter($q, $filters, 't');
-                $q->limit(1);
-            })
-            ->orderBy('b.id')
-            ->select([
-                'b.nopol_',
-                'b.tgl_bayar',
-                'b.pkb_provinsi_jalan',
-                'b.pkb_provinsi_tunggakan',
-                'b.pkb_opsen_jalan',
-                'b.pkb_opsen_tunggakan',
-            ]);
+        // MariaDB Aria temp (#sql-temptable-*.MAI) sering corrupt (error 126/1034)
+        // pada JOIN/EXISTS besar. Hindari join: scan terpisah + filter di PHP.
+        try {
+            DB::statement('SET SESSION default_tmp_storage_engine = InnoDB');
+        } catch (\Throwable $e) {
+            // ignore jika engine tidak tersedia
+        }
 
+        $nopolSet = [];
+        $tertagihQ = DB::table($tertagihTable)
+            ->where('year', $year)
+            ->whereNotNull('no_polisi')
+            ->where('no_polisi', '!=', '')
+            ->select(['id', 'no_polisi']);
+        $this->applyTertagihWilayahFilter($tertagihQ, $filters);
+        $tertagihQ->orderBy('id')->chunkById(5000, function ($rows) use (&$nopolSet) {
+            foreach ($rows as $row) {
+                $nopol = trim((string) ($row->no_polisi ?? ''));
+                if ($nopol !== '') {
+                    $nopolSet[$nopol] = true;
+                }
+            }
+        }, 'id');
+
+        $pendataanMap = [];
         $pendataanQ = DB::table($pendataanTable)
             ->whereNull('deleted_at')
             ->whereBetween('created_at', [$yearStart, $yearEnd])
             ->whereNotNull('nopol')
-            ->where('nopol', '!=', '');
+            ->where('nopol', '!=', '')
+            ->select(['id', 'nopol', 'created_at']);
         $this->applyPendataanWilayahFilter($pendataanQ, $filters);
-        $pendataanMap = $pendataanQ
-            ->groupBy('nopol')
-            ->selectRaw('nopol, MIN(DATE(created_at)) as tgl_pendataan')
-            ->pluck('tgl_pendataan', 'nopol');
+        $pendataanQ->orderBy('id')->chunkById(5000, function ($rows) use (&$pendataanMap) {
+            foreach ($rows as $row) {
+                $nopol = trim((string) ($row->nopol ?? ''));
+                if ($nopol === '') {
+                    continue;
+                }
+                $d = substr((string) ($row->created_at ?? ''), 0, 10);
+                if ($d === '') {
+                    continue;
+                }
+                if (! isset($pendataanMap[$nopol]) || $d < $pendataanMap[$nopol]) {
+                    $pendataanMap[$nopol] = $d;
+                }
+            }
+        }, 'id');
 
         $nopolUnik = [];
         $nopolBayarSebelum = [];
@@ -874,35 +887,70 @@ class RekapVisualFilterController extends Controller
         $tanpaProv = 0;
         $tanpaOps = 0;
 
-        foreach ($bayarQuery->cursor() as $row) {
-            $nopol = (string) $row->nopol_;
-            $nopolUnik[$nopol] = true;
+        DB::table('seng_bayar_pajak')
+            ->where('year', $year)
+            ->whereNotNull('nopol_')
+            ->where('nopol_', '!=', '')
+            ->select([
+                'id',
+                'nopol_',
+                'tgl_bayar',
+                'pkb_provinsi_jalan',
+                'pkb_provinsi_tunggakan',
+                'pkb_opsen_jalan',
+                'pkb_opsen_tunggakan',
+            ])
+            ->orderBy('id')
+            ->chunkById(3000, function ($rows) use (
+                &$nopolSet,
+                &$pendataanMap,
+                &$nopolUnik,
+                &$nopolBayarSebelum,
+                &$nopolBayarSesudah,
+                &$nopolTanpaPendataan,
+                &$nominalProvinsi,
+                &$nominalOpsen,
+                &$sebelumProv,
+                &$sebelumOps,
+                &$sesudahProv,
+                &$sesudahOps,
+                &$tanpaProv,
+                &$tanpaOps
+            ) {
+                foreach ($rows as $row) {
+                    $nopol = (string) $row->nopol_;
+                    if (! isset($nopolSet[$nopol])) {
+                        continue;
+                    }
 
-            $prov = (int) ($row->pkb_provinsi_jalan ?? 0) + (int) ($row->pkb_provinsi_tunggakan ?? 0);
-            $ops = (int) ($row->pkb_opsen_jalan ?? 0) + (int) ($row->pkb_opsen_tunggakan ?? 0);
-            $nominalProvinsi += $prov;
-            $nominalOpsen += $ops;
+                    $nopolUnik[$nopol] = true;
 
-            $tglPendataan = $pendataanMap[$nopol] ?? null;
-            $tglBayar = $row->tgl_bayar ? substr((string) $row->tgl_bayar, 0, 10) : null;
+                    $prov = (int) ($row->pkb_provinsi_jalan ?? 0) + (int) ($row->pkb_provinsi_tunggakan ?? 0);
+                    $ops = (int) ($row->pkb_opsen_jalan ?? 0) + (int) ($row->pkb_opsen_tunggakan ?? 0);
+                    $nominalProvinsi += $prov;
+                    $nominalOpsen += $ops;
 
-            if ($tglPendataan === null || $tglPendataan === '') {
-                $nopolTanpaPendataan[$nopol] = true;
-                $tanpaProv += $prov;
-                $tanpaOps += $ops;
-                continue;
-            }
+                    $tglPendataan = $pendataanMap[$nopol] ?? null;
+                    $tglBayar = $row->tgl_bayar ? substr((string) $row->tgl_bayar, 0, 10) : null;
 
-            if ($tglBayar !== null && $tglBayar < $tglPendataan) {
-                $nopolBayarSebelum[$nopol] = true;
-                $sebelumProv += $prov;
-                $sebelumOps += $ops;
-            } else {
-                $nopolBayarSesudah[$nopol] = true;
-                $sesudahProv += $prov;
-                $sesudahOps += $ops;
-            }
-        }
+                    if ($tglPendataan === null || $tglPendataan === '') {
+                        $nopolTanpaPendataan[$nopol] = true;
+                        $tanpaProv += $prov;
+                        $tanpaOps += $ops;
+                        continue;
+                    }
+
+                    if ($tglBayar !== null && $tglBayar < $tglPendataan) {
+                        $nopolBayarSebelum[$nopol] = true;
+                        $sebelumProv += $prov;
+                        $sebelumOps += $ops;
+                    } else {
+                        $nopolBayarSesudah[$nopol] = true;
+                        $sesudahProv += $prov;
+                        $sesudahOps += $ops;
+                    }
+                }
+            }, 'id');
 
         $jumlahTerbayar = count($nopolUnik);
         $sesudah = count($nopolBayarSesudah);

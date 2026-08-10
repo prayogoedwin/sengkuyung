@@ -826,21 +826,21 @@ class RekapVisualFilterController extends Controller
     ): array {
         $year = $filters['year'];
 
-        // Join ke daftar nopol tertagih (sekali) — lebih cepat dari whereExists berkorelasi per baris bayar.
-        $tertagihNopol = DB::table($tertagihTable)
-            ->where('year', $year)
-            ->whereNotNull('no_polisi')
-            ->where('no_polisi', '!=', '');
-        $this->applyTertagihWilayahFilter($tertagihNopol, $filters);
-        $tertagihNopol->select('no_polisi')->distinct();
-
+        // whereExists (bukan joinSub DISTINCT) — joinSub sering picu MySQL 1034
+        // "Index for table '(temporary)' is corrupt" di data besar.
         $bayarQuery = DB::table('seng_bayar_pajak as b')
-            ->joinSub($tertagihNopol, 'tn', function ($join) {
-                $join->on('tn.no_polisi', '=', 'b.nopol_');
-            })
             ->where('b.year', $year)
             ->whereNotNull('b.nopol_')
             ->where('b.nopol_', '!=', '')
+            ->whereExists(function ($q) use ($tertagihTable, $year, $filters) {
+                $q->select(DB::raw(1))
+                    ->from("{$tertagihTable} as t")
+                    ->whereColumn('t.no_polisi', 'b.nopol_')
+                    ->where('t.year', $year);
+                $this->applyTertagihWilayahFilter($q, $filters, 't');
+                $q->limit(1);
+            })
+            ->orderBy('b.id')
             ->select([
                 'b.nopol_',
                 'b.tgl_bayar',
@@ -874,7 +874,6 @@ class RekapVisualFilterController extends Controller
         $tanpaProv = 0;
         $tanpaOps = 0;
 
-        // cursor(): tidak menampung semua baris bayar di memory sekaligus.
         foreach ($bayarQuery->cursor() as $row) {
             $nopol = (string) $row->nopol_;
             $nopolUnik[$nopol] = true;

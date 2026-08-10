@@ -63,7 +63,7 @@ class WarmRekapVisualFilterCache extends Command
             );
 
             $this->info('Warm mulai · tahun=' . $year . ' · only=' . $only);
-            $this->comment('Urutan: Provinsi (semua → reguler → d2d) dulu, baru Kabkota. Tiap key langsung disimpan.');
+            $this->comment('Satu proses: Provinsi (semua → reguler → d2d) dulu, lalu Kabkota. Tiap key langsung disimpan — tidak perlu jalankan per fase manual.');
 
             $reguler = app(RekapVisualFilterController::class);
             $d2d = app(RekapVisualFilterD2dController::class);
@@ -72,12 +72,15 @@ class WarmRekapVisualFilterCache extends Command
             if ($only === 'provinsi' || $only === 'all') {
                 $this->line('');
                 $this->info('=== FASE 1: PROVINSI ===');
+                $this->updateWarmStatus('running', 'Fase Provinsi: menghitung semua → reguler → d2d…');
                 $totalKeys += $this->warmProvinsiPhase($year, $reguler, $d2d, $wantReguler, $wantD2d, $wantSemua);
+                $this->updateWarmStatus('running', "Fase Provinsi selesai ({$totalKeys} key). Lanjut Kabkota…");
             }
 
             if ($only === 'kabkota' || $only === 'all') {
                 $this->line('');
                 $this->info('=== FASE 2: KABKOTA ===');
+                $this->updateWarmStatus('running', 'Fase Kabkota: berjalan…');
                 $totalKeys += $this->warmKabkotaPhase($year, $reguler, $d2d, $wantReguler, $wantD2d, $wantSemua);
             }
 
@@ -105,7 +108,24 @@ class WarmRekapVisualFilterCache extends Command
     private function tick(string $msg): void
     {
         $sec = (int) round(microtime(true) - $this->startedAt);
-        $this->line(sprintf('  %s (+%ds)', $msg, $sec));
+        $line = sprintf('%s (+%ds)', $msg, $sec);
+        $this->line('  ' . $line);
+        $this->updateWarmStatus('running', $line);
+    }
+
+    private function updateWarmStatus(string $status, string $message): void
+    {
+        try {
+            $row = RekapVisualFilterCache::settings();
+            $row->last_warm_status = $status;
+            $row->last_warm_message = $message;
+            if ($status === 'running' && ! $row->last_warm_started_at) {
+                $row->last_warm_started_at = now('Asia/Jakarta');
+            }
+            $row->save();
+        } catch (Throwable $e) {
+            // jangan gagalkan warm hanya karena gagal update status
+        }
     }
 
     private function filters(int $year, string $kabkotaId = ''): array

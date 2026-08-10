@@ -99,7 +99,7 @@ class RekapVisualFilterCacheController extends Controller
             ->route('rekap-visual-filter-cache.index')
             ->with(
                 'success',
-                'Warm dijalankan di background. Tunggu beberapa menit, lalu refresh halaman ini — status & daftar cache akan terisi. Log: storage/logs/rvf-warm.log'
+                'Warm dijalankan di background (1x). Sistem membagi sendiri: Provinsi semua→reguler→d2d, lalu Kabkota. Refresh halaman untuk lihat status. Log: storage/logs/rvf-warm.log'
             );
     }
 

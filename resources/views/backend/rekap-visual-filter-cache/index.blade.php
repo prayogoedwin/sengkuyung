@@ -133,10 +133,10 @@
                                     Pastikan cron <code>* * * * * php artisan schedule:run</code> aktif.
                                 </p>
                                 <p class="mt-2 mb-0 small text-danger">
-                                    Jika daftar cache masih 0: tekan <strong>Warm Sekarang</strong> (background), atau CLI:
-                                    <code>php artisan rvf:warm-cache --force --only=provinsi</code>
-                                    (Provinsi dulu: semua→reguler→d2d), lalu
-                                    <code>php artisan rvf:warm-cache --force --only=kabkota</code>.
+                                    Cukup tekan <strong>Warm Sekarang</strong> sekali (jalan di background).
+                                    Sistem membagi sendiri: Provinsi semua → reguler → d2d, baru Kabkota — tiap tahap langsung disimpan.
+                                    Status di bawah akan berubah seiring progres. CLI sekali jalan:
+                                    <code>php artisan rvf:warm-cache --force</code>
                                 </p>
                             </div>
                         </div>

@@ -92,7 +92,35 @@ class RekapVisualFilterController extends Controller
     }
 
     /**
-     * Warm prewarm cache berurutan: Provinsi → tiap Kabkota → map.
+     * Warm helpers (dipakai command rvf:warm-cache).
+     *
+     * @param  array{year:int,kabkota_id:string,kecamatan_id:string,kelurahan_id:string}  $filters
+     * @return array{stats:array<string,mixed>,bayar:array<string,mixed>}
+     */
+    public function warmBuildStats(array $filters): array
+    {
+        return $this->computeStats($filters);
+    }
+
+    /**
+     * @param  array{year:int,kabkota_id:string,kecamatan_id:string,kelurahan_id:string}  $filters
+     * @return array{level:string,rows:list<array<string,mixed>>}
+     */
+    public function warmBuildBreakdown(array $filters): array
+    {
+        return $this->computeBreakdown($filters);
+    }
+
+    /**
+     * @return list<array<string,mixed>>
+     */
+    public function warmBuildMap(int $year): array
+    {
+        return $this->buildMapKabkotaRows($year);
+    }
+
+    /**
+     * @deprecated Diganti orkestrasi di WarmRekapVisualFilterCache (fase Provinsi dulu).
      *
      * @param  callable(string):void|null  $onProgress
      * @return list<string>
@@ -102,11 +130,21 @@ class RekapVisualFilterController extends Controller
         @set_time_limit(0);
         $written = [];
         $channel = $this->channelCode();
+        $t0 = microtime(true);
+        $tick = static function (string $msg) use ($onProgress, $t0): void {
+            if (! $onProgress) {
+                return;
+            }
+            $sec = (int) round(microtime(true) - $t0);
+            $onProgress(sprintf('%s (+%ds)', $msg, $sec));
+        };
 
-        if ($onProgress) {
-            $onProgress("[{$channel}] Provinsi…");
-        }
-        $written = array_merge($written, $this->warmOneScope($year, ''));
+        $tick("[{$channel}] Provinsi stats…");
+        $written = array_merge($written, $this->warmOneScopeStats($year, ''));
+        $tick("[{$channel}] Provinsi breakdown…");
+        $written = array_merge($written, $this->warmOneScopeBreakdown($year, ''));
+        $tick("[{$channel}] Map…");
+        $written[] = $this->warmMap($year);
 
         $kabkotas = SengWilayah::query()
             ->where('id_up', 33)
@@ -118,16 +156,9 @@ class RekapVisualFilterController extends Controller
         foreach ($kabkotas as $kab) {
             $i++;
             $kabId = (string) $kab->id;
-            if ($onProgress) {
-                $onProgress("[{$channel}] Kabkota {$i}/{$total}: {$kab->nama}");
-            }
+            $tick("[{$channel}] Kabkota {$i}/{$total}: {$kab->nama}");
             $written = array_merge($written, $this->warmOneScope($year, $kabId));
         }
-
-        if ($onProgress) {
-            $onProgress("[{$channel}] Map kabkota…");
-        }
-        $written[] = $this->warmMap($year);
 
         return $written;
     }
@@ -137,6 +168,17 @@ class RekapVisualFilterController extends Controller
      */
     protected function warmOneScope(int $year, string $kabkotaId): array
     {
+        return array_merge(
+            $this->warmOneScopeStats($year, $kabkotaId),
+            $this->warmOneScopeBreakdown($year, $kabkotaId)
+        );
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function warmOneScopeStats(int $year, string $kabkotaId): array
+    {
         $filters = [
             'year' => $year,
             'kabkota_id' => $kabkotaId,
@@ -145,12 +187,27 @@ class RekapVisualFilterController extends Controller
         ];
         $channel = $this->channelCode();
         $statsKey = RekapVisualFilterCache::statsKey($channel, $year, $kabkotaId);
-        $breakdownKey = RekapVisualFilterCache::breakdownKey($channel, $year, $kabkotaId);
-
         RekapVisualFilterCache::put($statsKey, $this->computeStats($filters));
+
+        return [$statsKey];
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function warmOneScopeBreakdown(int $year, string $kabkotaId): array
+    {
+        $filters = [
+            'year' => $year,
+            'kabkota_id' => $kabkotaId,
+            'kecamatan_id' => '',
+            'kelurahan_id' => '',
+        ];
+        $channel = $this->channelCode();
+        $breakdownKey = RekapVisualFilterCache::breakdownKey($channel, $year, $kabkotaId);
         RekapVisualFilterCache::put($breakdownKey, $this->computeBreakdown($filters));
 
-        return [$statsKey, $breakdownKey];
+        return [$breakdownKey];
     }
 
     protected function warmMap(int $year): string
@@ -769,19 +826,22 @@ class RekapVisualFilterController extends Controller
     ): array {
         $year = $filters['year'];
 
-        $rows = DB::table('seng_bayar_pajak as b')
+        // Join ke daftar nopol tertagih (sekali) — lebih cepat dari whereExists berkorelasi per baris bayar.
+        $tertagihNopol = DB::table($tertagihTable)
+            ->where('year', $year)
+            ->whereNotNull('no_polisi')
+            ->where('no_polisi', '!=', '');
+        $this->applyTertagihWilayahFilter($tertagihNopol, $filters);
+        $tertagihNopol->select('no_polisi')->distinct();
+
+        $bayarQuery = DB::table('seng_bayar_pajak as b')
+            ->joinSub($tertagihNopol, 'tn', function ($join) {
+                $join->on('tn.no_polisi', '=', 'b.nopol_');
+            })
             ->where('b.year', $year)
             ->whereNotNull('b.nopol_')
             ->where('b.nopol_', '!=', '')
-            ->whereExists(function ($q) use ($tertagihTable, $year, $filters) {
-                $q->select(DB::raw(1))
-                    ->from("{$tertagihTable} as t")
-                    ->whereColumn('t.no_polisi', 'b.nopol_')
-                    ->where('t.year', $year);
-                $this->applyTertagihWilayahFilter($q, $filters, 't');
-                $q->limit(1);
-            })
-            ->get([
+            ->select([
                 'b.nopol_',
                 'b.tgl_bayar',
                 'b.pkb_provinsi_jalan',
@@ -814,7 +874,8 @@ class RekapVisualFilterController extends Controller
         $tanpaProv = 0;
         $tanpaOps = 0;
 
-        foreach ($rows as $row) {
+        // cursor(): tidak menampung semua baris bayar di memory sekaligus.
+        foreach ($bayarQuery->cursor() as $row) {
             $nopol = (string) $row->nopol_;
             $nopolUnik[$nopol] = true;
 

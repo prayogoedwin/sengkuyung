@@ -133,9 +133,10 @@
                                     Pastikan cron <code>* * * * * php artisan schedule:run</code> aktif.
                                 </p>
                                 <p class="mt-2 mb-0 small text-danger">
-                                    Jika daftar cache masih 0: tekan <strong>Warm Sekarang</strong> (jalan di background), tunggu sampai status jadi success,
-                                    baru buka Rekap Visual Filter. Atau set sementara “Dashboard manfaatkan cache” = Tidak (query live; Provinsi bisa lambat).
-                                    CLI: <code>php artisan rvf:warm-cache --force</code>
+                                    Jika daftar cache masih 0: tekan <strong>Warm Sekarang</strong> (background), atau CLI:
+                                    <code>php artisan rvf:warm-cache --force --only=provinsi</code>
+                                    (Provinsi dulu: semua→reguler→d2d), lalu
+                                    <code>php artisan rvf:warm-cache --force --only=kabkota</code>.
                                 </p>
                             </div>
                         </div>

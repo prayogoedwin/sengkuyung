@@ -4,6 +4,8 @@ namespace App\Console\Commands;
 
 use App\Http\Controllers\RekapVisualFilterController;
 use App\Http\Controllers\RekapVisualFilterD2dController;
+use App\Models\SengWilayah;
+use App\Support\MoneyShortFormatter;
 use App\Support\RekapVisualFilterCache;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
@@ -14,13 +16,17 @@ class WarmRekapVisualFilterCache extends Command
     protected $signature = 'rvf:warm-cache
                             {--channel= : reguler|d2d|semua (override setting)}
                             {--year= : Tahun (override setting)}
+                            {--only= : provinsi|kabkota|all (default all)}
                             {--force : Abaikan lock jika ada}';
 
-    protected $description = 'Warm cache rekap-visual-filter (Provinsi + Kabkota) secara berurutan';
+    protected $description = 'Warm cache RVF bertahap: Provinsi semua→reguler→d2d, baru Kabkota';
+
+    private float $startedAt = 0;
 
     public function handle(): int
     {
         @set_time_limit(0);
+        $this->startedAt = microtime(true);
 
         $lock = Cache::lock(RekapVisualFilterCache::LOCK_KEY, 7200);
         if (! $this->option('force') && ! $lock->get()) {
@@ -34,33 +40,48 @@ class WarmRekapVisualFilterCache extends Command
                 ? (int) $this->option('year')
                 : RekapVisualFilterCache::warmYear();
 
+            $only = strtolower(trim((string) ($this->option('only') ?? 'all')));
+            if (! in_array($only, ['provinsi', 'kabkota', 'all'], true)) {
+                $only = 'all';
+            }
+
             $channelOpt = strtolower(trim((string) ($this->option('channel') ?? '')));
-            $channels = match ($channelOpt) {
+            $baseChannels = match ($channelOpt) {
                 'reguler' => ['reguler'],
                 'd2d' => ['d2d'],
                 'semua' => ['reguler', 'd2d'],
                 default => RekapVisualFilterCache::channelsToWarm(),
             };
 
+            $wantReguler = in_array('reguler', $baseChannels, true);
+            $wantD2d = in_array('d2d', $baseChannels, true);
+            $wantSemua = $wantReguler && $wantD2d;
+
             RekapVisualFilterCache::markWarmStart(
-                'Mulai warm tahun ' . $year . ' channel: ' . implode(',', $channels)
+                'Mulai warm tahun ' . $year . ' · only=' . $only
+                . ' · ' . implode(',', $baseChannels)
             );
-            $this->info('Warm mulai · tahun=' . $year . ' · channel=' . implode(',', $channels));
 
+            $this->info('Warm mulai · tahun=' . $year . ' · only=' . $only);
+            $this->comment('Urutan: Provinsi (semua → reguler → d2d) dulu, baru Kabkota. Tiap key langsung disimpan.');
+
+            $reguler = app(RekapVisualFilterController::class);
+            $d2d = app(RekapVisualFilterD2dController::class);
             $totalKeys = 0;
-            foreach ($channels as $channel) {
-                $controller = $channel === 'd2d'
-                    ? app(RekapVisualFilterD2dController::class)
-                    : app(RekapVisualFilterController::class);
 
-                $this->line('— Channel ' . strtoupper($channel));
-                $keys = $controller->warmPrewarmForYear($year, function (string $msg) {
-                    $this->line('  ' . $msg);
-                });
-                $totalKeys += count($keys);
+            if ($only === 'provinsi' || $only === 'all') {
+                $this->line('');
+                $this->info('=== FASE 1: PROVINSI ===');
+                $totalKeys += $this->warmProvinsiPhase($year, $reguler, $d2d, $wantReguler, $wantD2d, $wantSemua);
             }
 
-            $msg = "Selesai. {$totalKeys} key di-warm (tahun {$year}).";
+            if ($only === 'kabkota' || $only === 'all') {
+                $this->line('');
+                $this->info('=== FASE 2: KABKOTA ===');
+                $totalKeys += $this->warmKabkotaPhase($year, $reguler, $d2d, $wantReguler, $wantD2d, $wantSemua);
+            }
+
+            $msg = "Selesai. {$totalKeys} key di-warm (tahun {$year}, only={$only}).";
             RekapVisualFilterCache::markWarmFinish('success', $msg);
             $this->info($msg);
 
@@ -79,5 +100,349 @@ class WarmRekapVisualFilterCache extends Command
                 }
             }
         }
+    }
+
+    private function tick(string $msg): void
+    {
+        $sec = (int) round(microtime(true) - $this->startedAt);
+        $this->line(sprintf('  %s (+%ds)', $msg, $sec));
+    }
+
+    private function filters(int $year, string $kabkotaId = ''): array
+    {
+        return [
+            'year' => $year,
+            'kabkota_id' => $kabkotaId,
+            'kecamatan_id' => '',
+            'kelurahan_id' => '',
+        ];
+    }
+
+    /**
+     * @return int jumlah key tertulis
+     */
+    private function warmProvinsiPhase(
+        int $year,
+        RekapVisualFilterController $reguler,
+        RekapVisualFilterD2dController $d2d,
+        bool $wantReguler,
+        bool $wantD2d,
+        bool $wantSemua
+    ): int {
+        $written = 0;
+        $filters = $this->filters($year);
+
+        // --- STATS: hitung sekali per channel, simpan semua → reguler → d2d ---
+        $statsReg = null;
+        $statsD2d = null;
+
+        if ($wantReguler) {
+            $this->tick('Provinsi REGULER stats · hitung…');
+            $statsReg = $reguler->warmBuildStats($filters);
+        }
+        if ($wantD2d) {
+            $this->tick('Provinsi D2D stats · hitung…');
+            $statsD2d = $d2d->warmBuildStats($filters);
+        }
+
+        if ($wantSemua && $statsReg && $statsD2d) {
+            $this->tick('Provinsi SEMUA stats · simpan cache…');
+            RekapVisualFilterCache::put(
+                RekapVisualFilterCache::statsKey('semua', $year, ''),
+                $this->mergeStats($statsReg, $statsD2d)
+            );
+            $written++;
+        }
+        if ($statsReg) {
+            $this->tick('Provinsi REGULER stats · simpan cache…');
+            RekapVisualFilterCache::put(RekapVisualFilterCache::statsKey('reguler', $year, ''), $statsReg);
+            $written++;
+        }
+        if ($statsD2d) {
+            $this->tick('Provinsi D2D stats · simpan cache…');
+            RekapVisualFilterCache::put(RekapVisualFilterCache::statsKey('d2d', $year, ''), $statsD2d);
+            $written++;
+        }
+
+        // --- BREAKDOWN ---
+        $bdReg = null;
+        $bdD2d = null;
+        if ($wantReguler) {
+            $this->tick('Provinsi REGULER breakdown · hitung…');
+            $bdReg = $reguler->warmBuildBreakdown($filters);
+        }
+        if ($wantD2d) {
+            $this->tick('Provinsi D2D breakdown · hitung…');
+            $bdD2d = $d2d->warmBuildBreakdown($filters);
+        }
+        if ($wantSemua && $bdReg && $bdD2d) {
+            $this->tick('Provinsi SEMUA breakdown · simpan cache…');
+            RekapVisualFilterCache::put(
+                RekapVisualFilterCache::breakdownKey('semua', $year, ''),
+                $this->mergeBreakdown($bdReg, $bdD2d)
+            );
+            $written++;
+        }
+        if ($bdReg) {
+            $this->tick('Provinsi REGULER breakdown · simpan cache…');
+            RekapVisualFilterCache::put(RekapVisualFilterCache::breakdownKey('reguler', $year, ''), $bdReg);
+            $written++;
+        }
+        if ($bdD2d) {
+            $this->tick('Provinsi D2D breakdown · simpan cache…');
+            RekapVisualFilterCache::put(RekapVisualFilterCache::breakdownKey('d2d', $year, ''), $bdD2d);
+            $written++;
+        }
+
+        // --- MAP ---
+        $mapReg = null;
+        $mapD2d = null;
+        if ($wantReguler) {
+            $this->tick('Map REGULER · hitung…');
+            $mapReg = $reguler->warmBuildMap($year);
+        }
+        if ($wantD2d) {
+            $this->tick('Map D2D · hitung…');
+            $mapD2d = $d2d->warmBuildMap($year);
+        }
+        if ($wantSemua && $mapReg !== null && $mapD2d !== null) {
+            $this->tick('Map SEMUA · simpan cache…');
+            RekapVisualFilterCache::put(
+                RekapVisualFilterCache::mapKey('semua', $year),
+                $this->mergeRows($mapReg, $mapD2d)
+            );
+            $written++;
+        }
+        if ($mapReg !== null) {
+            $this->tick('Map REGULER · simpan cache…');
+            RekapVisualFilterCache::put(RekapVisualFilterCache::mapKey('reguler', $year), $mapReg);
+            $written++;
+        }
+        if ($mapD2d !== null) {
+            $this->tick('Map D2D · simpan cache…');
+            RekapVisualFilterCache::put(RekapVisualFilterCache::mapKey('d2d', $year), $mapD2d);
+            $written++;
+        }
+
+        $this->info("Fase Provinsi selesai ({$written} key). Dashboard seluruh Provinsi sudah bisa pakai cache.");
+
+        return $written;
+    }
+
+    /**
+     * @return int
+     */
+    private function warmKabkotaPhase(
+        int $year,
+        RekapVisualFilterController $reguler,
+        RekapVisualFilterD2dController $d2d,
+        bool $wantReguler,
+        bool $wantD2d,
+        bool $wantSemua
+    ): int {
+        $kabkotas = SengWilayah::query()
+            ->where('id_up', 33)
+            ->orderBy('nama')
+            ->get(['id', 'nama']);
+
+        $written = 0;
+        $i = 0;
+        $total = $kabkotas->count();
+
+        foreach ($kabkotas as $kab) {
+            $i++;
+            $kabId = (string) $kab->id;
+            $nama = (string) $kab->nama;
+            $filters = $this->filters($year, $kabId);
+
+            $this->line("— Kabkota {$i}/{$total}: {$nama}");
+
+            $statsReg = null;
+            $statsD2d = null;
+            if ($wantReguler) {
+                $this->tick("  stats REGULER…");
+                $statsReg = $reguler->warmBuildStats($filters);
+            }
+            if ($wantD2d) {
+                $this->tick("  stats D2D…");
+                $statsD2d = $d2d->warmBuildStats($filters);
+            }
+            if ($wantSemua && $statsReg && $statsD2d) {
+                RekapVisualFilterCache::put(
+                    RekapVisualFilterCache::statsKey('semua', $year, $kabId),
+                    $this->mergeStats($statsReg, $statsD2d)
+                );
+                $written++;
+                $this->tick('  stats SEMUA tersimpan');
+            }
+            if ($statsReg) {
+                RekapVisualFilterCache::put(RekapVisualFilterCache::statsKey('reguler', $year, $kabId), $statsReg);
+                $written++;
+                $this->tick('  stats REGULER tersimpan');
+            }
+            if ($statsD2d) {
+                RekapVisualFilterCache::put(RekapVisualFilterCache::statsKey('d2d', $year, $kabId), $statsD2d);
+                $written++;
+                $this->tick('  stats D2D tersimpan');
+            }
+
+            $bdReg = null;
+            $bdD2d = null;
+            if ($wantReguler) {
+                $this->tick('  breakdown REGULER…');
+                $bdReg = $reguler->warmBuildBreakdown($filters);
+            }
+            if ($wantD2d) {
+                $this->tick('  breakdown D2D…');
+                $bdD2d = $d2d->warmBuildBreakdown($filters);
+            }
+            if ($wantSemua && $bdReg && $bdD2d) {
+                RekapVisualFilterCache::put(
+                    RekapVisualFilterCache::breakdownKey('semua', $year, $kabId),
+                    $this->mergeBreakdown($bdReg, $bdD2d)
+                );
+                $written++;
+                $this->tick('  breakdown SEMUA tersimpan');
+            }
+            if ($bdReg) {
+                RekapVisualFilterCache::put(RekapVisualFilterCache::breakdownKey('reguler', $year, $kabId), $bdReg);
+                $written++;
+                $this->tick('  breakdown REGULER tersimpan');
+            }
+            if ($bdD2d) {
+                RekapVisualFilterCache::put(RekapVisualFilterCache::breakdownKey('d2d', $year, $kabId), $bdD2d);
+                $written++;
+                $this->tick('  breakdown D2D tersimpan');
+            }
+        }
+
+        return $written;
+    }
+
+    /**
+     * @param  array{stats:array,bayar:array}  $a
+     * @param  array{stats:array,bayar:array}  $b
+     * @return array{stats:array,bayar:array}
+     */
+    private function mergeStats(array $a, array $b): array
+    {
+        $sa = $a['stats'] ?? [];
+        $sb = $b['stats'] ?? [];
+        $ba = $a['bayar'] ?? [];
+        $bb = $b['bayar'] ?? [];
+
+        $sum = static fn ($x, $y) => (int) ($x ?? 0) + (int) ($y ?? 0);
+
+        $stats = [
+            'jumlah_tunggakan' => $sum($sa['jumlah_tunggakan'] ?? 0, $sb['jumlah_tunggakan'] ?? 0),
+            'jumlah_sudah_pendataan' => $sum($sa['jumlah_sudah_pendataan'] ?? 0, $sb['jumlah_sudah_pendataan'] ?? 0),
+            'jumlah_belum_pendataan' => $sum($sa['jumlah_belum_pendataan'] ?? 0, $sb['jumlah_belum_pendataan'] ?? 0),
+            'menunggu_verifikasi' => $sum($sa['menunggu_verifikasi'] ?? 0, $sb['menunggu_verifikasi'] ?? 0),
+            'verifikasi' => $sum($sa['verifikasi'] ?? 0, $sb['verifikasi'] ?? 0),
+            'ditolak' => $sum($sa['ditolak'] ?? 0, $sb['ditolak'] ?? 0),
+        ];
+        $stats['pct_dikunjungi'] = $stats['jumlah_tunggakan'] > 0
+            ? round(($stats['jumlah_sudah_pendataan'] / $stats['jumlah_tunggakan']) * 100, 2)
+            : 0.0;
+
+        $bayar = [
+            'jumlah_terbayar' => $sum($ba['jumlah_terbayar'] ?? 0, $bb['jumlah_terbayar'] ?? 0),
+            'nominal_provinsi' => $sum($ba['nominal_provinsi'] ?? 0, $bb['nominal_provinsi'] ?? 0),
+            'nominal_opsen' => $sum($ba['nominal_opsen'] ?? 0, $bb['nominal_opsen'] ?? 0),
+            'nominal_total' => $sum($ba['nominal_total'] ?? 0, $bb['nominal_total'] ?? 0),
+            'sebelum_pendataan' => $sum($ba['sebelum_pendataan'] ?? 0, $bb['sebelum_pendataan'] ?? 0),
+            'sesudah_pendataan' => $sum($ba['sesudah_pendataan'] ?? 0, $bb['sesudah_pendataan'] ?? 0),
+            'sebelum_pendataan_provinsi' => $sum($ba['sebelum_pendataan_provinsi'] ?? 0, $bb['sebelum_pendataan_provinsi'] ?? 0),
+            'sebelum_pendataan_opsen' => $sum($ba['sebelum_pendataan_opsen'] ?? 0, $bb['sebelum_pendataan_opsen'] ?? 0),
+            'sesudah_pendataan_provinsi' => $sum($ba['sesudah_pendataan_provinsi'] ?? 0, $bb['sesudah_pendataan_provinsi'] ?? 0),
+            'sesudah_pendataan_opsen' => $sum($ba['sesudah_pendataan_opsen'] ?? 0, $bb['sesudah_pendataan_opsen'] ?? 0),
+            'potensi_total' => $sum($ba['potensi_total'] ?? 0, $bb['potensi_total'] ?? 0),
+            'potensi_provinsi' => $sum($ba['potensi_provinsi'] ?? 0, $bb['potensi_provinsi'] ?? 0),
+            'potensi_opsen' => $sum($ba['potensi_opsen'] ?? 0, $bb['potensi_opsen'] ?? 0),
+        ];
+        $bayar['nominal_provinsi_fmt'] = MoneyShortFormatter::format($bayar['nominal_provinsi']);
+        $bayar['nominal_opsen_fmt'] = MoneyShortFormatter::format($bayar['nominal_opsen']);
+        $bayar['nominal_total_fmt'] = MoneyShortFormatter::format($bayar['nominal_total']);
+        $bayar['sebelum_pendataan_provinsi_fmt'] = MoneyShortFormatter::format($bayar['sebelum_pendataan_provinsi']);
+        $bayar['sebelum_pendataan_opsen_fmt'] = MoneyShortFormatter::format($bayar['sebelum_pendataan_opsen']);
+        $bayar['sesudah_pendataan_provinsi_fmt'] = MoneyShortFormatter::format($bayar['sesudah_pendataan_provinsi']);
+        $bayar['sesudah_pendataan_opsen_fmt'] = MoneyShortFormatter::format($bayar['sesudah_pendataan_opsen']);
+        $bayar['potensi_total_fmt'] = MoneyShortFormatter::format($bayar['potensi_total']);
+        $bayar['potensi_provinsi_fmt'] = MoneyShortFormatter::format($bayar['potensi_provinsi']);
+        $bayar['potensi_opsen_fmt'] = MoneyShortFormatter::format($bayar['potensi_opsen']);
+        $bayar['pct_bayar_vs_potensi'] = $bayar['potensi_total'] > 0
+            ? round(($bayar['nominal_total'] / $bayar['potensi_total']) * 100, 2)
+            : 0.0;
+
+        return ['stats' => $stats, 'bayar' => $bayar];
+    }
+
+    /**
+     * @param  array{level:string,rows:list<array>}  $a
+     * @param  array{level:string,rows:list<array>}  $b
+     * @return array{level:string,rows:list<array>}
+     */
+    private function mergeBreakdown(array $a, array $b): array
+    {
+        return [
+            'level' => $a['level'] ?? $b['level'] ?? 'kabkota',
+            'rows' => $this->mergeRows($a['rows'] ?? [], $b['rows'] ?? []),
+        ];
+    }
+
+    /**
+     * @param  list<array<string,mixed>>  $rowsA
+     * @param  list<array<string,mixed>>  $rowsB
+     * @return list<array<string,mixed>>
+     */
+    private function mergeRows(array $rowsA, array $rowsB): array
+    {
+        $map = [];
+        foreach ([$rowsA, $rowsB] as $rows) {
+            foreach ($rows as $row) {
+                $id = (string) ($row['id'] ?? '');
+                if ($id === '') {
+                    continue;
+                }
+                if (! isset($map[$id])) {
+                    $map[$id] = [
+                        'id' => $id,
+                        'nama' => $row['nama'] ?? $id,
+                        'tagihan' => 0,
+                        'pendataan' => 0,
+                        'bayar' => 0,
+                        'bayar_sesudah' => 0,
+                        'lat' => $row['lat'] ?? null,
+                        'lng' => $row['lng'] ?? null,
+                    ];
+                }
+                $map[$id]['tagihan'] += (int) ($row['tagihan'] ?? 0);
+                $map[$id]['pendataan'] += (int) ($row['pendataan'] ?? 0);
+                $map[$id]['bayar'] += (int) ($row['bayar'] ?? 0);
+                $map[$id]['bayar_sesudah'] += (int) ($row['bayar_sesudah'] ?? 0);
+                if (($map[$id]['lat'] ?? null) === null && isset($row['lat'])) {
+                    $map[$id]['lat'] = $row['lat'];
+                }
+                if (($map[$id]['lng'] ?? null) === null && isset($row['lng'])) {
+                    $map[$id]['lng'] = $row['lng'];
+                }
+                if (empty($map[$id]['nama']) && ! empty($row['nama'])) {
+                    $map[$id]['nama'] = $row['nama'];
+                }
+            }
+        }
+
+        $out = [];
+        foreach ($map as $r) {
+            $tagihan = (int) $r['tagihan'];
+            $pendataan = (int) $r['pendataan'];
+            $bayar = (int) $r['bayar'];
+            $bayarSesudah = (int) $r['bayar_sesudah'];
+            $r['bayar_pct'] = $tagihan > 0 ? round(($bayar / $tagihan) * 100, 2) : 0.0;
+            $r['success_rate'] = $pendataan > 0 ? round(($bayarSesudah / $pendataan) * 100, 2) : 0.0;
+            $out[] = $r;
+        }
+
+        return $out;
     }
 }

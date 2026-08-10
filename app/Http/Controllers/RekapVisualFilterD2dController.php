@@ -49,7 +49,7 @@ class RekapVisualFilterD2dController extends RekapVisualFilterController
 
     protected function pageTitle(): string
     {
-        return 'REKAP VISUAL FILTER DOOR TO DOOR';
+        return 'REKAP VISUAL FILTER';
     }
 
     protected function channelLabel(): string
@@ -64,6 +64,6 @@ class RekapVisualFilterD2dController extends RekapVisualFilterController
 
     protected function cacheNamespace(): string
     {
-        return 'rvf:standalone:v3:d2d:';
+        return 'rvf:standalone:v4:d2d:';
     }
 }

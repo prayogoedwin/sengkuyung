@@ -68,7 +68,7 @@ class RekapVisualFilterController extends Controller
 
     protected function pageTitle(): string
     {
-        return 'REKAP VISUAL FILTER REGULER';
+        return 'REKAP VISUAL FILTER';
     }
 
     protected function channelLabel(): string
@@ -83,7 +83,7 @@ class RekapVisualFilterController extends Controller
 
     protected function cacheNamespace(): string
     {
-        return 'rvf:standalone:v3:reguler:';
+        return 'rvf:standalone:v4:reguler:';
     }
 
     public function index(Request $request)
@@ -100,9 +100,26 @@ class RekapVisualFilterController extends Controller
             'year' => $year,
             'pageTitle' => $this->pageTitle(),
             'channelLabel' => $this->channelLabel(),
+            'defaultChannel' => 'reguler',
             'isD2d' => $this->isD2d(),
             'routeIndex' => $this->routeIndex(),
             'routeSibling' => $this->routeSibling(),
+            'channelEndpoints' => [
+                'reguler' => [
+                    'label' => 'Reguler',
+                    'stats' => route('rekap-visual-filter.stats'),
+                    'breakdown' => route('rekap-visual-filter.breakdown'),
+                    'map' => route('rekap-visual-filter.map'),
+                    'options' => route('rekap-visual-filter.options'),
+                ],
+                'd2d' => [
+                    'label' => 'D2D',
+                    'stats' => route('rekap-visual-filter-d2d.stats'),
+                    'breakdown' => route('rekap-visual-filter-d2d.breakdown'),
+                    'map' => route('rekap-visual-filter-d2d.map'),
+                    'options' => route('rekap-visual-filter-d2d.options'),
+                ],
+            ],
             'statsUrl' => route($this->routeStats()),
             'breakdownUrl' => route($this->routeBreakdown()),
             'mapUrl' => route($this->routeMap()),
@@ -653,6 +670,10 @@ class RekapVisualFilterController extends Controller
             'nominal_total_fmt' => $this->formatMoney($nominalProvinsi + $nominalOpsen),
             'sebelum_pendataan' => $sebelumTotal,
             'sesudah_pendataan' => $sesudah,
+            'sebelum_pendataan_provinsi' => $sebelumProvTotal,
+            'sebelum_pendataan_opsen' => $sebelumOpsTotal,
+            'sesudah_pendataan_provinsi' => $sesudahProv,
+            'sesudah_pendataan_opsen' => $sesudahOps,
             'sebelum_pendataan_provinsi_fmt' => $this->formatMoney($sebelumProvTotal),
             'sebelum_pendataan_opsen_fmt' => $this->formatMoney($sebelumOpsTotal),
             'sesudah_pendataan_provinsi_fmt' => $this->formatMoney($sesudahProv),

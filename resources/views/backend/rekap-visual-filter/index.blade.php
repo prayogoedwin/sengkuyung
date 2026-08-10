@@ -195,20 +195,21 @@
     <div class="top">
         <div class="brand">
             <a class="back-link" href="{{ route('dashboard') }}">← Dashboard</a>
-            <h1>{{ $pageTitle }} · {{ $year }}</h1>
-            <div class="meta" id="rvMeta">Channel {{ $channelLabel }} · Siap memuat…</div>
+            <h1 id="pageTitle">{{ $pageTitle }} · {{ $year }}</h1>
+            <div class="meta" id="rvMeta">Channel Reguler · Siap memuat…</div>
         </div>
         <div class="side-controls">
             <div class="actions">
-                <a href="{{ route('rekap-visual-filter.index', ['year' => $year]) }}" class="{{ !$isD2d ? 'active' : '' }}">Reguler</a>
-                <a href="{{ route('rekap-visual-filter-d2d.index', ['year' => $year]) }}" class="{{ $isD2d ? 'active' : '' }}">D2D</a>
-                <form method="GET" action="{{ route($routeIndex) }}" style="display:flex;gap:6px;align-items:center;">
-                    <select name="year" id="yearSelect" onchange="this.form.submit()">
-                        @for ($y = (int) date('Y'); $y >= (int) date('Y') - 3; $y--)
-                            <option value="{{ $y }}" @selected($y === (int) $year)>{{ $y }}</option>
-                        @endfor
-                    </select>
-                </form>
+                <select id="fChannel" title="Channel">
+                    <option value="semua">Semua</option>
+                    <option value="reguler" selected>Reguler</option>
+                    <option value="d2d">D2D</option>
+                </select>
+                <select id="yearSelect" title="Tahun">
+                    @for ($y = (int) date('Y'); $y >= (int) date('Y') - 3; $y--)
+                        <option value="{{ $y }}" @selected($y === (int) $year)>{{ $y }}</option>
+                    @endfor
+                </select>
                 <button type="button" id="btnReload">Muat Ulang</button>
             </div>
             <div class="filter-row">
@@ -336,19 +337,20 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function () {
-    const statsUrl = @json($statsUrl);
-    const breakdownUrl = @json($breakdownUrl);
-    const mapUrl = @json($mapUrl);
-    const optionsUrl = @json($optionsUrl);
+    const channelEndpoints = @json($channelEndpoints);
     const geoUrl = @json($geoUrl);
-    const channelLabel = @json($channelLabel);
-    const year = @json((int) $year);
+    const pageTitleBase = @json($pageTitle);
+    let year = @json((int) $year);
+    let activeChannel = 'reguler';
+    let channelLabel = channelEndpoints.reguler.label;
 
     let tableMode = 'potensi';
     let breakdownRows = [];
     let breakdownLevel = 'kabkota';
     let mapKabkotaRows = [];
     let lastStats = null;
+    let lastMapChannel = null;
+    let lastMapYear = null;
     let loading = false;
     let loadSeq = 0;
     let activeControllers = [];
@@ -356,6 +358,8 @@
     let geojsonCache = null;
     let fallbackMarkers = [];
 
+    const elChannel = document.getElementById('fChannel');
+    const elYear = document.getElementById('yearSelect');
     const elKab = document.getElementById('fKabkota');
     const elKec = document.getElementById('fKecamatan');
     const elKel = document.getElementById('fKelurahan');
@@ -375,6 +379,18 @@
         const digits = d == null ? 2 : d;
         return Number(n || 0).toFixed(digits).replace('.', ',') + '%';
     }
+    function formatMoney(amount) {
+        const n = Number(amount || 0);
+        const abs = Math.abs(n);
+        function trimNum(v, digits) {
+            return String(Number(v).toFixed(digits)).replace(/\.?0+$/, '').replace('.', ',');
+        }
+        if (abs >= 1e12) return trimNum(n / 1e12, 2) + ' T';
+        if (abs >= 1e9) return trimNum(n / 1e9, 2) + ' M';
+        if (abs >= 1e6) return trimNum(n / 1e6, 2) + ' jt';
+        if (abs >= 1e3) return trimNum(n / 1e3, 1) + ' rb';
+        return Math.round(n).toLocaleString('id-ID');
+    }
     function ratioPct(a, b) {
         const den = Number(b || 0);
         if (den <= 0) return 0;
@@ -384,6 +400,22 @@
         const el = document.getElementById(id);
         if (el) el.style.width = Math.max(0, Math.min(100, Number(width) || 0)) + '%';
     }
+    function channelLabelFor(ch) {
+        if (ch === 'semua') return 'Semua';
+        if (ch === 'd2d') return channelEndpoints.d2d.label;
+        return channelEndpoints.reguler.label;
+    }
+    function optionsUrl() {
+        // Master wilayah sama; pakai endpoint channel aktif (fallback reguler).
+        const ch = activeChannel === 'd2d' ? 'd2d' : 'reguler';
+        return channelEndpoints[ch].options;
+    }
+    function endpointsForLoad() {
+        if (activeChannel === 'semua') {
+            return [channelEndpoints.reguler, channelEndpoints.d2d];
+        }
+        return [channelEndpoints[activeChannel] || channelEndpoints.reguler];
+    }
     function filterParams() {
         const p = new URLSearchParams();
         p.set('year', String(year));
@@ -391,6 +423,13 @@
         if (elKec.value) p.set('kecamatan_id', elKec.value);
         if (elKel.value) p.set('kelurahan_id', elKel.value);
         return p;
+    }
+    function syncPendingFiltersFromUi() {
+        activeChannel = elChannel.value || 'reguler';
+        channelLabel = channelLabelFor(activeChannel);
+        year = parseInt(elYear.value, 10) || year;
+        const titleEl = document.getElementById('pageTitle');
+        if (titleEl) titleEl.textContent = pageTitleBase + ' · ' + year;
     }
     function expectedLevel() {
         if (elKel.value || elKec.value) return 'kelurahan';
@@ -462,6 +501,94 @@
 
         return attempt(1);
     }
+    function sumNum(a, b) {
+        return Number(a || 0) + Number(b || 0);
+    }
+    function mergeStatsPayload(a, b) {
+        const sa = (a && a.stats) || {};
+        const sb = (b && b.stats) || {};
+        const ba = (a && a.bayar) || {};
+        const bb = (b && b.bayar) || {};
+        const stats = {
+            jumlah_tunggakan: sumNum(sa.jumlah_tunggakan, sb.jumlah_tunggakan),
+            jumlah_sudah_pendataan: sumNum(sa.jumlah_sudah_pendataan, sb.jumlah_sudah_pendataan),
+            jumlah_belum_pendataan: sumNum(sa.jumlah_belum_pendataan, sb.jumlah_belum_pendataan),
+            menunggu_verifikasi: sumNum(sa.menunggu_verifikasi, sb.menunggu_verifikasi),
+            verifikasi: sumNum(sa.verifikasi, sb.verifikasi),
+            ditolak: sumNum(sa.ditolak, sb.ditolak),
+        };
+        stats.pct_dikunjungi = stats.jumlah_tunggakan > 0
+            ? Math.round((stats.jumlah_sudah_pendataan / stats.jumlah_tunggakan) * 10000) / 100
+            : 0;
+
+        const bayar = {
+            jumlah_terbayar: sumNum(ba.jumlah_terbayar, bb.jumlah_terbayar),
+            nominal_provinsi: sumNum(ba.nominal_provinsi, bb.nominal_provinsi),
+            nominal_opsen: sumNum(ba.nominal_opsen, bb.nominal_opsen),
+            nominal_total: sumNum(ba.nominal_total, bb.nominal_total),
+            sebelum_pendataan: sumNum(ba.sebelum_pendataan, bb.sebelum_pendataan),
+            sesudah_pendataan: sumNum(ba.sesudah_pendataan, bb.sesudah_pendataan),
+            sebelum_pendataan_provinsi: sumNum(ba.sebelum_pendataan_provinsi, bb.sebelum_pendataan_provinsi),
+            sebelum_pendataan_opsen: sumNum(ba.sebelum_pendataan_opsen, bb.sebelum_pendataan_opsen),
+            sesudah_pendataan_provinsi: sumNum(ba.sesudah_pendataan_provinsi, bb.sesudah_pendataan_provinsi),
+            sesudah_pendataan_opsen: sumNum(ba.sesudah_pendataan_opsen, bb.sesudah_pendataan_opsen),
+            potensi_total: sumNum(ba.potensi_total, bb.potensi_total),
+        };
+        bayar.nominal_provinsi_fmt = formatMoney(bayar.nominal_provinsi);
+        bayar.nominal_opsen_fmt = formatMoney(bayar.nominal_opsen);
+        bayar.nominal_total_fmt = formatMoney(bayar.nominal_total);
+        bayar.sebelum_pendataan_provinsi_fmt = formatMoney(bayar.sebelum_pendataan_provinsi);
+        bayar.sebelum_pendataan_opsen_fmt = formatMoney(bayar.sebelum_pendataan_opsen);
+        bayar.sesudah_pendataan_provinsi_fmt = formatMoney(bayar.sesudah_pendataan_provinsi);
+        bayar.sesudah_pendataan_opsen_fmt = formatMoney(bayar.sesudah_pendataan_opsen);
+        bayar.potensi_total_fmt = formatMoney(bayar.potensi_total);
+        bayar.pct_bayar_vs_potensi = bayar.potensi_total > 0
+            ? Math.round((bayar.nominal_total / bayar.potensi_total) * 10000) / 100
+            : 0;
+
+        return {
+            year: (a && a.year) || (b && b.year) || year,
+            filters: (a && a.filters) || (b && b.filters) || {},
+            stats: stats,
+            bayar: bayar,
+            refreshedAt: (a && a.refreshedAt) || (b && b.refreshedAt) || '',
+        };
+    }
+    function mergeBreakdownRows(rowsA, rowsB) {
+        const map = {};
+        function add(rows) {
+            (rows || []).forEach(function (row) {
+                const id = String(row.id);
+                if (!map[id]) {
+                    map[id] = {
+                        id: id,
+                        nama: row.nama,
+                        tagihan: 0,
+                        pendataan: 0,
+                        bayar: 0,
+                        bayar_sesudah: 0,
+                        lat: row.lat,
+                        lng: row.lng,
+                    };
+                }
+                map[id].tagihan += Number(row.tagihan || 0);
+                map[id].pendataan += Number(row.pendataan || 0);
+                map[id].bayar += Number(row.bayar || 0);
+                map[id].bayar_sesudah += Number(row.bayar_sesudah || 0);
+                if (map[id].lat == null && row.lat != null) map[id].lat = row.lat;
+                if (map[id].lng == null && row.lng != null) map[id].lng = row.lng;
+                if (!map[id].nama && row.nama) map[id].nama = row.nama;
+            });
+        }
+        add(rowsA);
+        add(rowsB);
+        return Object.keys(map).map(function (id) {
+            const r = map[id];
+            r.bayar_pct = ratioPct(r.bayar, r.tagihan);
+            r.success_rate = ratioPct(r.bayar_sesudah, r.pendataan);
+            return r;
+        });
+    }
     function showRetryHint(message) {
         setMeta(
             '<span class="err">' + message + '</span> ' +
@@ -488,6 +615,8 @@
         btnApply.disabled = on;
         document.getElementById('btnReload').disabled = on;
         document.getElementById('btnReset').disabled = on;
+        elChannel.disabled = on;
+        elYear.disabled = on;
         elKab.disabled = on;
         if (!elKab.value) {
             elKec.disabled = true;
@@ -506,6 +635,12 @@
         } else {
             btnApply.classList.remove('is-loading');
             btnApply.textContent = btnApplyDefault;
+            // Setelah load selesai, aktifkan cascade sesuai pilihan.
+            elKab.disabled = false;
+            elChannel.disabled = false;
+            elYear.disabled = false;
+            elKec.disabled = !elKab.value;
+            elKel.disabled = !elKec.value;
         }
     }
 
@@ -532,11 +667,15 @@
     }
 
     async function loadKecamatan() {
-        resetSelect(elKec, 'Semua Kecamatan', !!elKab.value);
+        resetSelect(elKec, 'Memuat kecamatan…', false);
         resetSelect(elKel, 'Semua Kelurahan', false);
-        if (!elKab.value) return;
+        if (!elKab.value) {
+            resetSelect(elKec, 'Semua Kecamatan', false);
+            return;
+        }
         const p = new URLSearchParams({ level: 'kecamatan', kabkota_id: elKab.value });
-        const data = await fetchJson(optionsUrl + '?' + p.toString());
+        const data = await fetchJson(optionsUrl() + '?' + p.toString());
+        resetSelect(elKec, 'Semua Kecamatan', true);
         (data.items || []).forEach(function (item) {
             const opt = document.createElement('option');
             opt.value = item.id;
@@ -546,10 +685,14 @@
     }
 
     async function loadKelurahan() {
-        resetSelect(elKel, 'Semua Kelurahan', !!elKec.value);
-        if (!elKec.value) return;
+        resetSelect(elKel, 'Memuat kelurahan…', false);
+        if (!elKec.value) {
+            resetSelect(elKel, 'Semua Kelurahan', false);
+            return;
+        }
         const p = new URLSearchParams({ level: 'kelurahan', kecamatan_id: elKec.value });
-        const data = await fetchJson(optionsUrl + '?' + p.toString());
+        const data = await fetchJson(optionsUrl() + '?' + p.toString());
+        resetSelect(elKel, 'Semua Kelurahan', true);
         (data.items || []).forEach(function (item) {
             const opt = document.createElement('option');
             opt.value = item.id;
@@ -847,25 +990,57 @@
     }
 
     async function loadAll(force) {
+        syncPendingFiltersFromUi();
         abortActiveLoads();
         const seq = ++loadSeq;
         setLoading(true);
         setMeta('Channel ' + channelLabel + ' · Memuat statistik, ringkasan & peta…');
 
         const qs = filterParams().toString();
-        const statsCtrl = new AbortController();
-        const breakdownCtrl = new AbortController();
-        const mapCtrl = new AbortController();
-        const needMap = force === true || !mapKabkotaRows.length;
-        activeControllers = needMap
-            ? [statsCtrl, breakdownCtrl, mapCtrl]
-            : [statsCtrl, breakdownCtrl];
+        const endpoints = endpointsForLoad();
+        const needMap = force === true
+            || !mapKabkotaRows.length
+            || lastMapChannel !== activeChannel
+            || lastMapYear !== year;
+        const controllers = [];
+
+        async function fetchMerged(kind, pathKey) {
+            const payloads = [];
+            for (let i = 0; i < endpoints.length; i++) {
+                const ctrl = new AbortController();
+                controllers.push(ctrl);
+                const url = endpoints[i][pathKey] + (kind === 'map' ? ('?year=' + year) : ('?' + qs));
+                payloads.push(await fetchJsonWithRetry(url, kind + (endpoints.length > 1 ? ('-' + (i + 1)) : ''), ctrl.signal, 3));
+            }
+            if (kind === 'stats') {
+                return payloads.length === 1 ? payloads[0] : mergeStatsPayload(payloads[0], payloads[1]);
+            }
+            if (kind === 'ringkasan') {
+                if (payloads.length === 1) return payloads[0];
+                return {
+                    year: payloads[0].year,
+                    filters: payloads[0].filters,
+                    level: payloads[0].level || payloads[1].level,
+                    rows: mergeBreakdownRows(payloads[0].rows || [], payloads[1].rows || []),
+                    refreshedAt: payloads[0].refreshedAt || payloads[1].refreshedAt || '',
+                };
+            }
+            // map
+            if (payloads.length === 1) return payloads[0];
+            return {
+                year: payloads[0].year,
+                mapKabkota: mergeBreakdownRows(payloads[0].mapKabkota || [], payloads[1].mapKabkota || []),
+                refreshedAt: payloads[0].refreshedAt || payloads[1].refreshedAt || '',
+            };
+        }
+
+        activeControllers = controllers;
 
         let statsOk = false;
         let breakdownOk = false;
         let mapOk = !needMap;
 
-        const statsPromise = fetchJsonWithRetry(statsUrl + '?' + qs, 'stats', statsCtrl.signal, 3)
+        const statsPromise = fetchMerged('stats', 'stats')
             .then(function (payload) {
                 if (seq !== loadSeq) return;
                 renderStats(payload);
@@ -876,7 +1051,7 @@
                 showRetryHint('Gagal memuat statistik (' + (err && err.message ? err.message : 'error') + ').');
             });
 
-        const breakdownPromise = fetchJsonWithRetry(breakdownUrl + '?' + qs, 'ringkasan', breakdownCtrl.signal, 3)
+        const breakdownPromise = fetchMerged('ringkasan', 'breakdown')
             .then(function (payload) {
                 if (seq !== loadSeq) return;
                 breakdownRows = payload.rows || [];
@@ -895,10 +1070,12 @@
             });
 
         const mapPromise = needMap
-            ? fetchJsonWithRetry(mapUrl + '?year=' + year, 'map', mapCtrl.signal, 3)
+            ? fetchMerged('map', 'map')
                 .then(function (payload) {
                     if (seq !== loadSeq) return;
                     mapKabkotaRows = payload.mapKabkota || [];
+                    lastMapChannel = activeChannel;
+                    lastMapYear = year;
                     mapOk = true;
                 })
                 .catch(function (err) {
@@ -925,20 +1102,21 @@
     }
 
     elKab.addEventListener('change', function () {
-        loadKecamatan()
-            .catch(function () { resetSelect(elKec, 'Gagal memuat kecamatan', false); })
-            .finally(function () { loadAll(false); });
+        loadKecamatan().catch(function () {
+            resetSelect(elKec, 'Gagal memuat kecamatan', false);
+            resetSelect(elKel, 'Semua Kelurahan', false);
+        });
     });
     elKec.addEventListener('change', function () {
-        loadKelurahan()
-            .catch(function () { resetSelect(elKel, 'Gagal memuat kelurahan', false); })
-            .finally(function () { loadAll(false); });
+        loadKelurahan().catch(function () {
+            resetSelect(elKel, 'Gagal memuat kelurahan', false);
+        });
     });
-    elKel.addEventListener('change', function () { loadAll(false); });
 
     btnApply.addEventListener('click', function () { loadAll(false); });
     document.getElementById('btnReload').addEventListener('click', function () { loadAll(true); });
     document.getElementById('btnReset').addEventListener('click', function () {
+        elChannel.value = 'reguler';
         elKab.value = '';
         resetSelect(elKec, 'Semua Kecamatan', false);
         resetSelect(elKel, 'Semua Kelurahan', false);

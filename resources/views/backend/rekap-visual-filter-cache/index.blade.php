@@ -134,8 +134,8 @@
                                 </p>
                                 <p class="mt-2 mb-0 small text-danger">
                                     Cukup tekan <strong>Warm Sekarang</strong> sekali (jalan di background).
-                                    Sistem membagi sendiri: Provinsi semua → reguler → d2d, baru Kabkota — tiap tahap langsung disimpan.
-                                    Status di bawah akan berubah seiring progres. CLI sekali jalan:
+                                    Sistem membagi sendiri: Reguler lengkap (stats+ringkasan kabkota+map) → D2D → Semua (merge) → Kabkota.
+                                    Status di bawah akan berubah seiring progres. CLI:
                                     <code>php artisan rvf:warm-cache --force</code>
                                 </p>
                             </div>

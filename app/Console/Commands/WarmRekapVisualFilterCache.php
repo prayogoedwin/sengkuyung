@@ -63,7 +63,7 @@ class WarmRekapVisualFilterCache extends Command
             );
 
             $this->info('Warm mulai · tahun=' . $year . ' · only=' . $only);
-            $this->comment('Satu proses: Provinsi (semua → reguler → d2d) dulu, lalu Kabkota. Tiap key langsung disimpan — tidak perlu jalankan per fase manual.');
+            $this->comment('Satu proses otomatis: REGULER → D2D → SEMUA (merge), lalu Kabkota. Tiap tahap langsung disimpan.');
 
             $reguler = app(RekapVisualFilterController::class);
             $d2d = app(RekapVisualFilterD2dController::class);
@@ -139,8 +139,9 @@ class WarmRekapVisualFilterCache extends Command
     }
 
     /**
-     * Urutan: REGULER (hitung+simpan) → D2D (hitung+simpan) → SEMUA (merge cepat) → baru lanjut.
-     * Jadi channel Reguler bisa dipakai tanpa menunggu D2D/SEMUA selesai.
+     * Per channel selesai utuh dulu: stats + breakdown (ringkasan kabkota) + map.
+     * Urutan: REGULER lengkap → D2D lengkap → SEMUA (merge) → Kabkota.
+     * Ringkasan "Seluruh Provinsi" = key breakdown:prov (bukan 1 key per kabkota).
      *
      * @return int jumlah key tertulis
      */
@@ -155,72 +156,69 @@ class WarmRekapVisualFilterCache extends Command
         $written = 0;
         $filters = $this->filters($year);
 
-        // --- STATS ---
         $statsReg = null;
         $statsD2d = null;
+        $bdReg = null;
+        $bdD2d = null;
+        $mapReg = null;
+        $mapD2d = null;
 
         if ($wantReguler) {
             $this->tick('Provinsi REGULER stats · hitung + simpan…');
             $statsReg = $reguler->warmBuildStats($filters);
             RekapVisualFilterCache::put(RekapVisualFilterCache::statsKey('reguler', $year, ''), $statsReg);
             $written++;
+
+            $this->tick('Provinsi REGULER breakdown/ringkasan kabkota · hitung + simpan…');
+            $bdReg = $reguler->warmBuildBreakdown($filters);
+            RekapVisualFilterCache::put(RekapVisualFilterCache::breakdownKey('reguler', $year, ''), $bdReg);
+            $written++;
+
+            $this->tick('Map REGULER · hitung + simpan…');
+            $mapReg = $reguler->warmBuildMap($year);
+            RekapVisualFilterCache::put(RekapVisualFilterCache::mapKey('reguler', $year), $mapReg);
+            $written++;
+
+            $this->info('Provinsi REGULER lengkap — stats + ringkasan kabkota + map siap dipakai.');
         }
+
         if ($wantD2d) {
             $this->tick('Provinsi D2D stats · hitung + simpan…');
             $statsD2d = $d2d->warmBuildStats($filters);
             RekapVisualFilterCache::put(RekapVisualFilterCache::statsKey('d2d', $year, ''), $statsD2d);
             $written++;
+
+            $this->tick('Provinsi D2D breakdown/ringkasan kabkota · hitung + simpan…');
+            $bdD2d = $d2d->warmBuildBreakdown($filters);
+            RekapVisualFilterCache::put(RekapVisualFilterCache::breakdownKey('d2d', $year, ''), $bdD2d);
+            $written++;
+
+            $this->tick('Map D2D · hitung + simpan…');
+            $mapD2d = $d2d->warmBuildMap($year);
+            RekapVisualFilterCache::put(RekapVisualFilterCache::mapKey('d2d', $year), $mapD2d);
+            $written++;
+
+            $this->info('Provinsi D2D lengkap.');
         }
+
         if ($wantSemua && $statsReg && $statsD2d) {
-            $this->tick('Provinsi SEMUA stats · merge + simpan (cepat)…');
+            $this->tick('Provinsi SEMUA stats · merge + simpan…');
             RekapVisualFilterCache::put(
                 RekapVisualFilterCache::statsKey('semua', $year, ''),
                 $this->mergeStats($statsReg, $statsD2d)
             );
             $written++;
         }
-
-        // --- BREAKDOWN ---
-        $bdReg = null;
-        $bdD2d = null;
-        if ($wantReguler) {
-            $this->tick('Provinsi REGULER breakdown · hitung + simpan…');
-            $bdReg = $reguler->warmBuildBreakdown($filters);
-            RekapVisualFilterCache::put(RekapVisualFilterCache::breakdownKey('reguler', $year, ''), $bdReg);
-            $written++;
-        }
-        if ($wantD2d) {
-            $this->tick('Provinsi D2D breakdown · hitung + simpan…');
-            $bdD2d = $d2d->warmBuildBreakdown($filters);
-            RekapVisualFilterCache::put(RekapVisualFilterCache::breakdownKey('d2d', $year, ''), $bdD2d);
-            $written++;
-        }
         if ($wantSemua && $bdReg && $bdD2d) {
-            $this->tick('Provinsi SEMUA breakdown · merge + simpan (cepat)…');
+            $this->tick('Provinsi SEMUA breakdown · merge + simpan…');
             RekapVisualFilterCache::put(
                 RekapVisualFilterCache::breakdownKey('semua', $year, ''),
                 $this->mergeBreakdown($bdReg, $bdD2d)
             );
             $written++;
         }
-
-        // --- MAP ---
-        $mapReg = null;
-        $mapD2d = null;
-        if ($wantReguler) {
-            $this->tick('Map REGULER · hitung + simpan…');
-            $mapReg = $reguler->warmBuildMap($year);
-            RekapVisualFilterCache::put(RekapVisualFilterCache::mapKey('reguler', $year), $mapReg);
-            $written++;
-        }
-        if ($wantD2d) {
-            $this->tick('Map D2D · hitung + simpan…');
-            $mapD2d = $d2d->warmBuildMap($year);
-            RekapVisualFilterCache::put(RekapVisualFilterCache::mapKey('d2d', $year), $mapD2d);
-            $written++;
-        }
         if ($wantSemua && $mapReg !== null && $mapD2d !== null) {
-            $this->tick('Map SEMUA · merge + simpan (cepat)…');
+            $this->tick('Map SEMUA · merge + simpan…');
             RekapVisualFilterCache::put(
                 RekapVisualFilterCache::mapKey('semua', $year),
                 $this->mergeRows($mapReg, $mapD2d)

@@ -139,6 +139,9 @@ class WarmRekapVisualFilterCache extends Command
     }
 
     /**
+     * Urutan: REGULER (hitung+simpan) → D2D (hitung+simpan) → SEMUA (merge cepat) → baru lanjut.
+     * Jadi channel Reguler bisa dipakai tanpa menunggu D2D/SEMUA selesai.
+     *
      * @return int jumlah key tertulis
      */
     private function warmProvinsiPhase(
@@ -152,35 +155,28 @@ class WarmRekapVisualFilterCache extends Command
         $written = 0;
         $filters = $this->filters($year);
 
-        // --- STATS: hitung sekali per channel, simpan semua → reguler → d2d ---
+        // --- STATS ---
         $statsReg = null;
         $statsD2d = null;
 
         if ($wantReguler) {
-            $this->tick('Provinsi REGULER stats · hitung…');
+            $this->tick('Provinsi REGULER stats · hitung + simpan…');
             $statsReg = $reguler->warmBuildStats($filters);
+            RekapVisualFilterCache::put(RekapVisualFilterCache::statsKey('reguler', $year, ''), $statsReg);
+            $written++;
         }
         if ($wantD2d) {
-            $this->tick('Provinsi D2D stats · hitung…');
+            $this->tick('Provinsi D2D stats · hitung + simpan…');
             $statsD2d = $d2d->warmBuildStats($filters);
+            RekapVisualFilterCache::put(RekapVisualFilterCache::statsKey('d2d', $year, ''), $statsD2d);
+            $written++;
         }
-
         if ($wantSemua && $statsReg && $statsD2d) {
-            $this->tick('Provinsi SEMUA stats · simpan cache…');
+            $this->tick('Provinsi SEMUA stats · merge + simpan (cepat)…');
             RekapVisualFilterCache::put(
                 RekapVisualFilterCache::statsKey('semua', $year, ''),
                 $this->mergeStats($statsReg, $statsD2d)
             );
-            $written++;
-        }
-        if ($statsReg) {
-            $this->tick('Provinsi REGULER stats · simpan cache…');
-            RekapVisualFilterCache::put(RekapVisualFilterCache::statsKey('reguler', $year, ''), $statsReg);
-            $written++;
-        }
-        if ($statsD2d) {
-            $this->tick('Provinsi D2D stats · simpan cache…');
-            RekapVisualFilterCache::put(RekapVisualFilterCache::statsKey('d2d', $year, ''), $statsD2d);
             $written++;
         }
 
@@ -188,29 +184,23 @@ class WarmRekapVisualFilterCache extends Command
         $bdReg = null;
         $bdD2d = null;
         if ($wantReguler) {
-            $this->tick('Provinsi REGULER breakdown · hitung…');
+            $this->tick('Provinsi REGULER breakdown · hitung + simpan…');
             $bdReg = $reguler->warmBuildBreakdown($filters);
+            RekapVisualFilterCache::put(RekapVisualFilterCache::breakdownKey('reguler', $year, ''), $bdReg);
+            $written++;
         }
         if ($wantD2d) {
-            $this->tick('Provinsi D2D breakdown · hitung…');
+            $this->tick('Provinsi D2D breakdown · hitung + simpan…');
             $bdD2d = $d2d->warmBuildBreakdown($filters);
+            RekapVisualFilterCache::put(RekapVisualFilterCache::breakdownKey('d2d', $year, ''), $bdD2d);
+            $written++;
         }
         if ($wantSemua && $bdReg && $bdD2d) {
-            $this->tick('Provinsi SEMUA breakdown · simpan cache…');
+            $this->tick('Provinsi SEMUA breakdown · merge + simpan (cepat)…');
             RekapVisualFilterCache::put(
                 RekapVisualFilterCache::breakdownKey('semua', $year, ''),
                 $this->mergeBreakdown($bdReg, $bdD2d)
             );
-            $written++;
-        }
-        if ($bdReg) {
-            $this->tick('Provinsi REGULER breakdown · simpan cache…');
-            RekapVisualFilterCache::put(RekapVisualFilterCache::breakdownKey('reguler', $year, ''), $bdReg);
-            $written++;
-        }
-        if ($bdD2d) {
-            $this->tick('Provinsi D2D breakdown · simpan cache…');
-            RekapVisualFilterCache::put(RekapVisualFilterCache::breakdownKey('d2d', $year, ''), $bdD2d);
             $written++;
         }
 
@@ -218,33 +208,27 @@ class WarmRekapVisualFilterCache extends Command
         $mapReg = null;
         $mapD2d = null;
         if ($wantReguler) {
-            $this->tick('Map REGULER · hitung…');
+            $this->tick('Map REGULER · hitung + simpan…');
             $mapReg = $reguler->warmBuildMap($year);
+            RekapVisualFilterCache::put(RekapVisualFilterCache::mapKey('reguler', $year), $mapReg);
+            $written++;
         }
         if ($wantD2d) {
-            $this->tick('Map D2D · hitung…');
+            $this->tick('Map D2D · hitung + simpan…');
             $mapD2d = $d2d->warmBuildMap($year);
+            RekapVisualFilterCache::put(RekapVisualFilterCache::mapKey('d2d', $year), $mapD2d);
+            $written++;
         }
         if ($wantSemua && $mapReg !== null && $mapD2d !== null) {
-            $this->tick('Map SEMUA · simpan cache…');
+            $this->tick('Map SEMUA · merge + simpan (cepat)…');
             RekapVisualFilterCache::put(
                 RekapVisualFilterCache::mapKey('semua', $year),
                 $this->mergeRows($mapReg, $mapD2d)
             );
             $written++;
         }
-        if ($mapReg !== null) {
-            $this->tick('Map REGULER · simpan cache…');
-            RekapVisualFilterCache::put(RekapVisualFilterCache::mapKey('reguler', $year), $mapReg);
-            $written++;
-        }
-        if ($mapD2d !== null) {
-            $this->tick('Map D2D · simpan cache…');
-            RekapVisualFilterCache::put(RekapVisualFilterCache::mapKey('d2d', $year), $mapD2d);
-            $written++;
-        }
 
-        $this->info("Fase Provinsi selesai ({$written} key). Dashboard seluruh Provinsi sudah bisa pakai cache.");
+        $this->info("Fase Provinsi selesai ({$written} key). Lanjut Kabkota…");
 
         return $written;
     }
@@ -280,12 +264,16 @@ class WarmRekapVisualFilterCache extends Command
             $statsReg = null;
             $statsD2d = null;
             if ($wantReguler) {
-                $this->tick("  stats REGULER…");
+                $this->tick('  stats REGULER · hitung + simpan…');
                 $statsReg = $reguler->warmBuildStats($filters);
+                RekapVisualFilterCache::put(RekapVisualFilterCache::statsKey('reguler', $year, $kabId), $statsReg);
+                $written++;
             }
             if ($wantD2d) {
-                $this->tick("  stats D2D…");
+                $this->tick('  stats D2D · hitung + simpan…');
                 $statsD2d = $d2d->warmBuildStats($filters);
+                RekapVisualFilterCache::put(RekapVisualFilterCache::statsKey('d2d', $year, $kabId), $statsD2d);
+                $written++;
             }
             if ($wantSemua && $statsReg && $statsD2d) {
                 RekapVisualFilterCache::put(
@@ -293,28 +281,22 @@ class WarmRekapVisualFilterCache extends Command
                     $this->mergeStats($statsReg, $statsD2d)
                 );
                 $written++;
-                $this->tick('  stats SEMUA tersimpan');
-            }
-            if ($statsReg) {
-                RekapVisualFilterCache::put(RekapVisualFilterCache::statsKey('reguler', $year, $kabId), $statsReg);
-                $written++;
-                $this->tick('  stats REGULER tersimpan');
-            }
-            if ($statsD2d) {
-                RekapVisualFilterCache::put(RekapVisualFilterCache::statsKey('d2d', $year, $kabId), $statsD2d);
-                $written++;
-                $this->tick('  stats D2D tersimpan');
+                $this->tick('  stats SEMUA · merge tersimpan');
             }
 
             $bdReg = null;
             $bdD2d = null;
             if ($wantReguler) {
-                $this->tick('  breakdown REGULER…');
+                $this->tick('  breakdown REGULER · hitung + simpan…');
                 $bdReg = $reguler->warmBuildBreakdown($filters);
+                RekapVisualFilterCache::put(RekapVisualFilterCache::breakdownKey('reguler', $year, $kabId), $bdReg);
+                $written++;
             }
             if ($wantD2d) {
-                $this->tick('  breakdown D2D…');
+                $this->tick('  breakdown D2D · hitung + simpan…');
                 $bdD2d = $d2d->warmBuildBreakdown($filters);
+                RekapVisualFilterCache::put(RekapVisualFilterCache::breakdownKey('d2d', $year, $kabId), $bdD2d);
+                $written++;
             }
             if ($wantSemua && $bdReg && $bdD2d) {
                 RekapVisualFilterCache::put(
@@ -322,17 +304,7 @@ class WarmRekapVisualFilterCache extends Command
                     $this->mergeBreakdown($bdReg, $bdD2d)
                 );
                 $written++;
-                $this->tick('  breakdown SEMUA tersimpan');
-            }
-            if ($bdReg) {
-                RekapVisualFilterCache::put(RekapVisualFilterCache::breakdownKey('reguler', $year, $kabId), $bdReg);
-                $written++;
-                $this->tick('  breakdown REGULER tersimpan');
-            }
-            if ($bdD2d) {
-                RekapVisualFilterCache::put(RekapVisualFilterCache::breakdownKey('d2d', $year, $kabId), $bdD2d);
-                $written++;
-                $this->tick('  breakdown D2D tersimpan');
+                $this->tick('  breakdown SEMUA · merge tersimpan');
             }
         }
 

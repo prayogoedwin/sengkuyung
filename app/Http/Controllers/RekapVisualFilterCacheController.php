@@ -41,6 +41,7 @@ class RekapVisualFilterCacheController extends Controller
             'schedule_enabled' => ['required', 'in:0,1'],
             'warm_channel' => ['required', 'in:semua,reguler,d2d'],
             'ttl_hours' => ['required', 'integer', 'min:1', 'max:72'],
+            'ttl_detail_minutes' => ['required', 'integer', 'min:5', 'max:1440'],
             'warm_year' => ['nullable', 'integer', 'min:2020', 'max:2100'],
             'slot1' => ['nullable', 'string', 'max:8'],
             'slot2' => ['nullable', 'string', 'max:8'],
@@ -72,6 +73,7 @@ class RekapVisualFilterCacheController extends Controller
         $row->schedule_enabled = (int) $validated['schedule_enabled'] === 1;
         $row->warm_channel = $validated['warm_channel'];
         $row->ttl_hours = (int) $validated['ttl_hours'];
+        $row->ttl_detail_minutes = (int) $validated['ttl_detail_minutes'];
         $row->warm_year = $validated['warm_year'] !== null && $validated['warm_year'] !== ''
             ? (int) $validated['warm_year']
             : null;
@@ -110,7 +112,7 @@ class RekapVisualFilterCacheController extends Controller
 
         return redirect()
             ->route('rekap-visual-filter-cache.index')
-            ->with('success', "Berhasil menghapus {$count} cache key prewarm.");
+            ->with('success', "Berhasil menghapus {$count} cache key berawalan rvf:.");
     }
 
     public function clearSelected(Request $request): RedirectResponse
@@ -123,7 +125,7 @@ class RekapVisualFilterCacheController extends Controller
 
         $deleted = 0;
         foreach ($validated['keys'] as $key) {
-            if (!str_starts_with($key, RekapVisualFilterCache::KEY_PREFIX)) {
+            if (! RekapVisualFilterCache::isRvfKey($key)) {
                 continue;
             }
             if (RekapVisualFilterCache::forget($key)) {
@@ -133,7 +135,7 @@ class RekapVisualFilterCacheController extends Controller
 
         return redirect()
             ->route('rekap-visual-filter-cache.index')
-            ->with('success', "Berhasil menghapus {$deleted} key terpilih.");
+            ->with('success', "Berhasil menghapus {$deleted} key terpilih (hanya rvf:).");
     }
 
     private function ensureSuperAdmin(): void

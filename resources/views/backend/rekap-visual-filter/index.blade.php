@@ -44,6 +44,7 @@
             letter-spacing: 0.01em;
         }
         .meta { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
+        .meta.warn { color: #b45309; }
         .meta .retry-link,
         .retry-link {
             margin-left: 8px;
@@ -447,6 +448,20 @@
         el.innerHTML = html;
         el.className = 'meta' + (isErr ? ' err' : '');
     }
+    function showSlowNotice(message) {
+        setMeta(
+            '<span class="warn">' + (message || 'Data cache tidak ada. Melakukan pencarian ini membutuhkan waktu…') + '</span>',
+            false
+        );
+        const el = document.getElementById('rvMeta');
+        if (el) el.className = 'meta warn';
+    }
+    function noteSlowFromPayload(payload, bag) {
+        if (payload && payload.slow_notice && payload.message) {
+            bag.noticed = true;
+            bag.message = payload.message;
+        }
+    }
     function abortActiveLoads() {
         activeControllers.forEach(function (c) {
             try { c.abort(); } catch (e) {}
@@ -552,6 +567,9 @@
             stats: stats,
             bayar: bayar,
             refreshedAt: (a && a.refreshedAt) || (b && b.refreshedAt) || '',
+            message: (a && a.message) || (b && b.message) || null,
+            slow_notice: !!(a && a.slow_notice) || !!(b && b.slow_notice),
+            cache: (a && a.cache) || (b && b.cache) || '',
         };
     }
     function mergeBreakdownRows(rowsA, rowsB) {
@@ -1003,6 +1021,7 @@
             || lastMapChannel !== activeChannel
             || lastMapYear !== year;
         const controllers = [];
+        const slowBag = { noticed: false, message: '' };
 
         async function fetchMerged(kind, pathKey) {
             const payloads = [];
@@ -1023,6 +1042,9 @@
                     level: payloads[0].level || payloads[1].level,
                     rows: mergeBreakdownRows(payloads[0].rows || [], payloads[1].rows || []),
                     refreshedAt: payloads[0].refreshedAt || payloads[1].refreshedAt || '',
+                    message: payloads[0].message || payloads[1].message || null,
+                    slow_notice: !!(payloads[0].slow_notice || payloads[1].slow_notice),
+                    cache: payloads[0].cache || payloads[1].cache || '',
                 };
             }
             // map
@@ -1031,6 +1053,9 @@
                 year: payloads[0].year,
                 mapKabkota: mergeBreakdownRows(payloads[0].mapKabkota || [], payloads[1].mapKabkota || []),
                 refreshedAt: payloads[0].refreshedAt || payloads[1].refreshedAt || '',
+                message: payloads[0].message || payloads[1].message || null,
+                slow_notice: !!(payloads[0].slow_notice || payloads[1].slow_notice),
+                cache: payloads[0].cache || payloads[1].cache || '',
             };
         }
 
@@ -1043,10 +1068,7 @@
         const statsPromise = fetchMerged('stats', 'stats')
             .then(function (payload) {
                 if (seq !== loadSeq) return;
-                if (payload && payload.cache === 'miss') {
-                    showRetryHint(payload.message || 'Cache statistik belum tersedia. Jalankan Warm di Setting.');
-                    return;
-                }
+                noteSlowFromPayload(payload, slowBag);
                 if (!payload || !payload.stats) {
                     showRetryHint((payload && payload.message) || 'Statistik kosong.');
                     return;
@@ -1062,15 +1084,7 @@
         const breakdownPromise = fetchMerged('ringkasan', 'breakdown')
             .then(function (payload) {
                 if (seq !== loadSeq) return;
-                if (payload && payload.cache === 'miss') {
-                    document.getElementById('tableBody').innerHTML =
-                        '<tr><td class="err">' +
-                        (payload.message || 'Cache ringkasan belum tersedia.') +
-                        ' <button type="button" class="retry-link" id="btnRetryBreakdown">Coba lagi</button></td></tr>';
-                    const b = document.getElementById('btnRetryBreakdown');
-                    if (b) b.addEventListener('click', function () { loadAll(true); });
-                    return;
-                }
+                noteSlowFromPayload(payload, slowBag);
                 breakdownRows = payload.rows || [];
                 breakdownLevel = payload.level || expectedLevel();
                 renderTable();
@@ -1090,11 +1104,7 @@
             ? fetchMerged('map', 'map')
                 .then(function (payload) {
                     if (seq !== loadSeq) return;
-                    if (payload && payload.cache === 'miss') {
-                        mapKabkotaRows = [];
-                        ensureMapLoadingOverlay(payload.message || 'Cache peta belum tersedia. Jalankan Warm.');
-                        return;
-                    }
+                    noteSlowFromPayload(payload, slowBag);
                     mapKabkotaRows = payload.mapKabkota || [];
                     lastMapChannel = activeChannel;
                     lastMapYear = year;
@@ -1115,7 +1125,11 @@
         }
         if (statsOk && breakdownOk) {
             const refreshed = (lastStats && lastStats.refreshedAt) ? lastStats.refreshedAt : '';
-            setMeta('Channel ' + channelLabel + ' · Diperbarui ' + refreshed);
+            if (slowBag.noticed) {
+                showSlowNotice(slowBag.message);
+            } else {
+                setMeta('Channel ' + channelLabel + ' · Diperbarui ' + refreshed);
+            }
         } else if (!document.getElementById('btnRetryNow')) {
             showRetryHint('Sebagian data gagal dimuat. Coba lagi.');
         }

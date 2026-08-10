@@ -13,6 +13,8 @@ use Throwable;
  */
 class RekapVisualFilterCache
 {
+    /** Semua key RVF harus berawalan ini (untuk hapus aman). */
+    public const ROOT_PREFIX = 'rvf:';
     public const KEY_PREFIX = 'rvf:prewarm:v1:';
     public const INDEX_KEY = 'rvf:prewarm:keys_index';
     public const META_PREFIX = 'rvf:prewarm:meta:';
@@ -26,6 +28,7 @@ class RekapVisualFilterCache
         ['time' => '00:00', 'enabled' => true],
     ];
     public const DEFAULT_TTL_HOURS = 12;
+    public const DEFAULT_TTL_DETAIL_MINUTES = 60;
 
     public static function settings(): RvfCacheSetting
     {
@@ -35,10 +38,10 @@ class RekapVisualFilterCache
         }
 
         return RvfCacheSetting::query()->create([
-            // Default OFF sampai warm pertama berhasil — hindari HTTP 500 query live se-provinsi.
             'use_cache' => false,
             'warm_channel' => 'semua',
             'ttl_hours' => self::DEFAULT_TTL_HOURS,
+            'ttl_detail_minutes' => self::DEFAULT_TTL_DETAIL_MINUTES,
             'schedule_enabled' => true,
             'schedule_slots' => self::DEFAULT_SLOTS,
             'warm_year' => null,
@@ -71,6 +74,29 @@ class RekapVisualFilterCache
         $hours = (int) (self::settings()->ttl_hours ?: self::DEFAULT_TTL_HOURS);
 
         return max(1, $hours) * 3600;
+    }
+
+    /** TTL untuk filter kecamatan/kelurahan (detik). */
+    public static function ttlDetailSeconds(): int
+    {
+        try {
+            $minutes = (int) (self::settings()->ttl_detail_minutes ?: self::DEFAULT_TTL_DETAIL_MINUTES);
+        } catch (Throwable $e) {
+            $minutes = self::DEFAULT_TTL_DETAIL_MINUTES;
+        }
+
+        return max(1, $minutes) * 60;
+    }
+
+    public static function isDeepFilter(array $filters): bool
+    {
+        return trim((string) ($filters['kecamatan_id'] ?? '')) !== ''
+            || trim((string) ($filters['kelurahan_id'] ?? '')) !== '';
+    }
+
+    public static function ttlForFilters(array $filters): int
+    {
+        return self::isDeepFilter($filters) ? self::ttlDetailSeconds() : self::ttlSeconds();
     }
 
     public static function warmYear(): int
@@ -162,20 +188,27 @@ class RekapVisualFilterCache
 
     public static function isProvOrKabOnly(array $filters): bool
     {
-        $kec = trim((string) ($filters['kecamatan_id'] ?? ''));
-        $kel = trim((string) ($filters['kelurahan_id'] ?? ''));
-
-        return $kec === '' && $kel === '';
+        return ! self::isDeepFilter($filters);
     }
 
-    public static function statsKey(string $channel, int $year, string $kabkotaId = ''): string
-    {
-        return self::KEY_PREFIX . $channel . ':' . $year . ':stats:' . self::scopeSuffix($kabkotaId);
+    public static function statsKey(
+        string $channel,
+        int $year,
+        string $kabkotaId = '',
+        string $kecamatanId = '',
+        string $kelurahanId = ''
+    ): string {
+        return self::KEY_PREFIX . $channel . ':' . $year . ':stats:' . self::scopeSuffix($kabkotaId, $kecamatanId, $kelurahanId);
     }
 
-    public static function breakdownKey(string $channel, int $year, string $kabkotaId = ''): string
-    {
-        return self::KEY_PREFIX . $channel . ':' . $year . ':breakdown:' . self::scopeSuffix($kabkotaId);
+    public static function breakdownKey(
+        string $channel,
+        int $year,
+        string $kabkotaId = '',
+        string $kecamatanId = '',
+        string $kelurahanId = ''
+    ): string {
+        return self::KEY_PREFIX . $channel . ':' . $year . ':breakdown:' . self::scopeSuffix($kabkotaId, $kecamatanId, $kelurahanId);
     }
 
     public static function mapKey(string $channel, int $year): string
@@ -183,11 +216,30 @@ class RekapVisualFilterCache
         return self::KEY_PREFIX . $channel . ':' . $year . ':map';
     }
 
-    private static function scopeSuffix(string $kabkotaId): string
+    private static function scopeSuffix(string $kabkotaId, string $kecamatanId = '', string $kelurahanId = ''): string
     {
         $kabkotaId = trim($kabkotaId);
+        $kecamatanId = trim($kecamatanId);
+        $kelurahanId = trim($kelurahanId);
 
-        return $kabkotaId === '' ? 'prov' : ('kab:' . $kabkotaId);
+        if ($kabkotaId === '') {
+            return 'prov';
+        }
+
+        $suffix = 'kab:' . $kabkotaId;
+        if ($kecamatanId !== '') {
+            $suffix .= ':kec:' . $kecamatanId;
+        }
+        if ($kelurahanId !== '') {
+            $suffix .= ':kel:' . $kelurahanId;
+        }
+
+        return $suffix;
+    }
+
+    public static function isRvfKey(string $key): bool
+    {
+        return str_starts_with($key, self::ROOT_PREFIX);
     }
 
     public static function put(string $key, mixed $value, ?int $ttlSeconds = null): bool
@@ -293,9 +345,19 @@ class RekapVisualFilterCache
     {
         $count = 0;
         foreach (self::trackedKeys() as $key) {
+            if (! self::isRvfKey($key)) {
+                continue;
+            }
             if (self::forget($key)) {
                 $count++;
             }
+        }
+
+        // Bersihkan index & meta orphan berawalan rvf:
+        try {
+            Cache::forget(self::INDEX_KEY);
+        } catch (Throwable $e) {
+            // ignore
         }
 
         return $count;

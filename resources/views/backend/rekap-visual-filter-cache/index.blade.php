@@ -29,7 +29,7 @@
                                     @csrf
                                     <button type="submit" class="btn btn-primary">Warm Sekarang</button>
                                 </form>
-                                <form method="POST" action="{{ route('rekap-visual-filter-cache.clear-all') }}" onsubmit="return confirm('Hapus semua cache prewarm?');">
+                                <form method="POST" action="{{ route('rekap-visual-filter-cache.clear-all') }}" onsubmit="return confirm('Hapus semua cache berawalan rvf: ? Cache aplikasi lain tidak ikut terhapus.');">
                                     @csrf
                                     <button type="submit" class="btn btn-outline-danger">Hapus Semua Cache</button>
                                 </form>
@@ -67,6 +67,12 @@
                                         <div class="col-md-2">
                                             <label class="form-label">TTL (jam)</label>
                                             <input type="number" name="ttl_hours" class="form-control" min="1" max="72" value="{{ old('ttl_hours', $settings->ttl_hours ?: 12) }}" required>
+                                            <div class="form-text">Provinsi / Kabkota</div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">TTL kec/kel (menit)</label>
+                                            <input type="number" name="ttl_detail_minutes" class="form-control" min="5" max="1440" value="{{ old('ttl_detail_minutes', $settings->ttl_detail_minutes ?: 60) }}" required>
+                                            <div class="form-text">Default 60 menit</div>
                                         </div>
                                         <div class="col-md-2">
                                             <label class="form-label">Tahun warm</label>
@@ -129,7 +135,9 @@
                                 </p>
                                 <p class="mb-0 small text-muted">{{ $settings->last_warm_message ?: 'Belum ada log warm.' }}</p>
                                 <p class="mt-2 mb-0 small text-muted">
-                                    Scope cache: <strong>Provinsi + semua Kabkota</strong> saja (kecamatan/kelurahan tidak di-prewarm).
+                                    Prewarm: <strong>Provinsi + Kabkota</strong>.
+                                    Filter kecamatan/kelurahan di-cache on-demand (TTL terpisah, tanpa notif lambat).
+                                    Jika cache Provinsi/Kabkota kosong saat Terapkan: query live + notifikasi “membutuhkan waktu”, lalu hasil disimpan ke cache.
                                     Pastikan cron <code>* * * * * php artisan schedule:run</code> aktif.
                                 </p>
                                 <p class="mt-2 mb-0 small text-danger">
@@ -137,6 +145,9 @@
                                     Sistem membagi sendiri: Reguler lengkap (stats+ringkasan kabkota+map) → D2D → Semua (merge) → Kabkota.
                                     Status di bawah akan berubah seiring progres. CLI:
                                     <code>php artisan rvf:warm-cache --force</code>
+                                </p>
+                                <p class="mt-2 mb-0 small text-muted">
+                                    <strong>Hapus Semua Cache</strong> hanya menghapus key berawalan <code>rvf:</code> (aman untuk cache lain).
                                 </p>
                             </div>
                         </div>

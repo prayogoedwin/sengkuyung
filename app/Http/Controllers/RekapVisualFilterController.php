@@ -370,6 +370,7 @@ class RekapVisualFilterController extends Controller
             'bayar' => $payload['bayar'],
             'cache' => $payload['_cache'] ?? 'live',
             'message' => $payload['_message'] ?? null,
+            'slow_notice' => (bool) ($payload['_slow_notice'] ?? false),
             'refreshedAt' => now()->format('d/m/Y H:i:s'),
         ]);
     }
@@ -393,6 +394,7 @@ class RekapVisualFilterController extends Controller
             'rows' => $payload['rows'],
             'cache' => $payload['_cache'] ?? 'live',
             'message' => $payload['_message'] ?? null,
+            'slow_notice' => (bool) ($payload['_slow_notice'] ?? false),
             'refreshedAt' => now()->format('d/m/Y H:i:s'),
         ]);
     }
@@ -410,122 +412,126 @@ class RekapVisualFilterController extends Controller
             'mapKabkota' => $resolved['rows'],
             'cache' => $resolved['_cache'] ?? 'live',
             'message' => $resolved['_message'] ?? null,
+            'slow_notice' => (bool) ($resolved['_slow_notice'] ?? false),
             'refreshedAt' => now()->format('d/m/Y H:i:s'),
         ]);
     }
 
     /**
      * @param array{year:int,kabkota_id:string,kecamatan_id:string,kelurahan_id:string} $filters
-     * @return array{stats:array<string,mixed>,bayar:array<string,mixed>,_cache?:string}
+     * @return array{stats:array<string,mixed>|null,bayar:array<string,mixed>|null,_cache?:string,_message?:string,_slow_notice?:bool}
      */
     protected function resolveStatsPayload(array $filters): array
     {
         $useCache = RekapVisualFilterCache::useCache();
-        $prewarmEligible = $useCache && RekapVisualFilterCache::isProvOrKabOnly($filters);
-
-        if ($prewarmEligible) {
-            $key = RekapVisualFilterCache::statsKey(
-                $this->channelCode(),
-                $filters['year'],
-                $filters['kabkota_id']
-            );
-            $cached = RekapVisualFilterCache::get($key);
-            if (is_array($cached) && isset($cached['stats'], $cached['bayar'])) {
-                $cached['_cache'] = 'prewarm';
-
-                return $cached;
-            }
-
-            // Provinsi tanpa cache: jangan hitung live di HTTP (berat → timeout/500).
-            // Kabkota: boleh live + simpan agar tetap bisa dipakai sebelum warm penuh.
-            if ($filters['kabkota_id'] === '') {
-                return [
-                    'stats' => null,
-                    'bayar' => null,
-                    '_cache' => 'miss',
-                    '_message' => 'Cache belum tersedia untuk seluruh Provinsi. Jalankan "Warm Sekarang" di Setting → Cache Rekap Visual Filter, atau pilih satu Kab/Kota, atau set "Dashboard manfaatkan cache" = Tidak.',
-                ];
-            }
-
+        if (! $useCache) {
             $payload = $this->computeStats($filters);
-            RekapVisualFilterCache::put($key, $payload);
-            $payload['_cache'] = 'miss-stored';
+            $payload['_cache'] = 'disabled';
 
             return $payload;
         }
 
+        $key = RekapVisualFilterCache::statsKey(
+            $this->channelCode(),
+            $filters['year'],
+            $filters['kabkota_id'],
+            $filters['kecamatan_id'],
+            $filters['kelurahan_id']
+        );
+        $cached = RekapVisualFilterCache::get($key);
+        if (is_array($cached) && isset($cached['stats'], $cached['bayar'])) {
+            $cached['_cache'] = 'hit';
+
+            return $cached;
+        }
+
+        $isDeep = RekapVisualFilterCache::isDeepFilter($filters);
+        $ttl = RekapVisualFilterCache::ttlForFilters($filters);
         $payload = $this->computeStats($filters);
-        $payload['_cache'] = $useCache ? 'live' : 'disabled';
+        RekapVisualFilterCache::put($key, [
+            'stats' => $payload['stats'],
+            'bayar' => $payload['bayar'],
+        ], $ttl);
+
+        $payload['_cache'] = $isDeep ? 'miss-stored-detail' : 'miss-stored';
+        if (! $isDeep) {
+            $payload['_slow_notice'] = true;
+            $payload['_message'] = 'Data cache tidak ada. Melakukan pencarian ini membutuhkan waktu. Hasil akan disimpan ke cache.';
+        }
 
         return $payload;
     }
 
     /**
      * @param array{year:int,kabkota_id:string,kecamatan_id:string,kelurahan_id:string} $filters
-     * @return array{level:string,rows:list<array<string,mixed>>,_cache?:string}
+     * @return array{level:string,rows:list<array<string,mixed>>,_cache?:string,_message?:string,_slow_notice?:bool}
      */
     protected function resolveBreakdownPayload(array $filters): array
     {
         $useCache = RekapVisualFilterCache::useCache();
-        $prewarmEligible = $useCache && RekapVisualFilterCache::isProvOrKabOnly($filters);
-
-        if ($prewarmEligible) {
-            $key = RekapVisualFilterCache::breakdownKey(
-                $this->channelCode(),
-                $filters['year'],
-                $filters['kabkota_id']
-            );
-            $cached = RekapVisualFilterCache::get($key);
-            if (is_array($cached) && isset($cached['level'], $cached['rows'])) {
-                $cached['_cache'] = 'prewarm';
-
-                return $cached;
-            }
-
-            if ($filters['kabkota_id'] === '') {
-                return [
-                    'level' => 'kabkota',
-                    'rows' => [],
-                    '_cache' => 'miss',
-                    '_message' => 'Cache ringkasan belum tersedia. Jalankan Warm di Setting → Cache Rekap Visual Filter.',
-                ];
-            }
-
+        if (! $useCache) {
             $payload = $this->computeBreakdown($filters);
-            RekapVisualFilterCache::put($key, $payload);
-            $payload['_cache'] = 'miss-stored';
+            $payload['_cache'] = 'disabled';
 
             return $payload;
         }
 
+        $key = RekapVisualFilterCache::breakdownKey(
+            $this->channelCode(),
+            $filters['year'],
+            $filters['kabkota_id'],
+            $filters['kecamatan_id'],
+            $filters['kelurahan_id']
+        );
+        $cached = RekapVisualFilterCache::get($key);
+        if (is_array($cached) && isset($cached['level'], $cached['rows'])) {
+            $cached['_cache'] = 'hit';
+
+            return $cached;
+        }
+
+        $isDeep = RekapVisualFilterCache::isDeepFilter($filters);
+        $ttl = RekapVisualFilterCache::ttlForFilters($filters);
         $payload = $this->computeBreakdown($filters);
-        $payload['_cache'] = $useCache ? 'live' : 'disabled';
+        RekapVisualFilterCache::put($key, [
+            'level' => $payload['level'],
+            'rows' => $payload['rows'],
+        ], $ttl);
+
+        $payload['_cache'] = $isDeep ? 'miss-stored-detail' : 'miss-stored';
+        if (! $isDeep) {
+            $payload['_slow_notice'] = true;
+            $payload['_message'] = 'Data cache tidak ada. Melakukan pencarian ini membutuhkan waktu. Hasil akan disimpan ke cache.';
+        }
 
         return $payload;
     }
 
     /**
-     * @return array{rows:list<array<string,mixed>>,_cache:string}
+     * @return array{rows:list<array<string,mixed>>,_cache:string,_message?:string,_slow_notice?:bool}
      */
     protected function resolveMapPayload(int $year): array
     {
         $useCache = RekapVisualFilterCache::useCache();
-        if ($useCache) {
-            $key = RekapVisualFilterCache::mapKey($this->channelCode(), $year);
-            $cached = RekapVisualFilterCache::get($key);
-            if (is_array($cached)) {
-                return ['rows' => $cached, '_cache' => 'prewarm'];
-            }
-
-            // Map kabkota se-provinsi juga berat — jangan hitung live saat cache-first miss.
-            return [
-                'rows' => [],
-                '_cache' => 'miss',
-                '_message' => 'Cache peta belum tersedia. Jalankan Warm di Setting → Cache Rekap Visual Filter.',
-            ];
+        if (! $useCache) {
+            return ['rows' => $this->buildMapKabkotaRows($year), '_cache' => 'disabled'];
         }
 
-        return ['rows' => $this->buildMapKabkotaRows($year), '_cache' => 'disabled'];
+        $key = RekapVisualFilterCache::mapKey($this->channelCode(), $year);
+        $cached = RekapVisualFilterCache::get($key);
+        if (is_array($cached)) {
+            return ['rows' => $cached, '_cache' => 'hit'];
+        }
+
+        $rows = $this->buildMapKabkotaRows($year);
+        RekapVisualFilterCache::put($key, $rows);
+
+        return [
+            'rows' => $rows,
+            '_cache' => 'miss-stored',
+            '_slow_notice' => true,
+            '_message' => 'Data cache tidak ada. Melakukan pencarian ini membutuhkan waktu. Hasil akan disimpan ke cache.',
+        ];
     }
 
     protected function authorizeAccess(): void

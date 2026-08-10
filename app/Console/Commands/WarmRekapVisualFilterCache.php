@@ -255,6 +255,7 @@ class WarmRekapVisualFilterCache extends Command
             ->get(['id', 'nama']);
 
         $written = 0;
+        $failed = 0;
         $i = 0;
         $total = $kabkotas->count();
 
@@ -266,51 +267,86 @@ class WarmRekapVisualFilterCache extends Command
 
             $this->line("— Kabkota {$i}/{$total}: {$nama}");
 
-            $statsReg = null;
-            $statsD2d = null;
-            if ($wantReguler) {
-                $this->tick('  stats REGULER · hitung + simpan…');
-                $statsReg = $reguler->warmBuildStats($filters);
-                RekapVisualFilterCache::put(RekapVisualFilterCache::statsKey('reguler', $year, $kabId), $statsReg);
-                $written++;
-            }
-            if ($wantD2d) {
-                $this->tick('  stats D2D · hitung + simpan…');
-                $statsD2d = $d2d->warmBuildStats($filters);
-                RekapVisualFilterCache::put(RekapVisualFilterCache::statsKey('d2d', $year, $kabId), $statsD2d);
-                $written++;
-            }
-            if ($wantSemua && $statsReg && $statsD2d) {
-                RekapVisualFilterCache::put(
-                    RekapVisualFilterCache::statsKey('semua', $year, $kabId),
-                    $this->mergeStats($statsReg, $statsD2d)
-                );
-                $written++;
-                $this->tick('  stats SEMUA · merge tersimpan');
-            }
+            try {
+                $statsReg = null;
+                $statsD2d = null;
+                if ($wantReguler) {
+                    $key = RekapVisualFilterCache::statsKey('reguler', $year, $kabId);
+                    if (is_array(RekapVisualFilterCache::get($key))) {
+                        $this->tick('  stats REGULER · skip (sudah ada)');
+                        $statsReg = RekapVisualFilterCache::get($key);
+                    } else {
+                        $this->tick('  stats REGULER · hitung + simpan…');
+                        $statsReg = $reguler->warmBuildStats($filters);
+                        RekapVisualFilterCache::put($key, $statsReg);
+                        $written++;
+                    }
+                }
+                if ($wantD2d) {
+                    $key = RekapVisualFilterCache::statsKey('d2d', $year, $kabId);
+                    if (is_array(RekapVisualFilterCache::get($key))) {
+                        $this->tick('  stats D2D · skip (sudah ada)');
+                        $statsD2d = RekapVisualFilterCache::get($key);
+                    } else {
+                        $this->tick('  stats D2D · hitung + simpan…');
+                        $statsD2d = $d2d->warmBuildStats($filters);
+                        RekapVisualFilterCache::put($key, $statsD2d);
+                        $written++;
+                    }
+                }
+                if ($wantSemua && $statsReg && $statsD2d) {
+                    $key = RekapVisualFilterCache::statsKey('semua', $year, $kabId);
+                    if (! is_array(RekapVisualFilterCache::get($key))) {
+                        RekapVisualFilterCache::put($key, $this->mergeStats($statsReg, $statsD2d));
+                        $written++;
+                        $this->tick('  stats SEMUA · merge tersimpan');
+                    }
+                }
 
-            $bdReg = null;
-            $bdD2d = null;
-            if ($wantReguler) {
-                $this->tick('  breakdown REGULER · hitung + simpan…');
-                $bdReg = $reguler->warmBuildBreakdown($filters);
-                RekapVisualFilterCache::put(RekapVisualFilterCache::breakdownKey('reguler', $year, $kabId), $bdReg);
-                $written++;
+                $bdReg = null;
+                $bdD2d = null;
+                if ($wantReguler) {
+                    $key = RekapVisualFilterCache::breakdownKey('reguler', $year, $kabId);
+                    if (is_array(RekapVisualFilterCache::get($key))) {
+                        $this->tick('  breakdown REGULER · skip (sudah ada)');
+                        $bdReg = RekapVisualFilterCache::get($key);
+                    } else {
+                        $this->tick('  breakdown REGULER · hitung + simpan…');
+                        $bdReg = $reguler->warmBuildBreakdown($filters);
+                        RekapVisualFilterCache::put($key, $bdReg);
+                        $written++;
+                    }
+                }
+                if ($wantD2d) {
+                    $key = RekapVisualFilterCache::breakdownKey('d2d', $year, $kabId);
+                    if (is_array(RekapVisualFilterCache::get($key))) {
+                        $this->tick('  breakdown D2D · skip (sudah ada)');
+                        $bdD2d = RekapVisualFilterCache::get($key);
+                    } else {
+                        $this->tick('  breakdown D2D · hitung + simpan…');
+                        $bdD2d = $d2d->warmBuildBreakdown($filters);
+                        RekapVisualFilterCache::put($key, $bdD2d);
+                        $written++;
+                    }
+                }
+                if ($wantSemua && $bdReg && $bdD2d) {
+                    $key = RekapVisualFilterCache::breakdownKey('semua', $year, $kabId);
+                    if (! is_array(RekapVisualFilterCache::get($key))) {
+                        RekapVisualFilterCache::put($key, $this->mergeBreakdown($bdReg, $bdD2d));
+                        $written++;
+                        $this->tick('  breakdown SEMUA · merge tersimpan');
+                    }
+                }
+            } catch (Throwable $e) {
+                $failed++;
+                $msg = "Kabkota {$nama} gagal: " . $e->getMessage();
+                $this->error('  ! ' . $msg);
+                $this->updateWarmStatus('running', $msg . ' — lanjut kabkota berikutnya');
             }
-            if ($wantD2d) {
-                $this->tick('  breakdown D2D · hitung + simpan…');
-                $bdD2d = $d2d->warmBuildBreakdown($filters);
-                RekapVisualFilterCache::put(RekapVisualFilterCache::breakdownKey('d2d', $year, $kabId), $bdD2d);
-                $written++;
-            }
-            if ($wantSemua && $bdReg && $bdD2d) {
-                RekapVisualFilterCache::put(
-                    RekapVisualFilterCache::breakdownKey('semua', $year, $kabId),
-                    $this->mergeBreakdown($bdReg, $bdD2d)
-                );
-                $written++;
-                $this->tick('  breakdown SEMUA · merge tersimpan');
-            }
+        }
+
+        if ($failed > 0) {
+            $this->warn("Fase Kabkota: {$failed} kabkota gagal, {$written} key baru tersimpan. Jalankan ulang untuk melanjutkan (yang sudah ada di-skip).");
         }
 
         return $written;

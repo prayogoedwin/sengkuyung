@@ -1288,27 +1288,7 @@ class RekapVisualFilterController extends Controller
      */
     protected function bayarCountByLokasi(array $filters, string $tertagihTable)
     {
-        $year = (int) $filters['year'];
-        $lokasiSql = $this->tertagihLokasiSqlFragment($filters, 't');
-
-        return DB::table(DB::raw("(
-            SELECT x.nopol_, MIN(t.id_lokasi_samsat) AS id_lokasi_samsat
-            FROM (
-                SELECT DISTINCT b.nopol_
-                FROM seng_bayar_pajak b
-                WHERE b.year = {$year}
-                  AND b.nopol_ IS NOT NULL
-                  AND b.nopol_ != ''
-            ) x
-            INNER JOIN {$tertagihTable} t
-                ON t.no_polisi = x.nopol_
-               AND t.year = {$year}
-               {$lokasiSql}
-            GROUP BY x.nopol_
-        ) as paid"))
-            ->selectRaw('id_lokasi_samsat, COUNT(*) as c')
-            ->groupBy('id_lokasi_samsat')
-            ->pluck('c', 'id_lokasi_samsat');
+        return collect($this->bayarDistinctCountByTertagihColumn($filters, $tertagihTable, 'id_lokasi_samsat'));
     }
 
     /**
@@ -1322,40 +1302,14 @@ class RekapVisualFilterController extends Controller
         string $yearStart,
         string $yearEnd
     ) {
-        $year = (int) $filters['year'];
-        $lokasiSql = $this->tertagihLokasiSqlFragment($filters, 't');
-        $pendataanWhere = $this->pendataanWilayahSqlFragment($filters, 'p');
-
-        return DB::table(DB::raw("(
-            SELECT x.nopol_, MIN(t.id_lokasi_samsat) AS id_lokasi_samsat
-            FROM (
-                SELECT DISTINCT b.nopol_
-                FROM seng_bayar_pajak b
-                INNER JOIN (
-                    SELECT nopol, MIN(DATE(created_at)) AS tgl_pendataan
-                    FROM {$pendataanTable} p
-                    WHERE deleted_at IS NULL
-                      AND created_at BETWEEN '{$yearStart}' AND '{$yearEnd}'
-                      AND nopol IS NOT NULL
-                      AND nopol != ''
-                      {$pendataanWhere}
-                    GROUP BY nopol
-                ) p ON p.nopol = b.nopol_
-                WHERE b.year = {$year}
-                  AND b.nopol_ IS NOT NULL
-                  AND b.nopol_ != ''
-                  AND b.tgl_bayar IS NOT NULL
-                  AND DATE(b.tgl_bayar) >= p.tgl_pendataan
-            ) x
-            INNER JOIN {$tertagihTable} t
-                ON t.no_polisi = x.nopol_
-               AND t.year = {$year}
-               {$lokasiSql}
-            GROUP BY x.nopol_
-        ) as paid_sesudah"))
-            ->selectRaw('id_lokasi_samsat, COUNT(*) as c')
-            ->groupBy('id_lokasi_samsat')
-            ->pluck('c', 'id_lokasi_samsat');
+        return collect($this->bayarSesudahDistinctCountByTertagihColumn(
+            $filters,
+            $tertagihTable,
+            $pendataanTable,
+            $yearStart,
+            $yearEnd,
+            'id_lokasi_samsat'
+        ));
     }
 
     /**
@@ -1364,35 +1318,11 @@ class RekapVisualFilterController extends Controller
      */
     protected function bayarCountByWilayahColumn(array $filters, string $tertagihTable, string $column): array
     {
-        $year = (int) $filters['year'];
-        $lokasiSql = $this->tertagihLokasiSqlFragment($filters, 't');
-        $safeCol = in_array($column, ['id_kecamatan', 'id_kelurahan'], true) ? $column : 'id_kecamatan';
+        $safeCol = in_array($column, ['id_kecamatan', 'id_kelurahan', 'id_lokasi_samsat'], true)
+            ? $column
+            : 'id_kecamatan';
 
-        $rows = DB::table(DB::raw("(
-            SELECT x.nopol_, MIN(t.{$safeCol}) AS wilayah_id
-            FROM (
-                SELECT DISTINCT b.nopol_
-                FROM seng_bayar_pajak b
-                WHERE b.year = {$year}
-                  AND b.nopol_ IS NOT NULL
-                  AND b.nopol_ != ''
-            ) x
-            INNER JOIN {$tertagihTable} t
-                ON t.no_polisi = x.nopol_
-               AND t.year = {$year}
-               {$lokasiSql}
-            GROUP BY x.nopol_
-        ) as paid"))
-            ->selectRaw("COALESCE(NULLIF(wilayah_id, ''), '-') as wilayah_id, COUNT(*) as c")
-            ->groupBy('wilayah_id')
-            ->get();
-
-        $out = [];
-        foreach ($rows as $row) {
-            $out[(string) $row->wilayah_id] = (int) $row->c;
-        }
-
-        return $out;
+        return $this->bayarDistinctCountByTertagihColumn($filters, $tertagihTable, $safeCol);
     }
 
     /**
@@ -1407,48 +1337,194 @@ class RekapVisualFilterController extends Controller
         string $yearEnd,
         string $column
     ): array {
+        $safeCol = in_array($column, ['id_kecamatan', 'id_kelurahan', 'id_lokasi_samsat'], true)
+            ? $column
+            : 'id_kecamatan';
+
+        return $this->bayarSesudahDistinctCountByTertagihColumn(
+            $filters,
+            $tertagihTable,
+            $pendataanTable,
+            $yearStart,
+            $yearEnd,
+            $safeCol
+        );
+    }
+
+    /**
+     * Hitung nopol unik bayar per kolom wilayah tanpa JOIN/DISTINCT temp (hindari Aria 1034/126).
+     *
+     * @param array{year:int,kabkota_id:string,kecamatan_id:string,kelurahan_id:string} $filters
+     * @return array<string,int>
+     */
+    protected function bayarDistinctCountByTertagihColumn(
+        array $filters,
+        string $tertagihTable,
+        string $column
+    ): array {
+        $this->preferInnoDbTempTables();
         $year = (int) $filters['year'];
-        $lokasiSql = $this->tertagihLokasiSqlFragment($filters, 't');
-        $pendataanWhere = $this->pendataanWilayahSqlFragment($filters, 'p');
-        $safeCol = in_array($column, ['id_kecamatan', 'id_kelurahan'], true) ? $column : 'id_kecamatan';
 
-        $rows = DB::table(DB::raw("(
-            SELECT x.nopol_, MIN(t.{$safeCol}) AS wilayah_id
-            FROM (
-                SELECT DISTINCT b.nopol_
-                FROM seng_bayar_pajak b
-                INNER JOIN (
-                    SELECT nopol, MIN(DATE(created_at)) AS tgl_pendataan
-                    FROM {$pendataanTable} p
-                    WHERE deleted_at IS NULL
-                      AND created_at BETWEEN '{$yearStart}' AND '{$yearEnd}'
-                      AND nopol IS NOT NULL
-                      AND nopol != ''
-                      {$pendataanWhere}
-                    GROUP BY nopol
-                ) pend ON pend.nopol = b.nopol_
-                WHERE b.year = {$year}
-                  AND b.nopol_ IS NOT NULL
-                  AND b.nopol_ != ''
-                  AND b.tgl_bayar IS NOT NULL
-                  AND DATE(b.tgl_bayar) >= pend.tgl_pendataan
-            ) x
-            INNER JOIN {$tertagihTable} t
-                ON t.no_polisi = x.nopol_
-               AND t.year = {$year}
-               {$lokasiSql}
-            GROUP BY x.nopol_
-        ) as paid_sesudah"))
-            ->selectRaw("COALESCE(NULLIF(wilayah_id, ''), '-') as wilayah_id, COUNT(*) as c")
-            ->groupBy('wilayah_id')
-            ->get();
+        $nopolToWilayah = [];
+        $tertagihQ = DB::table($tertagihTable)
+            ->where('year', $year)
+            ->whereNotNull('no_polisi')
+            ->where('no_polisi', '!=', '')
+            ->select(['id', 'no_polisi', $column]);
+        $this->applyTertagihWilayahFilter($tertagihQ, $filters);
+        $tertagihQ->orderBy('id')->chunkById(5000, function ($rows) use (&$nopolToWilayah, $column) {
+            foreach ($rows as $row) {
+                $nopol = trim((string) ($row->no_polisi ?? ''));
+                if ($nopol === '') {
+                    continue;
+                }
+                $wilayah = trim((string) ($row->{$column} ?? ''));
+                if ($wilayah === '') {
+                    $wilayah = '-';
+                }
+                if (! isset($nopolToWilayah[$nopol]) || ($wilayah !== '-' && (
+                    ! isset($nopolToWilayah[$nopol]) || strcmp($wilayah, (string) $nopolToWilayah[$nopol]) < 0
+                ))) {
+                    // MIN(wilayah) seperti SQL lama
+                    if (! isset($nopolToWilayah[$nopol])) {
+                        $nopolToWilayah[$nopol] = $wilayah;
+                    } elseif ($wilayah !== '-' && (string) $nopolToWilayah[$nopol] !== '-' && strcmp($wilayah, (string) $nopolToWilayah[$nopol]) < 0) {
+                        $nopolToWilayah[$nopol] = $wilayah;
+                    } elseif ((string) $nopolToWilayah[$nopol] === '-' && $wilayah !== '-') {
+                        $nopolToWilayah[$nopol] = $wilayah;
+                    }
+                }
+            }
+        }, 'id');
 
+        $seen = [];
         $out = [];
-        foreach ($rows as $row) {
-            $out[(string) $row->wilayah_id] = (int) $row->c;
-        }
+        DB::table('seng_bayar_pajak')
+            ->where('year', $year)
+            ->whereNotNull('nopol_')
+            ->where('nopol_', '!=', '')
+            ->select(['id', 'nopol_'])
+            ->orderBy('id')
+            ->chunkById(3000, function ($rows) use (&$nopolToWilayah, &$seen, &$out) {
+                foreach ($rows as $row) {
+                    $nopol = (string) $row->nopol_;
+                    if (! isset($nopolToWilayah[$nopol]) || isset($seen[$nopol])) {
+                        continue;
+                    }
+                    $seen[$nopol] = true;
+                    $wilayah = (string) $nopolToWilayah[$nopol];
+                    $out[$wilayah] = ($out[$wilayah] ?? 0) + 1;
+                }
+            }, 'id');
 
         return $out;
+    }
+
+    /**
+     * @param array{year:int,kabkota_id:string,kecamatan_id:string,kelurahan_id:string} $filters
+     * @return array<string,int>
+     */
+    protected function bayarSesudahDistinctCountByTertagihColumn(
+        array $filters,
+        string $tertagihTable,
+        string $pendataanTable,
+        string $yearStart,
+        string $yearEnd,
+        string $column
+    ): array {
+        $this->preferInnoDbTempTables();
+        $year = (int) $filters['year'];
+
+        $nopolToWilayah = [];
+        $tertagihQ = DB::table($tertagihTable)
+            ->where('year', $year)
+            ->whereNotNull('no_polisi')
+            ->where('no_polisi', '!=', '')
+            ->select(['id', 'no_polisi', $column]);
+        $this->applyTertagihWilayahFilter($tertagihQ, $filters);
+        $tertagihQ->orderBy('id')->chunkById(5000, function ($rows) use (&$nopolToWilayah, $column) {
+            foreach ($rows as $row) {
+                $nopol = trim((string) ($row->no_polisi ?? ''));
+                if ($nopol === '') {
+                    continue;
+                }
+                $wilayah = trim((string) ($row->{$column} ?? ''));
+                if ($wilayah === '') {
+                    $wilayah = '-';
+                }
+                if (! isset($nopolToWilayah[$nopol])) {
+                    $nopolToWilayah[$nopol] = $wilayah;
+                } elseif ($wilayah !== '-' && (string) $nopolToWilayah[$nopol] !== '-' && strcmp($wilayah, (string) $nopolToWilayah[$nopol]) < 0) {
+                    $nopolToWilayah[$nopol] = $wilayah;
+                } elseif ((string) $nopolToWilayah[$nopol] === '-' && $wilayah !== '-') {
+                    $nopolToWilayah[$nopol] = $wilayah;
+                }
+            }
+        }, 'id');
+
+        $pendataanMap = [];
+        $pendataanQ = DB::table($pendataanTable)
+            ->whereNull('deleted_at')
+            ->whereBetween('created_at', [$yearStart, $yearEnd])
+            ->whereNotNull('nopol')
+            ->where('nopol', '!=', '')
+            ->select(['id', 'nopol', 'created_at']);
+        $this->applyPendataanWilayahFilter($pendataanQ, $filters);
+        $pendataanQ->orderBy('id')->chunkById(5000, function ($rows) use (&$pendataanMap) {
+            foreach ($rows as $row) {
+                $nopol = trim((string) ($row->nopol ?? ''));
+                if ($nopol === '') {
+                    continue;
+                }
+                $d = substr((string) ($row->created_at ?? ''), 0, 10);
+                if ($d === '') {
+                    continue;
+                }
+                if (! isset($pendataanMap[$nopol]) || $d < $pendataanMap[$nopol]) {
+                    $pendataanMap[$nopol] = $d;
+                }
+            }
+        }, 'id');
+
+        $seen = [];
+        $out = [];
+        DB::table('seng_bayar_pajak')
+            ->where('year', $year)
+            ->whereNotNull('nopol_')
+            ->where('nopol_', '!=', '')
+            ->whereNotNull('tgl_bayar')
+            ->select(['id', 'nopol_', 'tgl_bayar'])
+            ->orderBy('id')
+            ->chunkById(3000, function ($rows) use (&$nopolToWilayah, &$pendataanMap, &$seen, &$out) {
+                foreach ($rows as $row) {
+                    $nopol = (string) $row->nopol_;
+                    if (! isset($nopolToWilayah[$nopol]) || isset($seen[$nopol])) {
+                        continue;
+                    }
+                    $tglPendataan = $pendataanMap[$nopol] ?? null;
+                    if ($tglPendataan === null || $tglPendataan === '') {
+                        continue;
+                    }
+                    $tglBayar = substr((string) $row->tgl_bayar, 0, 10);
+                    if ($tglBayar === '' || $tglBayar < $tglPendataan) {
+                        continue;
+                    }
+                    $seen[$nopol] = true;
+                    $wilayah = (string) $nopolToWilayah[$nopol];
+                    $out[$wilayah] = ($out[$wilayah] ?? 0) + 1;
+                }
+            }, 'id');
+
+        return $out;
+    }
+
+    protected function preferInnoDbTempTables(): void
+    {
+        try {
+            DB::statement('SET SESSION default_tmp_storage_engine = InnoDB');
+        } catch (\Throwable $e) {
+            // ignore
+        }
     }
 
     /**

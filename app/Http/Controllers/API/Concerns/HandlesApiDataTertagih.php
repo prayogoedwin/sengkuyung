@@ -132,7 +132,6 @@ trait HandlesApiDataTertagih
         return response()->json([
             'status' => true,
             'message' => 'Data ditemukan',
-            'data' => $items,
             'pagination' => [
                 'current_page' => $paginator->currentPage(),
                 'per_page' => $paginator->perPage(),
@@ -141,6 +140,7 @@ trait HandlesApiDataTertagih
                 'from' => $paginator->firstItem(),
                 'to' => $paginator->lastItem(),
             ],
+            'data' => $items,
         ]);
     }
 

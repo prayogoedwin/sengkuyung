@@ -47,7 +47,6 @@ trait HandlesJrVerifikasi
         return response()->json([
             'status' => true,
             'message' => 'Data ditemukan',
-            'data' => $items,
             'pagination' => [
                 'current_page' => $paginator->currentPage(),
                 'per_page' => $paginator->perPage(),
@@ -56,6 +55,7 @@ trait HandlesJrVerifikasi
                 'from' => $paginator->firstItem(),
                 'to' => $paginator->lastItem(),
             ],
+            'data' => $items,
         ]);
     }
 

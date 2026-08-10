@@ -77,7 +77,11 @@ trait HandlesJrVerifikasi
         }
 
         if ($request->filled('status_verifikasi_id')) {
-            $query->where('status_verifikasi', (int) $request->status_verifikasi_id);
+            $statusVerifikasiId = (int) $request->status_verifikasi_id;
+            // 15 = sentinel "semua status" (tidak filter status_verifikasi).
+            if ($statusVerifikasiId !== 15) {
+                $query->where('status_verifikasi', $statusVerifikasiId);
+            }
         } else {
             $query->whereIn('status_verifikasi', VerifikasiStatusGroups::menungguIds());
         }

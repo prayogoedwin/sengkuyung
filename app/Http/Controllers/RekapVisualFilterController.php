@@ -9,10 +9,10 @@ use App\Models\SengStatusVerifikasi;
 use App\Models\SengWilayah;
 use App\Models\SengWilayahKec;
 use App\Models\SengWilayahKel;
+use App\Support\RekapVisualFilterCache;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -84,6 +84,116 @@ class RekapVisualFilterController extends Controller
     protected function cacheNamespace(): string
     {
         return 'rvf:standalone:v4:reguler:';
+    }
+
+    protected function channelCode(): string
+    {
+        return $this->isD2d() ? 'd2d' : 'reguler';
+    }
+
+    /**
+     * Warm prewarm cache berurutan: Provinsi → tiap Kabkota → map.
+     *
+     * @param  callable(string):void|null  $onProgress
+     * @return list<string>
+     */
+    public function warmPrewarmForYear(int $year, ?callable $onProgress = null): array
+    {
+        @set_time_limit(0);
+        $written = [];
+        $channel = $this->channelCode();
+
+        if ($onProgress) {
+            $onProgress("[{$channel}] Provinsi…");
+        }
+        $written = array_merge($written, $this->warmOneScope($year, ''));
+
+        $kabkotas = SengWilayah::query()
+            ->where('id_up', 33)
+            ->orderBy('nama')
+            ->get(['id', 'nama']);
+
+        $i = 0;
+        $total = $kabkotas->count();
+        foreach ($kabkotas as $kab) {
+            $i++;
+            $kabId = (string) $kab->id;
+            if ($onProgress) {
+                $onProgress("[{$channel}] Kabkota {$i}/{$total}: {$kab->nama}");
+            }
+            $written = array_merge($written, $this->warmOneScope($year, $kabId));
+        }
+
+        if ($onProgress) {
+            $onProgress("[{$channel}] Map kabkota…");
+        }
+        $written[] = $this->warmMap($year);
+
+        return $written;
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function warmOneScope(int $year, string $kabkotaId): array
+    {
+        $filters = [
+            'year' => $year,
+            'kabkota_id' => $kabkotaId,
+            'kecamatan_id' => '',
+            'kelurahan_id' => '',
+        ];
+        $channel = $this->channelCode();
+        $statsKey = RekapVisualFilterCache::statsKey($channel, $year, $kabkotaId);
+        $breakdownKey = RekapVisualFilterCache::breakdownKey($channel, $year, $kabkotaId);
+
+        RekapVisualFilterCache::put($statsKey, $this->computeStats($filters));
+        RekapVisualFilterCache::put($breakdownKey, $this->computeBreakdown($filters));
+
+        return [$statsKey, $breakdownKey];
+    }
+
+    protected function warmMap(int $year): string
+    {
+        $channel = $this->channelCode();
+        $key = RekapVisualFilterCache::mapKey($channel, $year);
+        RekapVisualFilterCache::put($key, $this->buildMapKabkotaRows($year));
+
+        return $key;
+    }
+
+    /**
+     * @return list<array<string,mixed>>
+     */
+    protected function buildMapKabkotaRows(int $year): array
+    {
+        $filters = [
+            'year' => $year,
+            'kabkota_id' => '',
+            'kecamatan_id' => '',
+            'kelurahan_id' => '',
+        ];
+        $rows = $this->breakdownByKabkota(
+            $filters,
+            $this->tertagihTable(),
+            $this->pendataanTable(),
+            sprintf('%04d-01-01 00:00:00', $year),
+            sprintf('%04d-12-31 23:59:59', $year)
+        );
+
+        $coords = SengWilayah::query()
+            ->where('id_up', 33)
+            ->get(['id', 'lat', 'lng'])
+            ->keyBy(fn ($r) => (string) $r->id);
+
+        foreach ($rows as &$row) {
+            $c = $coords[$row['id']] ?? null;
+            $row['lat'] = $c && $c->lat !== null ? (float) $c->lat : null;
+            $row['lng'] = $c && $c->lng !== null ? (float) $c->lng : null;
+        }
+        unset($row);
+
+        return $rows;
     }
 
     public function index(Request $request)
@@ -190,11 +300,7 @@ class RekapVisualFilterController extends Controller
         @set_time_limit(300);
 
         $filters = $this->resolveFilters($request);
-        $cacheKey = $this->cacheNamespace() . 'stats:' . $this->filterCacheSuffix($filters);
-
-        $payload = Cache::remember($cacheKey, 1800, function () use ($filters) {
-            return $this->computeStats($filters);
-        });
+        $payload = $this->resolveStatsPayload($filters);
 
         return response()->json([
             'year' => $filters['year'],
@@ -205,6 +311,7 @@ class RekapVisualFilterController extends Controller
             ],
             'stats' => $payload['stats'],
             'bayar' => $payload['bayar'],
+            'cache' => $payload['_cache'] ?? 'live',
             'refreshedAt' => now()->format('d/m/Y H:i:s'),
         ]);
     }
@@ -215,11 +322,7 @@ class RekapVisualFilterController extends Controller
         @set_time_limit(300);
 
         $filters = $this->resolveFilters($request);
-        $cacheKey = $this->cacheNamespace() . 'breakdown:' . $this->filterCacheSuffix($filters);
-
-        $payload = Cache::remember($cacheKey, 1800, function () use ($filters) {
-            return $this->computeBreakdown($filters);
-        });
+        $payload = $this->resolveBreakdownPayload($filters);
 
         return response()->json([
             'year' => $filters['year'],
@@ -230,6 +333,7 @@ class RekapVisualFilterController extends Controller
             ],
             'level' => $payload['level'],
             'rows' => $payload['rows'],
+            'cache' => $payload['_cache'] ?? 'live',
             'refreshedAt' => now()->format('d/m/Y H:i:s'),
         ]);
     }
@@ -240,43 +344,106 @@ class RekapVisualFilterController extends Controller
         @set_time_limit(300);
 
         $year = $this->resolveYear($request);
-        $cacheKey = $this->cacheNamespace() . 'map:y:' . $year;
-
-        $rows = Cache::remember($cacheKey, 1800, function () use ($year) {
-            $filters = [
-                'year' => $year,
-                'kabkota_id' => '',
-                'kecamatan_id' => '',
-                'kelurahan_id' => '',
-            ];
-            $rows = $this->breakdownByKabkota(
-                $filters,
-                $this->tertagihTable(),
-                $this->pendataanTable(),
-                sprintf('%04d-01-01 00:00:00', $year),
-                sprintf('%04d-12-31 23:59:59', $year)
-            );
-
-            $coords = SengWilayah::query()
-                ->where('id_up', 33)
-                ->get(['id', 'lat', 'lng'])
-                ->keyBy(fn ($r) => (string) $r->id);
-
-            foreach ($rows as &$row) {
-                $c = $coords[$row['id']] ?? null;
-                $row['lat'] = $c && $c->lat !== null ? (float) $c->lat : null;
-                $row['lng'] = $c && $c->lng !== null ? (float) $c->lng : null;
-            }
-            unset($row);
-
-            return $rows;
-        });
+        $resolved = $this->resolveMapPayload($year);
 
         return response()->json([
             'year' => $year,
-            'mapKabkota' => $rows,
+            'mapKabkota' => $resolved['rows'],
+            'cache' => $resolved['_cache'] ?? 'live',
             'refreshedAt' => now()->format('d/m/Y H:i:s'),
         ]);
+    }
+
+    /**
+     * @param array{year:int,kabkota_id:string,kecamatan_id:string,kelurahan_id:string} $filters
+     * @return array{stats:array<string,mixed>,bayar:array<string,mixed>,_cache?:string}
+     */
+    protected function resolveStatsPayload(array $filters): array
+    {
+        $useCache = RekapVisualFilterCache::useCache();
+        $prewarmEligible = $useCache && RekapVisualFilterCache::isProvOrKabOnly($filters);
+
+        if ($prewarmEligible) {
+            $key = RekapVisualFilterCache::statsKey(
+                $this->channelCode(),
+                $filters['year'],
+                $filters['kabkota_id']
+            );
+            $cached = RekapVisualFilterCache::get($key);
+            if (is_array($cached) && isset($cached['stats'], $cached['bayar'])) {
+                $cached['_cache'] = 'prewarm';
+
+                return $cached;
+            }
+
+            $payload = $this->computeStats($filters);
+            RekapVisualFilterCache::put($key, $payload);
+            $payload['_cache'] = 'miss-stored';
+
+            return $payload;
+        }
+
+        $payload = $this->computeStats($filters);
+        $payload['_cache'] = $useCache ? 'live' : 'disabled';
+
+        return $payload;
+    }
+
+    /**
+     * @param array{year:int,kabkota_id:string,kecamatan_id:string,kelurahan_id:string} $filters
+     * @return array{level:string,rows:list<array<string,mixed>>,_cache?:string}
+     */
+    protected function resolveBreakdownPayload(array $filters): array
+    {
+        $useCache = RekapVisualFilterCache::useCache();
+        $prewarmEligible = $useCache && RekapVisualFilterCache::isProvOrKabOnly($filters);
+
+        if ($prewarmEligible) {
+            $key = RekapVisualFilterCache::breakdownKey(
+                $this->channelCode(),
+                $filters['year'],
+                $filters['kabkota_id']
+            );
+            $cached = RekapVisualFilterCache::get($key);
+            if (is_array($cached) && isset($cached['level'], $cached['rows'])) {
+                $cached['_cache'] = 'prewarm';
+
+                return $cached;
+            }
+
+            $payload = $this->computeBreakdown($filters);
+            RekapVisualFilterCache::put($key, $payload);
+            $payload['_cache'] = 'miss-stored';
+
+            return $payload;
+        }
+
+        $payload = $this->computeBreakdown($filters);
+        $payload['_cache'] = $useCache ? 'live' : 'disabled';
+
+        return $payload;
+    }
+
+    /**
+     * @return array{rows:list<array<string,mixed>>,_cache:string}
+     */
+    protected function resolveMapPayload(int $year): array
+    {
+        $useCache = RekapVisualFilterCache::useCache();
+        if ($useCache) {
+            $key = RekapVisualFilterCache::mapKey($this->channelCode(), $year);
+            $cached = RekapVisualFilterCache::get($key);
+            if (is_array($cached)) {
+                return ['rows' => $cached, '_cache' => 'prewarm'];
+            }
+
+            $rows = $this->buildMapKabkotaRows($year);
+            RekapVisualFilterCache::put($key, $rows);
+
+            return ['rows' => $rows, '_cache' => 'miss-stored'];
+        }
+
+        return ['rows' => $this->buildMapKabkotaRows($year), '_cache' => 'disabled'];
     }
 
     protected function authorizeAccess(): void

@@ -27,6 +27,7 @@ use App\Http\Controllers\KebijakanPrivasiController;
 use App\Http\Controllers\VersionController;
 use App\Http\Controllers\JasaRaharjaController;
 use App\Http\Controllers\MaintenanceStatusController;
+use App\Http\Controllers\RekapVisualFilterCacheController;
 
 Route::get('/kebijakan-privasi', [KebijakanPrivasiController::class, 'show'])->name('kebijakan-privasi');
 
@@ -149,6 +150,12 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::post('/cache-management/{scope}/clear-all', [CacheManagementController::class, 'clearAll'])
             ->whereIn('scope', ['admin', 'api'])
             ->name('cache-management.clear-all');
+
+        Route::get('/rekap-visual-filter-cache', [RekapVisualFilterCacheController::class, 'index'])->name('rekap-visual-filter-cache.index');
+        Route::post('/rekap-visual-filter-cache/settings', [RekapVisualFilterCacheController::class, 'updateSettings'])->name('rekap-visual-filter-cache.settings');
+        Route::post('/rekap-visual-filter-cache/warm', [RekapVisualFilterCacheController::class, 'warmNow'])->name('rekap-visual-filter-cache.warm');
+        Route::post('/rekap-visual-filter-cache/clear-all', [RekapVisualFilterCacheController::class, 'clearAll'])->name('rekap-visual-filter-cache.clear-all');
+        Route::post('/rekap-visual-filter-cache/clear-selected', [RekapVisualFilterCacheController::class, 'clearSelected'])->name('rekap-visual-filter-cache.clear-selected');
 
         Route::get('/maintenance-status', [MaintenanceStatusController::class, 'index'])->name('maintenance-status.index');
         Route::post('/maintenance-status', [MaintenanceStatusController::class, 'update'])->name('maintenance-status.update');

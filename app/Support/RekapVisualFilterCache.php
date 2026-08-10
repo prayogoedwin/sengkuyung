@@ -1,0 +1,320 @@
+<?php
+
+namespace App\Support;
+
+use App\Models\RvfCacheSetting;
+use Illuminate\Support\Facades\Cache;
+use Carbon\Carbon;
+
+/**
+ * Prewarm cache untuk rekap-visual-filter: hanya Provinsi + Kabkota.
+ */
+class RekapVisualFilterCache
+{
+    public const KEY_PREFIX = 'rvf:prewarm:v1:';
+    public const INDEX_KEY = 'rvf:prewarm:keys_index';
+    public const META_PREFIX = 'rvf:prewarm:meta:';
+    public const LOCK_KEY = 'rvf:prewarm:lock';
+    public const SLOT_GUARD_PREFIX = 'rvf:prewarm:slot:';
+
+    public const DEFAULT_SLOTS = [
+        ['time' => '06:00', 'enabled' => true],
+        ['time' => '12:00', 'enabled' => true],
+        ['time' => '18:00', 'enabled' => true],
+        ['time' => '00:00', 'enabled' => true],
+    ];
+    public const DEFAULT_TTL_HOURS = 12;
+
+    public static function settings(): RvfCacheSetting
+    {
+        $row = RvfCacheSetting::query()->first();
+        if ($row) {
+            return $row;
+        }
+
+        return RvfCacheSetting::query()->create([
+            'use_cache' => true,
+            'warm_channel' => 'semua',
+            'ttl_hours' => self::DEFAULT_TTL_HOURS,
+            'schedule_enabled' => true,
+            'schedule_slots' => self::DEFAULT_SLOTS,
+            'warm_year' => null,
+        ]);
+    }
+
+    public static function useCache(): bool
+    {
+        return (bool) self::settings()->use_cache;
+    }
+
+    public static function scheduleEnabled(): bool
+    {
+        $row = self::settings();
+        if ($row->schedule_enabled === null) {
+            return true;
+        }
+
+        return (bool) $row->schedule_enabled;
+    }
+
+    public static function ttlSeconds(): int
+    {
+        $hours = (int) (self::settings()->ttl_hours ?: self::DEFAULT_TTL_HOURS);
+
+        return max(1, $hours) * 3600;
+    }
+
+    public static function warmYear(): int
+    {
+        $year = self::settings()->warm_year;
+
+        return $year ? (int) $year : (int) date('Y');
+    }
+
+    /**
+     * Semua slot (termasuk yang off) untuk form admin.
+     *
+     * @return list<array{time:string,enabled:bool}>
+     */
+    public static function scheduleSlotDefs(): array
+    {
+        $slots = self::settings()->schedule_slots;
+        if (!is_array($slots) || $slots === []) {
+            return self::DEFAULT_SLOTS;
+        }
+
+        $out = [];
+        foreach ($slots as $slot) {
+            if (is_string($slot)) {
+                $time = trim($slot);
+                if (preg_match('/^\d{2}:\d{2}$/', $time)) {
+                    $out[] = ['time' => $time, 'enabled' => true];
+                }
+                continue;
+            }
+            if (!is_array($slot)) {
+                continue;
+            }
+            $time = trim((string) ($slot['time'] ?? ''));
+            if (!preg_match('/^\d{2}:\d{2}$/', $time)) {
+                continue;
+            }
+            $out[] = [
+                'time' => $time,
+                'enabled' => (bool) ($slot['enabled'] ?? true),
+            ];
+        }
+
+        while (count($out) < 4) {
+            $out[] = ['time' => '', 'enabled' => false];
+        }
+
+        return array_slice($out, 0, 4);
+    }
+
+    /**
+     * Jam yang aktif saja (dipakai scheduler).
+     *
+     * @return list<string>
+     */
+    public static function scheduleSlots(): array
+    {
+        if (! self::scheduleEnabled()) {
+            return [];
+        }
+
+        $out = [];
+        foreach (self::scheduleSlotDefs() as $slot) {
+            if (!($slot['enabled'] ?? false)) {
+                continue;
+            }
+            $time = trim((string) ($slot['time'] ?? ''));
+            if (preg_match('/^\d{2}:\d{2}$/', $time)) {
+                $out[] = $time;
+            }
+        }
+
+        return array_values(array_unique($out));
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function channelsToWarm(): array
+    {
+        $mode = strtolower(trim((string) self::settings()->warm_channel));
+
+        return match ($mode) {
+            'reguler' => ['reguler'],
+            'd2d' => ['d2d'],
+            default => ['reguler', 'd2d'],
+        };
+    }
+
+    public static function isProvOrKabOnly(array $filters): bool
+    {
+        $kec = trim((string) ($filters['kecamatan_id'] ?? ''));
+        $kel = trim((string) ($filters['kelurahan_id'] ?? ''));
+
+        return $kec === '' && $kel === '';
+    }
+
+    public static function statsKey(string $channel, int $year, string $kabkotaId = ''): string
+    {
+        return self::KEY_PREFIX . $channel . ':' . $year . ':stats:' . self::scopeSuffix($kabkotaId);
+    }
+
+    public static function breakdownKey(string $channel, int $year, string $kabkotaId = ''): string
+    {
+        return self::KEY_PREFIX . $channel . ':' . $year . ':breakdown:' . self::scopeSuffix($kabkotaId);
+    }
+
+    public static function mapKey(string $channel, int $year): string
+    {
+        return self::KEY_PREFIX . $channel . ':' . $year . ':map';
+    }
+
+    private static function scopeSuffix(string $kabkotaId): string
+    {
+        $kabkotaId = trim($kabkotaId);
+
+        return $kabkotaId === '' ? 'prov' : ('kab:' . $kabkotaId);
+    }
+
+    public static function put(string $key, mixed $value, ?int $ttlSeconds = null): void
+    {
+        $ttl = $ttlSeconds ?? self::ttlSeconds();
+        Cache::put($key, $value, $ttl);
+        self::trackKey($key);
+        Cache::put(self::META_PREFIX . $key, [
+            'stored_at' => now('Asia/Jakarta')->toDateTimeString(),
+            'ttl_seconds' => $ttl,
+        ], $ttl);
+    }
+
+    public static function get(string $key): mixed
+    {
+        return Cache::get($key);
+    }
+
+    public static function forget(string $key): bool
+    {
+        Cache::forget(self::META_PREFIX . $key);
+        $ok = Cache::forget($key);
+        self::untrackKey($key);
+
+        return $ok;
+    }
+
+    public static function forgetAll(): int
+    {
+        $count = 0;
+        foreach (self::trackedKeys() as $key) {
+            if (self::forget($key)) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function trackedKeys(): array
+    {
+        $keys = Cache::get(self::INDEX_KEY, []);
+        if (!is_array($keys)) {
+            return [];
+        }
+        sort($keys);
+
+        return array_values(array_unique($keys));
+    }
+
+    /**
+     * @return list<array{key:string,stored_at:?string,ttl_seconds:?int,exists:bool}>
+     */
+    public static function listedKeys(): array
+    {
+        $out = [];
+        foreach (self::trackedKeys() as $key) {
+            $meta = Cache::get(self::META_PREFIX . $key, []);
+            $out[] = [
+                'key' => $key,
+                'stored_at' => is_array($meta) ? ($meta['stored_at'] ?? null) : null,
+                'ttl_seconds' => is_array($meta) ? ($meta['ttl_seconds'] ?? null) : null,
+                'exists' => Cache::has($key),
+            ];
+        }
+
+        return $out;
+    }
+
+    private static function trackKey(string $key): void
+    {
+        $keys = Cache::get(self::INDEX_KEY, []);
+        if (!is_array($keys)) {
+            $keys = [];
+        }
+        if (!in_array($key, $keys, true)) {
+            $keys[] = $key;
+            Cache::forever(self::INDEX_KEY, $keys);
+        }
+    }
+
+    private static function untrackKey(string $key): void
+    {
+        $keys = Cache::get(self::INDEX_KEY, []);
+        if (!is_array($keys)) {
+            return;
+        }
+        $keys = array_values(array_filter($keys, static fn ($item) => $item !== $key));
+        Cache::forever(self::INDEX_KEY, $keys);
+    }
+
+    public static function shouldDispatchWarm(): bool
+    {
+        if (! self::scheduleEnabled()) {
+            return false;
+        }
+
+        $activeSlots = self::scheduleSlots();
+        if ($activeSlots === []) {
+            return false;
+        }
+
+        $now = Carbon::now('Asia/Jakarta');
+        $hm = $now->format('H:i');
+        if (!in_array($hm, $activeSlots, true)) {
+            return false;
+        }
+
+        $guard = self::SLOT_GUARD_PREFIX . $now->format('Y-m-d') . ':' . $hm;
+        if (Cache::has($guard)) {
+            return false;
+        }
+
+        Cache::put($guard, 1, 7200);
+
+        return true;
+    }
+
+    public static function markWarmStart(string $message = 'Berjalan'): void
+    {
+        $row = self::settings();
+        $row->last_warm_started_at = now('Asia/Jakarta');
+        $row->last_warm_status = 'running';
+        $row->last_warm_message = $message;
+        $row->save();
+    }
+
+    public static function markWarmFinish(string $status, string $message): void
+    {
+        $row = self::settings();
+        $row->last_warm_finished_at = now('Asia/Jakarta');
+        $row->last_warm_status = $status;
+        $row->last_warm_message = $message;
+        $row->save();
+    }
+}

@@ -3,8 +3,10 @@
 namespace App\Support;
 
 use App\Models\RvfCacheSetting;
-use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Prewarm cache untuk rekap-visual-filter: hanya Provinsi + Kabkota.
@@ -33,7 +35,8 @@ class RekapVisualFilterCache
         }
 
         return RvfCacheSetting::query()->create([
-            'use_cache' => true,
+            // Default OFF sampai warm pertama berhasil — hindari HTTP 500 query live se-provinsi.
+            'use_cache' => false,
             'warm_channel' => 'semua',
             'ttl_hours' => self::DEFAULT_TTL_HOURS,
             'schedule_enabled' => true,
@@ -44,7 +47,13 @@ class RekapVisualFilterCache
 
     public static function useCache(): bool
     {
-        return (bool) self::settings()->use_cache;
+        try {
+            return (bool) self::settings()->use_cache;
+        } catch (Throwable $e) {
+            Log::warning('RVF cache settings unreadable: ' . $e->getMessage());
+
+            return false;
+        }
     }
 
     public static function scheduleEnabled(): bool
@@ -181,29 +190,103 @@ class RekapVisualFilterCache
         return $kabkotaId === '' ? 'prov' : ('kab:' . $kabkotaId);
     }
 
-    public static function put(string $key, mixed $value, ?int $ttlSeconds = null): void
+    public static function put(string $key, mixed $value, ?int $ttlSeconds = null): bool
     {
-        $ttl = $ttlSeconds ?? self::ttlSeconds();
-        Cache::put($key, $value, $ttl);
-        self::trackKey($key);
-        Cache::put(self::META_PREFIX . $key, [
-            'stored_at' => now('Asia/Jakarta')->toDateTimeString(),
-            'ttl_seconds' => $ttl,
-        ], $ttl);
+        try {
+            $ttl = $ttlSeconds ?? self::ttlSeconds();
+            Cache::put($key, $value, $ttl);
+            self::trackKey($key);
+            Cache::put(self::META_PREFIX . $key, [
+                'stored_at' => now('Asia/Jakarta')->toDateTimeString(),
+                'ttl_seconds' => $ttl,
+            ], $ttl);
+
+            return true;
+        } catch (Throwable $e) {
+            Log::warning('RVF cache put gagal [' . $key . ']: ' . $e->getMessage());
+
+            return false;
+        }
     }
 
     public static function get(string $key): mixed
     {
-        return Cache::get($key);
+        try {
+            return Cache::get($key);
+        } catch (Throwable $e) {
+            Log::warning('RVF cache get gagal [' . $key . ']: ' . $e->getMessage());
+
+            return null;
+        }
     }
 
     public static function forget(string $key): bool
     {
-        Cache::forget(self::META_PREFIX . $key);
-        $ok = Cache::forget($key);
-        self::untrackKey($key);
+        try {
+            Cache::forget(self::META_PREFIX . $key);
+            $ok = Cache::forget($key);
+            self::untrackKey($key);
 
-        return $ok;
+            return $ok;
+        } catch (Throwable $e) {
+            Log::warning('RVF cache forget gagal [' . $key . ']: ' . $e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * Jalankan warm di proses terpisah agar request HTTP tidak timeout.
+     */
+    public static function dispatchWarmInBackground(bool $force = true): bool
+    {
+        try {
+            self::markWarmStart('Warm background diantrikan');
+        } catch (Throwable $e) {
+            Log::warning('RVF markWarmStart gagal: ' . $e->getMessage());
+        }
+
+        $forceFlag = $force ? ' --force' : '';
+        $artisan = base_path('artisan');
+        $logFile = storage_path('logs/rvf-warm.log');
+        $php = 'php';
+        if (defined('PHP_BINARY') && is_string(PHP_BINARY) && PHP_BINARY !== '' && ! str_contains(PHP_BINARY, 'php-fpm')) {
+            $php = PHP_BINARY;
+        }
+
+        $disabled = array_map('trim', explode(',', (string) ini_get('disable_functions')));
+        $canExec = function_exists('exec') && ! in_array('exec', $disabled, true);
+
+        if ($canExec) {
+            if (strncasecmp(PHP_OS, 'WIN', 3) === 0) {
+                $cmd = 'start /B "" ' . escapeshellarg($php) . ' ' . escapeshellarg($artisan)
+                    . ' rvf:warm-cache' . $forceFlag . ' >> ' . escapeshellarg($logFile) . ' 2>&1';
+            } else {
+                $cmd = 'nohup ' . escapeshellarg($php) . ' ' . escapeshellarg($artisan)
+                    . ' rvf:warm-cache' . $forceFlag . ' >> ' . escapeshellarg($logFile) . ' 2>&1 &';
+            }
+            try {
+                exec($cmd);
+
+                return true;
+            } catch (Throwable $e) {
+                Log::warning('RVF exec warm gagal, fallback afterResponse: ' . $e->getMessage());
+            }
+        }
+
+        try {
+            dispatch(static function () use ($force) {
+                \Illuminate\Support\Facades\Artisan::call('rvf:warm-cache', [
+                    '--force' => $force,
+                ]);
+            })->afterResponse();
+
+            return true;
+        } catch (Throwable $e) {
+            Log::error('RVF dispatch warm gagal: ' . $e->getMessage());
+
+            return false;
+        }
     }
 
     public static function forgetAll(): int

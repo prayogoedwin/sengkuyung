@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('rvf_cache_settings', function (Blueprint $table) {
             $table->id();
-            $table->boolean('use_cache')->default(true);
+            $table->boolean('use_cache')->default(false);
             $table->string('warm_channel', 20)->default('semua'); // semua|reguler|d2d
             $table->unsignedInteger('ttl_hours')->default(12);
             $table->boolean('schedule_enabled')->default(true);

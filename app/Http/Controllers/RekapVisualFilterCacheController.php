@@ -6,7 +6,6 @@ use App\Models\SengWilayah;
 use App\Support\RekapVisualFilterCache;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -88,22 +87,20 @@ class RekapVisualFilterCacheController extends Controller
     {
         $this->ensureSuperAdmin();
 
-        @set_time_limit(0);
-
-        $exit = Artisan::call('rvf:warm-cache', [
-            '--force' => true,
-        ]);
-        $output = trim(Artisan::output());
-
-        if ($exit !== 0) {
+        // Jangan Artisan::call sinkron di HTTP — se-provinsi + semua kabkota sering timeout
+        // sebelum key tersimpan, sehingga daftar cache tetap 0 dan dashboard STATS 500.
+        if (! RekapVisualFilterCache::dispatchWarmInBackground(true)) {
             return redirect()
                 ->route('rekap-visual-filter-cache.index')
-                ->with('error', 'Warm gagal. ' . $output);
+                ->with('error', 'Gagal mengantrikan warm. Coba dari CLI: php artisan rvf:warm-cache --force');
         }
 
         return redirect()
             ->route('rekap-visual-filter-cache.index')
-            ->with('success', 'Warm selesai. ' . $output);
+            ->with(
+                'success',
+                'Warm dijalankan di background. Tunggu beberapa menit, lalu refresh halaman ini — status & daftar cache akan terisi. Log: storage/logs/rvf-warm.log'
+            );
     }
 
     public function clearAll(): RedirectResponse

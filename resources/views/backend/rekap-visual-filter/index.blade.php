@@ -1043,6 +1043,14 @@
         const statsPromise = fetchMerged('stats', 'stats')
             .then(function (payload) {
                 if (seq !== loadSeq) return;
+                if (payload && payload.cache === 'miss') {
+                    showRetryHint(payload.message || 'Cache statistik belum tersedia. Jalankan Warm di Setting.');
+                    return;
+                }
+                if (!payload || !payload.stats) {
+                    showRetryHint((payload && payload.message) || 'Statistik kosong.');
+                    return;
+                }
                 renderStats(payload);
                 statsOk = true;
             })
@@ -1054,6 +1062,15 @@
         const breakdownPromise = fetchMerged('ringkasan', 'breakdown')
             .then(function (payload) {
                 if (seq !== loadSeq) return;
+                if (payload && payload.cache === 'miss') {
+                    document.getElementById('tableBody').innerHTML =
+                        '<tr><td class="err">' +
+                        (payload.message || 'Cache ringkasan belum tersedia.') +
+                        ' <button type="button" class="retry-link" id="btnRetryBreakdown">Coba lagi</button></td></tr>';
+                    const b = document.getElementById('btnRetryBreakdown');
+                    if (b) b.addEventListener('click', function () { loadAll(true); });
+                    return;
+                }
                 breakdownRows = payload.rows || [];
                 breakdownLevel = payload.level || expectedLevel();
                 renderTable();
@@ -1073,6 +1090,11 @@
             ? fetchMerged('map', 'map')
                 .then(function (payload) {
                     if (seq !== loadSeq) return;
+                    if (payload && payload.cache === 'miss') {
+                        mapKabkotaRows = [];
+                        ensureMapLoadingOverlay(payload.message || 'Cache peta belum tersedia. Jalankan Warm.');
+                        return;
+                    }
                     mapKabkotaRows = payload.mapKabkota || [];
                     lastMapChannel = activeChannel;
                     lastMapYear = year;

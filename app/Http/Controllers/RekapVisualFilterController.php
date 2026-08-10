@@ -312,6 +312,7 @@ class RekapVisualFilterController extends Controller
             'stats' => $payload['stats'],
             'bayar' => $payload['bayar'],
             'cache' => $payload['_cache'] ?? 'live',
+            'message' => $payload['_message'] ?? null,
             'refreshedAt' => now()->format('d/m/Y H:i:s'),
         ]);
     }
@@ -334,6 +335,7 @@ class RekapVisualFilterController extends Controller
             'level' => $payload['level'],
             'rows' => $payload['rows'],
             'cache' => $payload['_cache'] ?? 'live',
+            'message' => $payload['_message'] ?? null,
             'refreshedAt' => now()->format('d/m/Y H:i:s'),
         ]);
     }
@@ -350,6 +352,7 @@ class RekapVisualFilterController extends Controller
             'year' => $year,
             'mapKabkota' => $resolved['rows'],
             'cache' => $resolved['_cache'] ?? 'live',
+            'message' => $resolved['_message'] ?? null,
             'refreshedAt' => now()->format('d/m/Y H:i:s'),
         ]);
     }
@@ -374,6 +377,17 @@ class RekapVisualFilterController extends Controller
                 $cached['_cache'] = 'prewarm';
 
                 return $cached;
+            }
+
+            // Provinsi tanpa cache: jangan hitung live di HTTP (berat → timeout/500).
+            // Kabkota: boleh live + simpan agar tetap bisa dipakai sebelum warm penuh.
+            if ($filters['kabkota_id'] === '') {
+                return [
+                    'stats' => null,
+                    'bayar' => null,
+                    '_cache' => 'miss',
+                    '_message' => 'Cache belum tersedia untuk seluruh Provinsi. Jalankan "Warm Sekarang" di Setting → Cache Rekap Visual Filter, atau pilih satu Kab/Kota, atau set "Dashboard manfaatkan cache" = Tidak.',
+                ];
             }
 
             $payload = $this->computeStats($filters);
@@ -411,6 +425,15 @@ class RekapVisualFilterController extends Controller
                 return $cached;
             }
 
+            if ($filters['kabkota_id'] === '') {
+                return [
+                    'level' => 'kabkota',
+                    'rows' => [],
+                    '_cache' => 'miss',
+                    '_message' => 'Cache ringkasan belum tersedia. Jalankan Warm di Setting → Cache Rekap Visual Filter.',
+                ];
+            }
+
             $payload = $this->computeBreakdown($filters);
             RekapVisualFilterCache::put($key, $payload);
             $payload['_cache'] = 'miss-stored';
@@ -437,10 +460,12 @@ class RekapVisualFilterController extends Controller
                 return ['rows' => $cached, '_cache' => 'prewarm'];
             }
 
-            $rows = $this->buildMapKabkotaRows($year);
-            RekapVisualFilterCache::put($key, $rows);
-
-            return ['rows' => $rows, '_cache' => 'miss-stored'];
+            // Map kabkota se-provinsi juga berat — jangan hitung live saat cache-first miss.
+            return [
+                'rows' => [],
+                '_cache' => 'miss',
+                '_message' => 'Cache peta belum tersedia. Jalankan Warm di Setting → Cache Rekap Visual Filter.',
+            ];
         }
 
         return ['rows' => $this->buildMapKabkotaRows($year), '_cache' => 'disabled'];

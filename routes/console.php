@@ -9,7 +9,7 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('rvf:warm-cache')
+Schedule::command('rvf:warm-cache --refresh')
     ->everyMinute()
     ->timezone('Asia/Jakarta')
     ->withoutOverlapping(180)

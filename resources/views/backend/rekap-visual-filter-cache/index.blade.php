@@ -141,10 +141,11 @@
                                     Pastikan cron <code>* * * * * php artisan schedule:run</code> aktif.
                                 </p>
                                 <p class="mt-2 mb-0 small text-danger">
-                                    Cukup tekan <strong>Warm Sekarang</strong> sekali (jalan di background).
-                                    Sistem membagi sendiri: Reguler lengkap (stats+ringkasan kabkota+map) → D2D → Semua (merge) → Kabkota.
-                                    Status di bawah akan berubah seiring progres. CLI:
-                                    <code>php artisan rvf:warm-cache --force</code>
+                                    Cukup tekan <strong>Warm Sekarang</strong> sekali (jalan di background, <em>skip</em> key yang sudah ada).
+                                    Jadwal slot memakai <code>--refresh</code> (hitung ulang semua agar data &amp; TTL diperbarui).
+                                    Urutan: Reguler lengkap → D2D → Semua (merge) → Kabkota.
+                                    CLI lanjut sisa: <code>php artisan rvf:warm-cache --force</code>
+                                    · refresh penuh: <code>php artisan rvf:warm-cache --force --refresh</code>
                                 </p>
                                 <p class="mt-2 mb-0 small text-muted">
                                     <strong>Hapus Semua Cache</strong> hanya menghapus key berawalan <code>rvf:</code> (aman untuk cache lain).

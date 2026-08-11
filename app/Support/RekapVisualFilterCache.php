@@ -474,6 +474,7 @@ class RekapVisualFilterCache
     {
         $row = self::settings();
         $row->last_warm_started_at = now('Asia/Jakarta');
+        $row->last_warm_finished_at = null;
         $row->last_warm_status = 'running';
         $row->last_warm_message = $message;
         $row->save();

@@ -127,7 +127,9 @@
                                 <p class="mb-1 text-muted">
                                     Status warm terakhir:
                                     <strong>{{ $settings->last_warm_status ?: '-' }}</strong>
-                                    @if ($settings->last_warm_finished_at)
+                                    @if (($settings->last_warm_status ?? '') === 'running' && $settings->last_warm_started_at)
+                                        · mulai {{ $settings->last_warm_started_at->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') }}
+                                    @elseif ($settings->last_warm_finished_at)
                                         · selesai {{ $settings->last_warm_finished_at->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') }}
                                     @elseif ($settings->last_warm_started_at)
                                         · mulai {{ $settings->last_warm_started_at->timezone('Asia/Jakarta')->format('d/m/Y H:i:s') }}

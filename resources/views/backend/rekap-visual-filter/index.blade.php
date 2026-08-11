@@ -174,6 +174,9 @@
         table { width: 100%; border-collapse: collapse; font-size: 0.98rem; }
         th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; }
         th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--panel); }
+        th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+        th.sortable:hover { color: var(--ink); }
+        th.sortable .sort-ind { font-size: 0.75em; opacity: 0.85; margin-left: 2px; }
         td:not(:first-child), th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
         tfoot td { font-weight: 700; border-top: 2px solid var(--ink); }
         .muted { color: var(--muted); }
@@ -346,6 +349,8 @@
     let channelLabel = channelEndpoints.reguler.label;
 
     let tableMode = 'potensi';
+    let tableSortKey = 'bayar_pct';
+    let tableSortDir = 'desc';
     let breakdownRows = [];
     let breakdownLevel = 'kabkota';
     let mapKabkotaRows = [];
@@ -952,6 +957,56 @@
         document.getElementById('vPotensiTotal').textContent = b.potensi_total_fmt || '0';
     }
 
+    function defaultTableSort(mode) {
+        if (mode === 'kinerja') {
+            return { key: 'success_rate', dir: 'desc' };
+        }
+        return { key: 'bayar_pct', dir: 'desc' };
+    }
+
+    function resetTableSort(mode) {
+        const d = defaultTableSort(mode || tableMode);
+        tableSortKey = d.key;
+        tableSortDir = d.dir;
+    }
+
+    function sortInd(key) {
+        if (tableSortKey !== key) return '';
+        return tableSortDir === 'asc' ? ' ▲' : ' ▼';
+    }
+
+    function thSortable(label, key) {
+        return '<th class="sortable" data-sort="' + key + '" title="Klik untuk sort">' +
+            label + '<span class="sort-ind">' + sortInd(key) + '</span></th>';
+    }
+
+    function rowSortValue(row, key) {
+        if (key === 'nama') return String(row.nama || '').toLowerCase();
+        if (key === 'tagihan') return Number(row.tagihan || 0);
+        if (key === 'pendataan') return Number(row.pendataan || 0);
+        if (key === 'bayar') return Number(row.bayar || 0);
+        if (key === 'bayar_sesudah') return Number(row.bayar_sesudah || 0);
+        if (key === 'bayar_pct') return Number(row.bayar_pct || 0);
+        if (key === 'success_rate') return Number(row.success_rate || 0);
+        return 0;
+    }
+
+    function sortedBreakdownRows() {
+        const key = tableSortKey;
+        const dir = tableSortDir === 'asc' ? 1 : -1;
+        return breakdownRows.slice().sort(function (a, b) {
+            const av = rowSortValue(a, key);
+            const bv = rowSortValue(b, key);
+            if (typeof av === 'string' || typeof bv === 'string') {
+                if (av < bv) return -1 * dir;
+                if (av > bv) return 1 * dir;
+                return 0;
+            }
+            if (av === bv) return 0;
+            return av < bv ? -1 * dir : 1 * dir;
+        });
+    }
+
     function renderTable() {
         const head = document.getElementById('tableHead');
         const body = document.getElementById('tableBody');
@@ -965,12 +1020,16 @@
             return;
         }
 
+        const rows = sortedBreakdownRows();
+
         if (tableMode === 'kinerja') {
-            head.innerHTML = '<tr><th>Wilayah</th><th>Sudah Pendataan</th><th>Sudah Bayar</th><th>Success Rate</th></tr>';
+            head.innerHTML = '<tr>' +
+                '<th>Wilayah</th>' +
+                thSortable('Sudah Pendataan', 'pendataan') +
+                thSortable('Sudah Bayar', 'bayar_sesudah') +
+                thSortable('Success Rate', 'success_rate') +
+                '</tr>';
             let totalPendataan = 0, totalBayar = 0;
-            const rows = breakdownRows.slice().sort(function (a, b) {
-                return Number(b.success_rate || 0) - Number(a.success_rate || 0);
-            });
             body.innerHTML = rows.map(function (row) {
                 totalPendataan += Number(row.pendataan || 0);
                 totalBayar += Number(row.bayar_sesudah || 0);
@@ -986,11 +1045,14 @@
             return;
         }
 
-        head.innerHTML = '<tr><th>Wilayah</th><th>Obyek Potensi</th><th>Sudah Pendataan</th><th>Sudah Bayar</th><th>Potensi Pembayaran</th></tr>';
+        head.innerHTML = '<tr>' +
+            thSortable('Wilayah', 'nama') +
+            thSortable('Obyek Potensi', 'tagihan') +
+            thSortable('Sudah Pendataan', 'pendataan') +
+            thSortable('Sudah Bayar', 'bayar') +
+            thSortable('Potensi Pembayaran', 'bayar_pct') +
+            '</tr>';
         let totalTagihan = 0, totalPendataan = 0, totalBayar = 0;
-        const rows = breakdownRows.slice().sort(function (a, b) {
-            return Number(b.bayar_pct || 0) - Number(a.bayar_pct || 0);
-        });
         body.innerHTML = rows.map(function (row) {
             totalTagihan += Number(row.tagihan || 0);
             totalPendataan += Number(row.pendataan || 0);
@@ -1162,12 +1224,27 @@
     document.querySelectorAll('.tabs button').forEach(function (btn) {
         btn.addEventListener('click', function () {
             tableMode = btn.getAttribute('data-mode') || 'potensi';
+            resetTableSort(tableMode);
             document.querySelectorAll('.tabs button').forEach(function (b) {
                 b.classList.toggle('active', b === btn);
             });
             renderTable();
             paintMap();
         });
+    });
+
+    document.getElementById('tableHead').addEventListener('click', function (e) {
+        const th = e.target.closest('th.sortable');
+        if (!th) return;
+        const key = th.getAttribute('data-sort');
+        if (!key) return;
+        if (tableSortKey === key) {
+            tableSortDir = tableSortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+            tableSortKey = key;
+            tableSortDir = key === 'nama' ? 'asc' : 'desc';
+        }
+        renderTable();
     });
 
     loadAll(true);

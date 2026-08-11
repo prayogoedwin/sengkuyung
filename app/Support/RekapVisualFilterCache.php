@@ -21,6 +21,9 @@ class RekapVisualFilterCache
     public const LOCK_KEY = 'rvf:prewarm:lock';
     public const SLOT_GUARD_PREFIX = 'rvf:prewarm:slot:';
 
+    /** Jendela eksekusi setelah jam slot (menit) — toleransi jika cron telat. */
+    public const SLOT_TOLERANCE_MINUTES = 5;
+
     public const DEFAULT_SLOTS = [
         ['time' => '06:00', 'enabled' => true],
         ['time' => '12:00', 'enabled' => true],
@@ -418,24 +421,46 @@ class RekapVisualFilterCache
         Cache::forever(self::INDEX_KEY, $keys);
     }
 
-    public static function shouldDispatchWarm(): bool
+    /**
+     * Slot aktif yang sedang dalam jendela toleransi (null jika tidak ada).
+     */
+    public static function matchingScheduleSlot(?Carbon $now = null): ?string
     {
         if (! self::scheduleEnabled()) {
-            return false;
+            return null;
         }
 
         $activeSlots = self::scheduleSlots();
         if ($activeSlots === []) {
+            return null;
+        }
+
+        $now = ($now ?? Carbon::now('Asia/Jakarta'))->timezone('Asia/Jakarta');
+        $date = $now->format('Y-m-d');
+
+        foreach ($activeSlots as $slotHm) {
+            $slotStart = Carbon::createFromFormat('Y-m-d H:i', $date . ' ' . $slotHm, 'Asia/Jakarta');
+            if ($slotStart === false) {
+                continue;
+            }
+            $slotEnd = $slotStart->copy()->addMinutes(self::SLOT_TOLERANCE_MINUTES);
+            if ($now->gte($slotStart) && $now->lt($slotEnd)) {
+                return $slotHm;
+            }
+        }
+
+        return null;
+    }
+
+    public static function shouldDispatchWarm(): bool
+    {
+        $slotHm = self::matchingScheduleSlot();
+        if ($slotHm === null) {
             return false;
         }
 
         $now = Carbon::now('Asia/Jakarta');
-        $hm = $now->format('H:i');
-        if (!in_array($hm, $activeSlots, true)) {
-            return false;
-        }
-
-        $guard = self::SLOT_GUARD_PREFIX . $now->format('Y-m-d') . ':' . $hm;
+        $guard = self::SLOT_GUARD_PREFIX . $now->format('Y-m-d') . ':' . $slotHm;
         if (Cache::has($guard)) {
             return false;
         }

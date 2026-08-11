@@ -139,6 +139,8 @@
                                     Filter kecamatan/kelurahan di-cache on-demand (TTL terpisah, tanpa notif lambat).
                                     Jika cache Provinsi/Kabkota kosong saat Terapkan: query live + notifikasi “membutuhkan waktu”, lalu hasil disimpan ke cache.
                                     Pastikan cron <code>* * * * * php artisan schedule:run</code> aktif.
+                                    Slot dijalankan dalam jendela {{ \App\Support\RekapVisualFilterCache::SLOT_TOLERANCE_MINUTES }} menit setelah jam slot
+                                    (mis. 11:00–11:04) agar tidak terlewat jika cron telat 1–2 menit.
                                 </p>
                                 <p class="mt-2 mb-0 small text-danger">
                                     Cukup tekan <strong>Warm Sekarang</strong> sekali (jalan di background, <em>skip</em> key yang sudah ada).

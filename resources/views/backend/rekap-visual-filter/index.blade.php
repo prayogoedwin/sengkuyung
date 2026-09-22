@@ -118,6 +118,25 @@
         .pill { border-radius: 8px; padding: 8px 10px; background: rgba(255,255,255,0.12); }
         .pill .k { font-size: 0.9rem; opacity: 0.85; }
         .pill .v { font-size: 1.35rem; font-weight: 700; margin-top: 2px; }
+        .verif-divider {
+            border: 0; border-top: 1px solid rgba(255,255,255,0.28);
+            margin: 12px 0 10px;
+        }
+        .alasan-box {
+            border-radius: 8px; padding: 8px 10px;
+            background: rgba(255,255,255,0.14);
+        }
+        .alasan-box .title {
+            font-size: 0.78rem; font-weight: 700; letter-spacing: 0.02em;
+            text-transform: uppercase; opacity: 0.9; margin-bottom: 6px;
+        }
+        .alasan-rows { display: grid; gap: 4px; }
+        .alasan-row {
+            display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+            font-size: 0.8rem; line-height: 1.25;
+        }
+        .alasan-row .label { opacity: 0.9; }
+        .alasan-row .count { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
         .pay-grid { display: grid; grid-template-columns: 0.85fr 1.35fr; gap: 8px; }
         .money-box { border: 1px solid rgba(15,28,46,0.12); border-radius: 8px; padding: 8px 10px; background: #f8fafc; }
@@ -269,6 +288,13 @@
                 <div class="pill"><div class="k">Ditolak/Revisi</div><div class="v" id="vDitolak">…</div></div>
                 <div class="pill"><div class="k">% Dikunjungi</div><div class="v" id="vPct">…</div></div>
             </div>
+            <hr class="verif-divider">
+            <div class="alasan-box">
+                <div class="title">Alasan tidak bayar</div>
+                <div class="alasan-rows" id="vAlasanTidakBayar">
+                    <div class="alasan-row muted">…</div>
+                </div>
+            </div>
         </div>
         <div class="card">
             <h2>Pembayaran</h2>
@@ -375,9 +401,10 @@
     const jatengCenter = [-7.15, 110.15];
     const jatengZoom = 8;
     const map = L.map('rvMap', { zoomControl: true, scrollWheelZoom: true }).setView(jatengCenter, jatengZoom);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap',
-        maxZoom: 18,
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+        subdomains: 'abcd',
+        maxZoom: 20,
     }).addTo(map);
 
     function fmt(n) { return Number(n || 0).toLocaleString('id-ID'); }
@@ -524,6 +551,27 @@
     function sumNum(a, b) {
         return Number(a || 0) + Number(b || 0);
     }
+    function mergeAlasanTidakBayar(aList, bList) {
+        const labels = { 1: 'LUPA', 2: 'TIDAK MAU', 3: 'TIDAK PUNYA UANG' };
+        const counts = { 1: 0, 2: 0, 3: 0 };
+        [aList || [], bList || []].forEach(function (list) {
+            (list || []).forEach(function (item, idx) {
+                let id, count;
+                if (item && typeof item === 'object') {
+                    id = Number(item.id || 0);
+                    count = Number(item.count || 0);
+                    if (item.label) labels[id] = String(item.label);
+                } else {
+                    id = Number(idx);
+                    count = Number(item || 0);
+                }
+                if (counts[id] !== undefined) counts[id] += count;
+            });
+        });
+        return [1, 2, 3].map(function (id) {
+            return { id: id, label: labels[id], count: counts[id] };
+        });
+    }
     function mergeStatsPayload(a, b) {
         const sa = (a && a.stats) || {};
         const sb = (b && b.stats) || {};
@@ -536,6 +584,7 @@
             menunggu_verifikasi: sumNum(sa.menunggu_verifikasi, sb.menunggu_verifikasi),
             verifikasi: sumNum(sa.verifikasi, sb.verifikasi),
             ditolak: sumNum(sa.ditolak, sb.ditolak),
+            alasan_tidak_bayar: mergeAlasanTidakBayar(sa.alasan_tidak_bayar, sb.alasan_tidak_bayar),
         };
         stats.pct_dikunjungi = stats.jumlah_tunggakan > 0
             ? Math.round((stats.jumlah_sudah_pendataan / stats.jumlah_tunggakan) * 10000) / 100
@@ -941,6 +990,31 @@
         document.getElementById('vVerifikasi').textContent = fmt(s.verifikasi);
         document.getElementById('vDitolak').textContent = fmt(s.ditolak);
         document.getElementById('vPct').textContent = fmtPct(s.pct_dikunjungi);
+
+        const alasanBox = document.getElementById('vAlasanTidakBayar');
+        const alasanList = Array.isArray(s.alasan_tidak_bayar) ? s.alasan_tidak_bayar : [];
+        const alasanDefaults = [
+            { id: 1, label: 'LUPA', count: 0 },
+            { id: 2, label: 'TIDAK MAU', count: 0 },
+            { id: 3, label: 'TIDAK PUNYA UANG', count: 0 },
+        ];
+        const alasanMap = {};
+        alasanList.forEach(function (row) {
+            const id = Number(row && row.id);
+            if (!id) return;
+            alasanMap[id] = {
+                id: id,
+                label: String((row && row.label) || ''),
+                count: Number((row && row.count) || 0),
+            };
+        });
+        alasanBox.innerHTML = alasanDefaults.map(function (def) {
+            const row = alasanMap[def.id] || def;
+            return '<div class="alasan-row">' +
+                '<span class="label">' + (row.label || def.label) + '</span>' +
+                '<span class="count">' + fmt(row.count) + '</span>' +
+                '</div>';
+        }).join('');
 
         document.getElementById('vTrx').innerHTML = fmt(sudahBayar) + '<span class="unit">Obyek</span>';
         document.getElementById('vNomProv').textContent = b.nominal_provinsi_fmt || '0';

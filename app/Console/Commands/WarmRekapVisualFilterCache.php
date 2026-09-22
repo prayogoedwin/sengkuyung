@@ -435,6 +435,10 @@ class WarmRekapVisualFilterCache extends Command
             'menunggu_verifikasi' => $sum($sa['menunggu_verifikasi'] ?? 0, $sb['menunggu_verifikasi'] ?? 0),
             'verifikasi' => $sum($sa['verifikasi'] ?? 0, $sb['verifikasi'] ?? 0),
             'ditolak' => $sum($sa['ditolak'] ?? 0, $sb['ditolak'] ?? 0),
+            'alasan_tidak_bayar' => $this->mergeAlasanTidakBayar(
+                $sa['alasan_tidak_bayar'] ?? [],
+                $sb['alasan_tidak_bayar'] ?? []
+            ),
         ];
         $stats['pct_dikunjungi'] = $stats['jumlah_tunggakan'] > 0
             ? round(($stats['jumlah_sudah_pendataan'] / $stats['jumlah_tunggakan']) * 100, 2)
@@ -470,6 +474,50 @@ class WarmRekapVisualFilterCache extends Command
             : 0.0;
 
         return ['stats' => $stats, 'bayar' => $bayar];
+    }
+
+    /**
+     * @param  list<array{id?:int,label?:string,count?:int}>|array<int,int>  $a
+     * @param  list<array{id?:int,label?:string,count?:int}>|array<int,int>  $b
+     * @return list<array{id:int,label:string,count:int}>
+     */
+    private function mergeAlasanTidakBayar(array $a, array $b): array
+    {
+        $labels = [
+            1 => 'LUPA',
+            2 => 'TIDAK MAU',
+            3 => 'TIDAK PUNYA UANG',
+        ];
+        $counts = [1 => 0, 2 => 0, 3 => 0];
+
+        foreach ([$a, $b] as $list) {
+            foreach ($list as $key => $item) {
+                if (is_array($item)) {
+                    $id = (int) ($item['id'] ?? 0);
+                    $count = (int) ($item['count'] ?? 0);
+                    if (isset($item['label']) && $item['label'] !== '') {
+                        $labels[$id] = (string) $item['label'];
+                    }
+                } else {
+                    $id = (int) $key;
+                    $count = (int) $item;
+                }
+                if (isset($counts[$id])) {
+                    $counts[$id] += $count;
+                }
+            }
+        }
+
+        $out = [];
+        foreach ($counts as $id => $count) {
+            $out[] = [
+                'id' => $id,
+                'label' => $labels[$id],
+                'count' => $count,
+            ];
+        }
+
+        return $out;
     }
 
     /**

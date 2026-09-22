@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\Helper;
 use App\Models\DataTertagih;
 use App\Models\SengPendataanKendaraan;
 use App\Models\SengSaamsat;
@@ -616,8 +617,12 @@ class RekapVisualFilterController extends Controller
             ->selectRaw("SUM(CASE WHEN status_verifikasi IN ({$menunggu}) THEN 1 ELSE 0 END) as menunggu_verifikasi")
             ->selectRaw("SUM(CASE WHEN status_verifikasi IN ({$verifikasi}) THEN 1 ELSE 0 END) as verifikasi")
             ->selectRaw("SUM(CASE WHEN status_verifikasi IN ({$ditolak}) THEN 1 ELSE 0 END) as ditolak")
+            ->selectRaw('SUM(CASE WHEN alasan_tidak_bayar = 1 THEN 1 ELSE 0 END) as alasan_lupa')
+            ->selectRaw('SUM(CASE WHEN alasan_tidak_bayar = 2 THEN 1 ELSE 0 END) as alasan_tidak_mau')
+            ->selectRaw('SUM(CASE WHEN alasan_tidak_bayar = 3 THEN 1 ELSE 0 END) as alasan_tidak_punya_uang')
             ->first();
 
+        $alasanLabels = Helper::getAlasanTidakBayarPajak();
         $stats = [
             'jumlah_tunggakan' => (int) ($tertagihAgg->jumlah_tunggakan ?? 0),
             'jumlah_sudah_pendataan' => (int) ($tertagihAgg->jumlah_sudah_pendataan ?? 0),
@@ -625,6 +630,23 @@ class RekapVisualFilterController extends Controller
             'menunggu_verifikasi' => (int) ($pendataanAgg->menunggu_verifikasi ?? 0),
             'verifikasi' => (int) ($pendataanAgg->verifikasi ?? 0),
             'ditolak' => (int) ($pendataanAgg->ditolak ?? 0),
+            'alasan_tidak_bayar' => [
+                [
+                    'id' => 1,
+                    'label' => $alasanLabels[1] ?? 'LUPA',
+                    'count' => (int) ($pendataanAgg->alasan_lupa ?? 0),
+                ],
+                [
+                    'id' => 2,
+                    'label' => $alasanLabels[2] ?? 'TIDAK MAU',
+                    'count' => (int) ($pendataanAgg->alasan_tidak_mau ?? 0),
+                ],
+                [
+                    'id' => 3,
+                    'label' => $alasanLabels[3] ?? 'TIDAK PUNYA UANG',
+                    'count' => (int) ($pendataanAgg->alasan_tidak_punya_uang ?? 0),
+                ],
+            ],
         ];
         $stats['pct_dikunjungi'] = $stats['jumlah_tunggakan'] > 0
             ? round(($stats['jumlah_sudah_pendataan'] / $stats['jumlah_tunggakan']) * 100, 2)

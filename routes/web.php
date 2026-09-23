@@ -26,6 +26,8 @@ use App\Http\Controllers\CacheManagementController;
 use App\Http\Controllers\KebijakanPrivasiController;
 use App\Http\Controllers\VersionController;
 use App\Http\Controllers\JasaRaharjaController;
+use App\Http\Controllers\IntegrasiSettingController;
+use App\Http\Controllers\IntegrasiPembayaranTestController;
 use App\Http\Controllers\MaintenanceStatusController;
 use App\Http\Controllers\RekapVisualFilterCacheController;
 
@@ -169,6 +171,14 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::post('/jasa-raharja', [JasaRaharjaController::class, 'store'])->name('jasa-raharja.store');
         Route::put('/jasa-raharja/{id}', [JasaRaharjaController::class, 'update'])->name('jasa-raharja.update');
         Route::delete('/jasa-raharja/{id}', [JasaRaharjaController::class, 'destroy'])->name('jasa-raharja.destroy');
+
+        Route::get('/integrasi-setting', [IntegrasiSettingController::class, 'index'])->name('integrasi-setting.index');
+        Route::post('/integrasi-setting', [IntegrasiSettingController::class, 'store'])->name('integrasi-setting.store');
+        Route::put('/integrasi-setting/{id}', [IntegrasiSettingController::class, 'update'])->name('integrasi-setting.update');
+        Route::delete('/integrasi-setting/{id}', [IntegrasiSettingController::class, 'destroy'])->name('integrasi-setting.destroy');
+
+        Route::get('/integrasi-pembayaran', [IntegrasiPembayaranTestController::class, 'index'])->name('integrasi-pembayaran.index');
+        Route::post('/integrasi-pembayaran', [IntegrasiPembayaranTestController::class, 'hit'])->name('integrasi-pembayaran.hit');
     });
 });
 

@@ -54,7 +54,7 @@
             </li>
 
             @if ($isSuperAdmin)
-                <li class="menu-item {{ request()->routeIs('version.*') || request()->routeIs('jasa-raharja.*') || request()->routeIs('cache-management.*') || request()->routeIs('maintenance-status.*') || request()->routeIs('rekap-visual-filter-cache.*') ? 'active open' : '' }}">
+                <li class="menu-item {{ request()->routeIs('version.*') || request()->routeIs('jasa-raharja.*') || request()->routeIs('integrasi-setting.*') || request()->routeIs('integrasi-pembayaran.*') || request()->routeIs('cache-management.*') || request()->routeIs('maintenance-status.*') || request()->routeIs('rekap-visual-filter-cache.*') ? 'active open' : '' }}">
                     <a href="javascript:void(0);" class="menu-link menu-toggle">
                         <i class="menu-icon tf-icons bx bx-cog"></i>
                         <div data-i18n="Analytics">Setting</div>
@@ -68,6 +68,16 @@
                         <li class="menu-item {{ request()->routeIs('jasa-raharja.*') ? 'active' : '' }}">
                             <a href="{{ route('jasa-raharja.index') }}" class="menu-link">
                                 <div data-i18n="Analytics">Jasa Raharja</div>
+                            </a>
+                        </li>
+                        <li class="menu-item {{ request()->routeIs('integrasi-setting.*') ? 'active' : '' }}">
+                            <a href="{{ route('integrasi-setting.index') }}" class="menu-link">
+                                <div data-i18n="Analytics">Setting Integrasi</div>
+                            </a>
+                        </li>
+                        <li class="menu-item {{ request()->routeIs('integrasi-pembayaran.*') ? 'active' : '' }}">
+                            <a href="{{ route('integrasi-pembayaran.index') }}" class="menu-link">
+                                <div data-i18n="Analytics">Test Integrasi Pembayaran</div>
                             </a>
                         </li>
                         <li class="menu-item {{ request()->routeIs('cache-management.scope') && request()->route('scope') === 'admin' ? 'active' : '' }}">

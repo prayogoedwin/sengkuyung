@@ -34,6 +34,11 @@ class JrTransaksiClient
         $url = $this->transaksiUrl((string) $setting->base_url, $tanggalPenetapan);
 
         $response = Http::timeout(60)
+            ->withOptions([
+                'curl' => [
+                    CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                ],
+            ])
             ->withHeaders([
                 'x-client-id' => (string) $setting->client_id,
                 'x-timestamp' => $timestamp,

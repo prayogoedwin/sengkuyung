@@ -16,12 +16,10 @@ class JrTransaksiClient
     public function transaksiUrl(string $baseUrl, string $tanggalPenetapan): string
     {
         $base = rtrim(trim($baseUrl), '/');
+        $base = preg_replace('#/(jr)?dataTransaksi$#i', '', $base) ?? $base;
+        $base = rtrim($base, '/');
 
-        if (! preg_match('#/jrdataTransaksi$#i', $base)) {
-            $base .= '/jrdataTransaksi';
-        }
-
-        return $base.'/?tanggalPenetapan='.rawurlencode($tanggalPenetapan);
+        return $base.'/dataTransaksi/?tanggalPenetapan='.rawurlencode($tanggalPenetapan);
     }
 
     /**

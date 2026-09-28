@@ -41,7 +41,7 @@
                                         <div class="col-md-4">
                                             <label class="form-label">Base URL</label>
                                             <input type="url" name="base_url" class="form-control"
-                                                value="{{ old('base_url') }}" placeholder="https://samsat.jatengprov.go.id" required>
+                                                value="{{ old('base_url') }}" placeholder="https://jr-data-transaksi.bapendajateng.web.id" required>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label">Secret Key</label>

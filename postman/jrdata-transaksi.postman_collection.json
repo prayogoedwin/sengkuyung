@@ -1,0 +1,91 @@
+{
+  "info": {
+    "name": "Jasa Raharja dataTransaksi",
+    "description": "GET transaksi penetapan. Signature = SHA256 hex dari secret_key:timestamp (unix detik).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://jr-data-transaksi.bapendajateng.web.id"
+    },
+    {
+      "key": "client_id",
+      "value": "JASA_RAHARJA"
+    },
+    {
+      "key": "secret_key",
+      "value": "jasa_raharja_faa4175f71a04a58808fb07db649d8de"
+    },
+    {
+      "key": "tanggal_penetapan",
+      "value": "2026-07-07"
+    },
+    {
+      "key": "timestamp",
+      "value": ""
+    },
+    {
+      "key": "signature",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "dataTransaksi",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const secretKey = pm.collectionVariables.get('secret_key');",
+              "const timestamp = Math.floor(Date.now() / 1000).toString();",
+              "const signature = CryptoJS.SHA256(secretKey + ':' + timestamp).toString(CryptoJS.enc.Hex);",
+              "pm.variables.set('timestamp', timestamp);",
+              "pm.variables.set('signature', signature);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-client-id",
+            "value": "{{client_id}}"
+          },
+          {
+            "key": "x-timestamp",
+            "value": "{{timestamp}}"
+          },
+          {
+            "key": "x-signature",
+            "value": "{{signature}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/dataTransaksi/?tanggalPenetapan={{tanggal_penetapan}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "dataTransaksi",
+            ""
+          ],
+          "query": [
+            {
+              "key": "tanggalPenetapan",
+              "value": "{{tanggal_penetapan}}"
+            }
+          ]
+        },
+        "description": "Ubah variabel tanggal_penetapan bila perlu. Timestamp dan signature diisi otomatis setiap kali Send."
+      }
+    }
+  ]
+}

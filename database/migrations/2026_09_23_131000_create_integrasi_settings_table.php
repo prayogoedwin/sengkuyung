@@ -24,7 +24,7 @@ return new class extends Migration
             'client_id' => 'JASA_RAHARJA',
             'secret_key' => 'jasa_raharja_faa4175f71a04a58808fb07db649d8de',
             'api_key' => null,
-            'base_url' => 'https://samsat.jatengprov.go.id',
+            'base_url' => 'https://jr-data-transaksi.bapendajateng.web.id',
             'created_at' => now(),
             'updated_at' => now(),
         ]);

@@ -150,6 +150,45 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Data seng_bayar_pajak</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label">Tanggal bayar</label>
+                                        <input type="date" class="form-control" id="filterTanggal" value="{{ $defaultTanggal }}">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Cari nopol</label>
+                                        <input type="text" class="form-control" id="filterNopol" placeholder="H4878XA / H-4878-XA">
+                                    </div>
+                                    <div class="col-md-3 mt-4">
+                                        <button type="button" class="btn btn-primary btn-sm" id="btnLihatBayar">Lihat</button>
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table id="bayarPajakTable" class="table table-bordered table-striped mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>No</th>
+                                                <th>Nopol</th>
+                                                <th>Nopol_</th>
+                                                <th>Nopol lama</th>
+                                                <th>Tgl bayar</th>
+                                                <th>PKB Prov Jalan</th>
+                                                <th>PKB Prov Tunggakan</th>
+                                                <th>PKB Opsen Jalan</th>
+                                                <th>PKB Opsen Tunggakan</th>
+                                                <th>Tahun</th>
+                                            </tr>
+                                        </thead>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -168,6 +207,51 @@
         $(function () {
             const tarikUrl = @json(route('pembayaran.tarik'));
             const csrfToken = @json(csrf_token());
+            const defaultTanggal = @json($defaultTanggal);
+
+            const table = $('#bayarPajakTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: @json(route('pembayaran.index')),
+                    data: function (d) {
+                        d.tanggal = $('#filterTanggal').val();
+                        d.nopol = $('#filterNopol').val();
+                    }
+                },
+                autoWidth: false,
+                order: [],
+                columns: [
+                    { data: 'DT_RowIndex', orderable: false, searchable: false },
+                    { data: 'nopol' },
+                    { data: 'nopol_' },
+                    { data: 'nopol_lama', defaultContent: '' },
+                    { data: 'tgl_bayar_fmt' },
+                    { data: 'pkb_provinsi_jalan_fmt' },
+                    { data: 'pkb_provinsi_tunggakan_fmt' },
+                    { data: 'pkb_opsen_jalan_fmt' },
+                    { data: 'pkb_opsen_tunggakan_fmt' },
+                    { data: 'year' },
+                ]
+            });
+
+            $('#btnLihatBayar').on('click', function () {
+                table.ajax.reload();
+            });
+
+            $('#filterNopol').on('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    table.ajax.reload();
+                }
+            });
+
+            $('#filterTanggal').on('change', function () {
+                if (!$(this).val()) {
+                    $(this).val(defaultTanggal);
+                }
+                table.ajax.reload();
+            });
 
             async function parseJson(response) {
                 const text = await response.text();
@@ -212,10 +296,12 @@
                         done = !!data.done;
                         $progress.text(data.message || 'Memproses...');
                     }
-                    showAlert('success', $progress.text());
-                    window.setTimeout(function () {
-                        window.location.reload();
-                    }, 800);
+                    const tanggalSelesai = payload.tanggal || payload.tanggal_selesai || '';
+                    const nextUrl = new URL(@json(route('pembayaran.index')), window.location.origin);
+                    if (tanggalSelesai) {
+                        nextUrl.searchParams.set('tanggal', tanggalSelesai);
+                    }
+                    window.location = nextUrl.toString();
                 } catch (error) {
                     showAlert('danger', error.message || 'Tarikan gagal.');
                 } finally {

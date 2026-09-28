@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PembayaranTarikLog;
+use App\Models\SengBayarPajak;
 use App\Services\SengBayarPajakApiImporter;
 use App\Support\PembayaranTarik;
 use Carbon\Carbon;
@@ -11,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use Throwable;
+use Yajra\DataTables\Facades\DataTables;
 
 class PembayaranController extends Controller
 {
@@ -28,13 +30,46 @@ class PembayaranController extends Controller
         });
     }
 
-    public function index(): View
+    public function index(Request $request): View|JsonResponse
     {
+        if ($request->ajax()) {
+            $tanggal = (string) $request->input('tanggal', '');
+            $nopol = trim((string) $request->input('nopol', ''));
+
+            $query = SengBayarPajak::query()->orderByDesc('id');
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal) === 1) {
+                $query->where('tgl_bayar', $tanggal);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+
+            if ($nopol !== '') {
+                $query->where(function ($q) use ($nopol) {
+                    $q->where('nopol', 'like', '%'.$nopol.'%')
+                        ->orWhere('nopol_', 'like', '%'.$nopol.'%');
+                });
+            }
+
+            return DataTables::of($query)
+                ->addIndexColumn()
+                ->addColumn('tgl_bayar_fmt', function ($row) {
+                    return $row->tgl_bayar ? $row->tgl_bayar->format('Y-m-d') : '';
+                })
+                ->addColumn('pkb_provinsi_jalan_fmt', fn ($row) => $this->rupiah($row->pkb_provinsi_jalan))
+                ->addColumn('pkb_provinsi_tunggakan_fmt', fn ($row) => $this->rupiah($row->pkb_provinsi_tunggakan))
+                ->addColumn('pkb_opsen_jalan_fmt', fn ($row) => $this->rupiah($row->pkb_opsen_jalan))
+                ->addColumn('pkb_opsen_tunggakan_fmt', fn ($row) => $this->rupiah($row->pkb_opsen_tunggakan))
+                ->make(true);
+        }
+
         $this->failStaleRuns();
 
         return view('backend.pembayaran.index', [
             'jadwal' => PembayaranTarik::settings(),
             'logs' => PembayaranTarikLog::query()->orderByDesc('id')->limit(20)->get(),
+            'defaultTanggal' => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $request->query('tanggal', '')) === 1
+                ? (string) $request->query('tanggal')
+                : now()->toDateString(),
         ]);
     }
 
@@ -212,6 +247,15 @@ class PembayaranController extends Controller
         }
 
         return [$mulai, $selesai, 'rentang', null];
+    }
+
+    private function rupiah(mixed $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+
+        return number_format((int) $value, 0, ',', '.');
     }
 
     private function failStaleRuns(): void

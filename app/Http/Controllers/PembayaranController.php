@@ -266,6 +266,23 @@ class PembayaranController extends Controller
             ->get();
 
         foreach ($stale as $log) {
+            if ($log->jenis === 'background') {
+                if (PembayaranTarik::pidAlive(PembayaranTarik::backgroundPid())) {
+                    continue;
+                }
+
+                $log->status = 'berhenti';
+                $log->finished_at = now();
+                $log->message = 'Proses terminal terputus di '
+                    .($log->tanggal_proses?->toDateString() ?? '-')
+                    .' halaman '.$log->halaman
+                    .'. Lanjutkan: php artisan pembayaran:tarik-bg --lanjut';
+                $log->save();
+                PembayaranTarik::release('bg:'.$log->id);
+
+                continue;
+            }
+
             $log->status = 'gagal';
             $log->finished_at = now();
             $log->message = 'Tarikan terputus karena tidak ada kelanjutan selama 20 menit.';

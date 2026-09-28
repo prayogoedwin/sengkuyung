@@ -54,11 +54,23 @@
                                                     <input type="date" name="tanggal_selesai" class="form-control" required max="{{ now()->toDateString() }}">
                                                 </div>
                                             </div>
-                                            <p class="form-text">Ditarik berurutan per hari, maksimal {{ \App\Support\PembayaranTarik::MAX_RANGE_DAYS }} hari. Jangan tutup halaman sampai selesai.</p>
+                                            <p class="form-text">Ditarik berurutan per hari, maksimal {{ \App\Support\PembayaranTarik::MAX_RANGE_DAYS }} hari. Untuk rentang panjang, pakai terminal agar tidak putus saat browser ditutup.</p>
                                             <button type="submit" class="btn btn-primary">Tarik rentang</button>
                                         </form>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Tarik background (terminal)</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-2">Rentang panjang dijalankan di server, lepas dari browser. Posisi tiap halaman tersimpan di riwayat, jadi bisa berhenti lalu dilanjut.</p>
+                                <pre class="mb-0 small">php artisan pembayaran:tarik-bg 2026-01-01 2026-06-30 --detach
+php artisan pembayaran:tarik-bg --stop
+php artisan pembayaran:tarik-bg --lanjut</pre>
                             </div>
                         </div>
 
@@ -126,6 +138,7 @@
                                                 <th>Status</th>
                                                 <th>Masuk</th>
                                                 <th>Duplikat</th>
+                                                <th>Posisi</th>
                                                 <th>Keterangan</th>
                                             </tr>
                                         </thead>
@@ -138,11 +151,17 @@
                                                     <td>{{ $log->status }}</td>
                                                     <td>{{ number_format($log->inserted, 0, ',', '.') }}</td>
                                                     <td>{{ number_format($log->skipped_duplicate, 0, ',', '.') }}</td>
+                                                    <td>
+                                                        {{ $log->tanggal_proses?->toDateString() ?? '-' }}
+                                                        @if ($log->halaman)
+                                                            · hlm {{ $log->halaman }}@if ($log->total_halaman)/{{ $log->total_halaman }}@endif
+                                                        @endif
+                                                    </td>
                                                     <td>{{ $log->message }}</td>
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="7" class="text-center">Belum ada tarikan.</td>
+                                                    <td colspan="8" class="text-center">Belum ada tarikan.</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>

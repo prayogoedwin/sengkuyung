@@ -10,6 +10,8 @@ class PembayaranTarik
 {
     public const LOCK_KEY = 'pembayaran:tarik:active';
 
+    public const BG_STOP_KEY = 'pembayaran:tarik:bg-stop';
+
     public const SLOT_TOLERANCE_MINUTES = 5;
 
     public const MAX_RANGE_DAYS = 1100;
@@ -98,6 +100,48 @@ class PembayaranTarik
     {
         if (Cache::get(self::LOCK_KEY) === $owner) {
             Cache::forget(self::LOCK_KEY);
+        }
+    }
+
+    public static function pidPath(): string
+    {
+        return storage_path('app/pembayaran-tarik-bg.pid');
+    }
+
+    public static function backgroundPid(): ?int
+    {
+        $path = self::pidPath();
+        if (! is_file($path)) {
+            return null;
+        }
+
+        $pid = (int) trim((string) file_get_contents($path));
+
+        return $pid > 0 ? $pid : null;
+    }
+
+    public static function pidAlive(?int $pid): bool
+    {
+        if ($pid === null || $pid <= 0) {
+            return false;
+        }
+
+        if (function_exists('posix_kill')) {
+            return @posix_kill($pid, 0);
+        }
+
+        return is_dir('/proc/'.$pid);
+    }
+
+    public static function writePid(int $pid): void
+    {
+        file_put_contents(self::pidPath(), (string) $pid);
+    }
+
+    public static function clearPid(int $pid): void
+    {
+        if (self::backgroundPid() === $pid && is_file(self::pidPath())) {
+            unlink(self::pidPath());
         }
     }
 }

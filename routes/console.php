@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\PembayaranTarik;
 use App\Support\RekapVisualFilterCache;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -14,3 +15,9 @@ Schedule::command('rvf:warm-cache --refresh')
     ->timezone('Asia/Jakarta')
     ->withoutOverlapping(180)
     ->when(static fn () => RekapVisualFilterCache::shouldDispatchWarm());
+
+Schedule::command('pembayaran:tarik-jadwal')
+    ->everyMinute()
+    ->timezone('Asia/Jakarta')
+    ->withoutOverlapping(360)
+    ->when(static fn () => PembayaranTarik::shouldDispatch());

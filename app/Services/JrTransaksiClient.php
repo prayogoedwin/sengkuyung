@@ -52,4 +52,41 @@ class JrTransaksiClient
             'response' => $response,
         ];
     }
+
+    /**
+     * @return array{url: string, timestamp: string, signature: string, response: Response}
+     */
+    public function fetchPage(IntegrasiSetting $setting, string $tanggalPenetapan, int $page = 1, int $pageSize = 100): array
+    {
+        $page = max(1, $page);
+        $pageSize = max(1, min(100, $pageSize));
+        $timestamp = (string) time();
+        $signature = $this->signature((string) $setting->secret_key, $timestamp);
+        $url = $this->transaksiUrl((string) $setting->base_url, $tanggalPenetapan);
+        $url .= (str_contains($url, '?') ? '&' : '?').http_build_query([
+            'page' => $page,
+            'pageSize' => $pageSize,
+        ], '', '&', PHP_QUERY_RFC3986);
+
+        $response = Http::timeout(60)
+            ->withOptions([
+                'curl' => [
+                    CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                ],
+            ])
+            ->withHeaders([
+                'x-client-id' => (string) $setting->client_id,
+                'x-timestamp' => $timestamp,
+                'x-signature' => $signature,
+                'Accept' => 'application/json',
+            ])
+            ->get($url);
+
+        return [
+            'url' => $url,
+            'timestamp' => $timestamp,
+            'signature' => $signature,
+            'response' => $response,
+        ];
+    }
 }

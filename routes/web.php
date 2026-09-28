@@ -18,6 +18,7 @@ use App\Http\Controllers\PerbandinganKodeWilayahController;
 use App\Http\Controllers\DataTertagihController;
 use App\Http\Controllers\DataTertagihD2dController;
 use App\Http\Controllers\SengBayarPajakController;
+use App\Http\Controllers\PembayaranController;
 use App\Http\Controllers\RekapVisualController;
 use App\Http\Controllers\RekapVisualD2dController;
 use App\Http\Controllers\RekapVisualFilterController;
@@ -116,6 +117,10 @@ Route::middleware([LogActivity::class])->group(function () {
         Route::post('/data-tertagih-d2d/{id}/status', [DataTertagihD2dController::class, 'updateStatus'])->name('data-tertagih-d2d.update-status');
         Route::delete('/data-tertagih-d2d/{id}', [DataTertagihD2dController::class, 'destroy'])->name('data-tertagih-d2d.destroy');
         Route::delete('/data-tertagih-d2d/{id}/force', [DataTertagihD2dController::class, 'forceDestroy'])->name('data-tertagih-d2d.force-destroy');
+
+        Route::get('/pembayaran', [PembayaranController::class, 'index'])->name('pembayaran.index');
+        Route::post('/pembayaran/tarik', [PembayaranController::class, 'tarik'])->name('pembayaran.tarik');
+        Route::post('/pembayaran/jadwal', [PembayaranController::class, 'simpanJadwal'])->name('pembayaran.jadwal');
 
         Route::get('/bayar-pajak', [SengBayarPajakController::class, 'index'])->name('bayar-pajak.index');
         Route::post('/bayar-pajak/import/upload', [SengBayarPajakController::class, 'importUpload'])->name('bayar-pajak.import.upload');

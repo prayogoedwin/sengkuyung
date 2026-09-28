@@ -131,6 +131,13 @@
 
             @endif
 
+            <li class="menu-item {{ request()->routeIs('pembayaran.*') ? 'active' : '' }}">
+                <a href="{{ route('pembayaran.index') }}" class="menu-link">
+                    <i class="menu-icon tf-icons bx bx-wallet"></i>
+                    <div data-i18n="Analytics">Pembayaran</div>
+                </a>
+            </li>
+
             <li class="menu-item {{ request()->routeIs('verifikasi.index') ? 'active' : '' }}">
                 <a href="{{ route('verifikasi.index') }}" class="menu-link">
                     <i class="menu-icon tf-icons bx bx-check-shield"></i>

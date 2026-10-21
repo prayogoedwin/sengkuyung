@@ -34,6 +34,7 @@
             $canSeePelaporan = $isAdminScope || $isKabkota || $isUppd || $isKecamatan;
             $canSeeRekap = $isAdminScope || ($isUptd && !$isUppd);
             $canSeeRekapPelaporanD2d = $isAdminScope || $isUppd;
+            $canSeeRekapVisual = $isAdminScope || $isUppd;
         @endphp
 
         <!-- Dashboard -->
@@ -201,6 +202,15 @@
                 </li>
             @endif
 
+            @if ($canSeeRekapVisual)
+                <li class="menu-item {{ request()->routeIs('rekap-visual-filter.*') || request()->routeIs('rekap-visual-filter-d2d.*') ? 'active' : '' }}">
+                    <a href="{{ route('rekap-visual-filter.index') }}" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-pie-chart-alt-2"></i>
+                        <div data-i18n="Analytics">Rekap Visual</div>
+                    </a>
+                </li>
+            @endif
+
             <li class="menu-item {{ request()->routeIs('perbandingan-kode-wilayah.index') ? 'active' : '' }}" hidden> ? 'active' : '' }}" hidden>
                 <a href="{{ route('perbandingan-kode-wilayah.index') }}" class="menu-link">
                     <i class="menu-icon tf-icons bx bx-git-compare"></i>
@@ -298,6 +308,15 @@
                             <i class="menu-icon tf-icons bx bx-time-five"></i>
                             <div data-i18n="Analytics">Rekap D2D</div>
                         </a> --}}
+                    </li>
+                @endif
+
+                @if ($canSeeRekapVisual)
+                    <li class="menu-item {{ request()->routeIs('rekap-visual-filter.*') || request()->routeIs('rekap-visual-filter-d2d.*') ? 'active' : '' }}">
+                        <a href="{{ route('rekap-visual-filter.index') }}" class="menu-link">
+                            <i class="menu-icon tf-icons bx bx-pie-chart-alt-2"></i>
+                            <div data-i18n="Analytics">Rekap Visual</div>
+                        </a>
                     </li>
                 @endif
             @endif
